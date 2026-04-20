@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;family=Inter:wght@300..700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#98b3ff",
+                        "secondary-container": "#e1e2e9",
+                        "surface-container": "#edeeef",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#2c59ba",
+                        "on-secondary-fixed-variant": "#44474c",
+                        "tertiary": "#5d1900",
+                        "surface-container-low": "#f3f4f5",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb59d",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#dae2ff",
+                        "secondary-fixed-dim": "#c5c6cd",
+                        "primary-fixed-dim": "#b2c5ff",
+                        "primary": "#002b73",
+                        "on-primary-fixed": "#001848",
+                        "on-primary-fixed-variant": "#0040a1",
+                        "surface": "#f8f9fa",
+                        "inverse-on-surface": "#f0f1f2",
+                        "on-surface": "#191c1d",
+                        "on-tertiary-fixed": "#390c00",
+                        "secondary-fixed": "#e1e2e9",
+                        "surface-container-high": "#e7e8e9",
+                        "outline-variant": "#c3c6d4",
+                        "on-secondary-fixed": "#191c21",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "background": "#f8f9fa",
+                        "tertiary-fixed": "#ffdbd0",
+                        "tertiary-container": "#822803",
+                        "primary-container": "#0040a1",
+                        "on-secondary-container": "#62646a",
+                        "error-container": "#ffdad6",
+                        "inverse-primary": "#b2c5ff",
+                        "on-surface-variant": "#434652",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f8f9fa",
+                        "surface-dim": "#d9dadb",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-tertiary-container": "#ff9c7a",
+                        "on-secondary": "#ffffff",
+                        "outline": "#747784",
+                        "on-background": "#191c1d",
+                        "inverse-surface": "#2e3132",
+                        "on-tertiary-fixed-variant": "#822803",
+                        "secondary": "#5c5e64",
+                        "surface-variant": "#e1e3e4"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .editorial-shadow {
+            box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);
+        }
+        .soul-gradient {
+            background: linear-gradient(135deg, #0040a1 0%, #0056d2 100%);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+        h1, h2, h3 {
+            font-family: 'Manrope', sans-serif;
+            letter-spacing: -0.02em;
+        }
+    </style>
+</head>
+<body class="flex min-h-screen text-on-surface">
+<!-- Persistent SideNavBar from JSON -->
+<aside class="h-screen w-72 flex-shrink-0 sticky top-0 bg-slate-50 dark:bg-slate-900 flex flex-col py-8 px-6 space-y-6">
+<div class="text-lg font-black text-blue-900 dark:text-blue-100 tracking-tight mb-8">
+            The Digital Curator
+            <span class="block text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Fabric Warehouse</span>
+</div>
+<nav class="flex-grow space-y-2">
+<a class="flex items-center px-4 py-3 space-x-3 rounded-lg text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-sm">Dashboard</span>
+</a>
+<a class="flex items-center px-4 py-3 space-x-3 rounded-lg text-blue-700 dark:text-blue-400 font-extrabold border-r-4 border-blue-700 dark:border-blue-400 bg-slate-100 dark:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="input">input</span>
+<span class="text-sm">Inbound</span>
+</a>
+<a class="flex items-center px-4 py-3 space-x-3 rounded-lg text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="output">output</span>
+<span class="text-sm">Outbound</span>
+</a>
+<a class="flex items-center px-4 py-3 space-x-3 rounded-lg text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+<span class="text-sm">Reports</span>
+</a>
+</nav>
+<div class="pt-6 mt-6 border-t-0 flex flex-col space-y-2">
+<button class="soul-gradient text-white rounded-full py-3 px-6 text-sm font-bold editorial-shadow hover:opacity-90 transition-opacity mb-4">
+                Add New Fabric
+            </button>
+<a class="flex items-center px-4 py-2 space-x-3 rounded-lg text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="labels text-xs font-bold uppercase tracking-wider">Settings</span>
+</a>
+<a class="flex items-center px-4 py-2 space-x-3 rounded-lg text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="labels text-xs font-bold uppercase tracking-wider">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="flex-grow flex flex-col min-w-0 overflow-x-hidden">
+<!-- TopAppBar from JSON -->
+<header class="sticky top-0 w-full z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl shadow-[0px_20px_40px_rgba(25,28,29,0.05)]">
+<div class="flex items-center justify-between px-10 py-6 max-w-[1920px] mx-auto">
+<div class="flex items-center space-x-6 flex-grow max-w-2xl">
+<div class="relative w-full">
+<span class="absolute inset-y-0 left-4 flex items-center text-slate-400">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</span>
+<input class="w-full bg-surface-container-low border-0 rounded-xl pl-12 py-3 text-sm focus:bg-surface-container-lowest focus:ring-0 transition-all" placeholder="Quick Search inventory or batch IDs..." type="text"/>
+</div>
+</div>
+<div class="flex items-center space-x-8 ml-8">
+<button class="relative text-slate-400 hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute -top-1 -right-1 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="flex items-center space-x-3">
+<div class="text-right">
+<p class="text-xs font-bold text-on-surface uppercase tracking-tight">Warehouse Admin</p>
+<p class="text-[10px] text-on-secondary-container">Master Curator</p>
+</div>
+<img alt="Warehouse Admin" class="w-10 h-10 rounded-full object-cover" data-alt="Close-up portrait of a professional man in a minimalist office setting, soft natural lighting, editorial photography style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtgPIb4RuqxML6r90Zhhuo1CQ-QfChJ1f3-jYzhewueXRkgHzynvU3t_S6q207aE8UbV_5wpH0_b0htG9s723FyGLIu0CnTB7-svbc4j8_m2ZNfmLXvMkiJ_z1lGEZL9_mJN9dnFoglAkT6Yb0dlMIgPbxu0RY8meSzVTg_yVk2KakVfO8YSJ_7ZQmHSjPB3szjLQSWmKk7zBJG-F0OmdSXMVlTlBgh6GzfzjWPW9wfOe_ZnBJpz3CWpfsb7n5G-IJOeVXaROyqt8"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="p-10 max-w-[1920px] mx-auto w-full">
+<header class="mb-12 flex justify-between items-end">
+<div>
+<h1 class="text-5xl font-extrabold text-primary mb-2">New Inventory Batch</h1>
+<p class="text-lg text-on-surface-variant max-w-xl leading-relaxed">
+                        Register newly arrived textile artifacts into the central repository. Ensure composition accuracy for catalog integrity.
+                    </p>
+</div>
+<div class="flex space-x-4">
+<button class="px-8 py-3 rounded-full text-sm font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors">
+                        Save as Draft
+                    </button>
+<button class="soul-gradient px-10 py-3 rounded-full text-sm font-bold text-white editorial-shadow hover:opacity-90 transition-all">
+                        Commit to Catalog
+                    </button>
+</div>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+<!-- Form Section -->
+<div class="lg:col-span-7 space-y-10">
+<section class="bg-surface-container-lowest rounded-[2rem] p-10 editorial-shadow">
+<h2 class="text-2xl font-bold mb-8 text-on-surface">Core Specifications</h2>
+<div class="grid grid-cols-2 gap-8">
+<div class="space-y-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-secondary-container ml-1">Batch ID</label>
+<input class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-4 text-primary font-bold focus:bg-white transition-all" type="text" value="BTC-2024-0882"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-secondary-container ml-1">Supplier</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-4 focus:bg-white transition-all" placeholder="Search suppliers..." type="text"/>
+<span class="absolute right-4 top-4 text-slate-400 material-symbols-outlined" data-icon="search">search</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-secondary-container ml-1">Fabric Type</label>
+<select class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-4 focus:bg-white transition-all appearance-none">
+<option>Select Category</option>
+<option selected="">Premium Egyptian Cotton</option>
+<option>Mulberry Silk</option>
+<option>Brushed Flannel</option>
+<option>Technical Synthetic</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-secondary-container ml-1">Quantity (Rolls)</label>
+<input class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-4 focus:bg-white transition-all" type="number" value="12"/>
+</div>
+</div>
+<div class="mt-8 grid grid-cols-2 gap-8">
+<div class="space-y-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-secondary-container ml-1">Total Weight (kg)</label>
+<input class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-4 focus:bg-white transition-all" placeholder="0.00" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold uppercase tracking-widest text-on-secondary-container ml-1">GSM Value</label>
+<input class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-4 focus:bg-white transition-all" placeholder="e.g. 180" type="text"/>
+</div>
+</div>
+</section>
+<section class="bg-surface-container-lowest rounded-[2rem] p-10 editorial-shadow">
+<div class="flex justify-between items-center mb-8">
+<h2 class="text-2xl font-bold text-on-surface">Composition Details</h2>
+<button class="text-primary-container text-sm font-bold flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="add_circle">add_circle</span>
+<span>Add Fiber</span>
+</button>
+</div>
+<div class="space-y-6">
+<div class="flex items-center space-x-6 p-4 rounded-xl bg-surface-container-low">
+<div class="flex-grow">
+<label class="text-[10px] font-bold uppercase tracking-widest text-on-secondary-container block mb-1">Fiber Type</label>
+<p class="font-bold">Organic Cotton</p>
+</div>
+<div class="w-32">
+<label class="text-[10px] font-bold uppercase tracking-widest text-on-secondary-container block mb-1">Percentage</label>
+<p class="font-bold">95%</p>
+</div>
+<button class="text-error hover:opacity-70 transition-opacity">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</button>
+</div>
+<div class="flex items-center space-x-6 p-4 rounded-xl bg-surface-container-low">
+<div class="flex-grow">
+<label class="text-[10px] font-bold uppercase tracking-widest text-on-secondary-container block mb-1">Fiber Type</label>
+<p class="font-bold">Elastane</p>
+</div>
+<div class="w-32">
+<label class="text-[10px] font-bold uppercase tracking-widest text-on-secondary-container block mb-1">Percentage</label>
+<p class="font-bold">5%</p>
+</div>
+<button class="text-error hover:opacity-70 transition-opacity">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+<!-- Quality Check & Visual Section -->
+<div class="lg:col-span-5 space-y-10">
+<section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden editorial-shadow flex flex-col h-full">
+<div class="p-10 pb-6">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h2 class="text-2xl font-bold text-on-surface">Material Quality Check</h2>
+<p class="text-sm text-on-surface-variant mt-1">High-resolution swatch verification</p>
+</div>
+<span class="bg-primary-container text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Awaiting QC</span>
+</div>
+</div>
+<div class="px-10 flex-grow">
+<div class="relative group rounded-2xl overflow-hidden aspect-square lg:aspect-auto lg:h-96">
+<img alt="Fabric Swatch" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="Macro photography of white organic cotton fabric texture, soft natural folds, highlighting fine weave and clean finish, bright airy mood" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRBwVmo_I4m7q_Y0DYncg4F7Lc-VD6Qj4hCiZXPvO01dz5s_pThq8O7BgPsGK7L4kCh9cxX16QFH36v-EUHnjn9JAM6hzQ4pOojaNgID0K6I_UWlcRIStXbu4ggalSslulEt13QkDByucxWoiARLtCbd6UOjHjCuuZei5S9OVfKr07oi1yak9_Th0PFmwZXBlc6fWTqpLxKaEM79WrzjU8sKIRg9AkcI3zWICFAtrGFaZmjdzHCnPTtVNhEX5lhJg4YsWJO0eJ-k0"/>
+<div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+<button class="bg-white text-primary px-6 py-3 rounded-full font-bold text-sm flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="zoom_in">zoom_in</span>
+<span>Examine Texture</span>
+</button>
+</div>
+</div>
+</div>
+<div class="p-10 pt-8 space-y-8">
+<div class="grid grid-cols-2 gap-4">
+<button class="flex flex-col items-center justify-center p-4 rounded-2xl bg-surface-container-low hover:bg-primary-container hover:text-white transition-all group">
+<span class="material-symbols-outlined mb-2 group-hover:fill-current" data-icon="check_circle">check_circle</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Verify Weave</span>
+</button>
+<button class="flex flex-col items-center justify-center p-4 rounded-2xl bg-surface-container-low hover:bg-primary-container hover:text-white transition-all group">
+<span class="material-symbols-outlined mb-2 group-hover:fill-current" data-icon="palette">palette</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Color Match</span>
+</button>
+</div>
+<div class="space-y-4">
+<label class="text-xs font-bold uppercase tracking-widest text-on-secondary-container ml-1">Curator Notes</label>
+<textarea class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-4 text-sm focus:bg-white transition-all" placeholder="Describe tactile qualities or any visible irregularities..." rows="4"></textarea>
+</div>
+</div>
+</section>
+<!-- Status Summary Bento Card -->
+<section class="bg-primary text-white rounded-[2rem] p-10 editorial-shadow flex items-center justify-between overflow-hidden relative">
+<div class="relative z-10">
+<p class="text-xs font-bold uppercase tracking-[0.2em] opacity-60 mb-2">Inventory Impact</p>
+<h3 class="text-3xl font-black">+480.5 Yards</h3>
+<p class="text-sm opacity-80 mt-4 flex items-center">
+<span class="material-symbols-outlined text-sm mr-2" data-icon="trending_up">trending_up</span>
+                                Warehouse capacity at 64%
+                            </p>
+</div>
+<div class="absolute -right-10 -bottom-10 opacity-10">
+<span class="material-symbols-outlined text-[160px]" data-icon="inventory_2" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+</body></html>

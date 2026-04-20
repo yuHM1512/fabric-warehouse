@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Nhập kho</div>
+        <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Nhập kho / kiểm kho</h2>
+        <p class="mt-2 text-sm text-on-surface-variant leading-relaxed">
+          Chọn <span class="font-semibold text-on-surface">Nhu cầu</span> → <span class="font-semibold text-on-surface">Lot</span> để xác nhận số lượng thực tế theo từng cây.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/wms" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">WMS</a>
+      </div>
+    </div>
+
+    {% if request.query_params.get('saved') %}
+      <div class="mt-8 rounded-2xl bg-secondary-container px-6 py-4 text-sm text-on-surface">
+        <span class="font-bold">Đã lưu kiểm kho</span> cho Lot <span class="font-extrabold">{{ lot }}</span>.
+      </div>
+    {% endif %}
+
+    <div class="mt-10 bg-surface-container-low rounded-[2rem] p-8">
+      <form method="get" action="/wms/stock" class="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="nhu_cau">Nhu cầu</label>
+          <select
+            id="nhu_cau"
+            name="nhu_cau"
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+            onchange="this.form.submit()"
+          >
+            <option value="" {% if not nhu_cau %}selected{% endif %}>Chọn...</option>
+            {% for nc in nhu_cau_options %}
+              <option value="{{ nc }}" {% if nhu_cau == nc %}selected{% endif %}>{{ nc }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="lot">Lot</label>
+          <select
+            id="lot"
+            name="lot"
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0 disabled:opacity-50"
+            onchange="this.form.submit()"
+            {% if not nhu_cau %}disabled{% endif %}
+          >
+            <option value="" {% if not lot %}selected{% endif %}>Chọn...</option>
+            {% for l in lot_options %}
+              <option value="{{ l }}" {% if lot == l %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="flex items-end">
+          <a
+            class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors"
+            href="/wms/stock{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}"
+          >
+            <span class="material-symbols-outlined text-base">refresh</span>
+            Reset lọc
+          </a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  {% if nhu_cau and lot %}
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+      <form method="post" action="/wms/stock">
+        <input type="hidden" name="nhu_cau" value="{{ nhu_cau }}" />
+        <input type="hidden" name="lot" value="{{ lot }}" />
+        <input type="hidden" name="row_count" value="{{ rows|length }}" />
+
+        <div class="px-10 py-8 bg-surface-container-low">
+          <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Nhu cầu</div>
+              <div class="mt-2 text-lg font-extrabold font-headline">{{ nhu_cau }}</div>
+            </div>
+            <div class="md:text-right">
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Lot</div>
+              <div class="mt-2 text-lg font-extrabold font-headline">{{ lot }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-surface-container-low text-on-surface-variant">
+              <tr class="text-left">
+                <th class="px-10 py-4 w-28 text-[10px] font-bold uppercase tracking-widest">Đủ</th>
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Mã cây</th>
+                <th class="px-10 py-4 w-40 text-right text-[10px] font-bold uppercase tracking-widest">YDS (phiếu)</th>
+                <th class="px-10 py-4 w-44 text-right text-[10px] font-bold uppercase tracking-widest">Thực tế</th>
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Ghi chú</th>
+                <th class="px-10 py-4 w-44 text-[10px] font-bold uppercase tracking-widest">Cập nhật</th>
+              </tr>
+            </thead>
+            <tbody class="bg-surface-container-lowest">
+              {% for r in rows %}
+                {% set i = loop.index0 %}
+                <tr class="hover:bg-surface-container-low transition-colors">
+                  <td class="px-10 py-4">
+                    <label class="inline-flex items-center gap-2">
+                      <input
+                        class="full-checkbox h-4 w-4 rounded"
+                        type="checkbox"
+                        name="full_{{ i }}"
+                        data-idx="{{ i }}"
+                        {% if r.actual_yards is not none and r.expected_yards is not none and (r.actual_yards == r.expected_yards) %}checked{% endif %}
+                      />
+                      <span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Đủ</span>
+                    </label>
+                  </td>
+                  <td class="px-10 py-4 font-semibold">
+                    {{ r.ma_cay }}
+                    <input type="hidden" name="ma_cay_{{ i }}" value="{{ r.ma_cay }}" />
+                  </td>
+                  <td class="px-10 py-4 text-right tabular-nums font-semibold">
+                    {{ r.expected_yards or "" }}
+                    <input type="hidden" name="expected_{{ i }}" value="{{ r.expected_yards or '' }}" />
+                  </td>
+                  <td class="px-10 py-4 text-right">
+                    <input
+                      class="actual-input w-36 rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm text-right tabular-nums focus:bg-white focus:ring-0"
+                      type="text"
+                      inputmode="decimal"
+                      name="actual_{{ i }}"
+                      data-idx="{{ i }}"
+                      value="{{ r.actual_yards or '' }}"
+                      placeholder="VD: 123"
+                    />
+                  </td>
+                  <td class="px-10 py-4">
+                    <input
+                      class="w-full min-w-[260px] rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0"
+                      type="text"
+                      name="note_{{ i }}"
+                      value="{{ r.note or '' }}"
+                      placeholder="Ghi chú..."
+                    />
+                  </td>
+                  <td class="px-10 py-4 text-xs text-on-surface-variant">
+                    {{ r.updated_at or "" }}
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td class="px-10 py-6 text-on-surface-variant" colspan="6">Không có dữ liệu cho Nhu cầu/Lot này.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="px-10 py-8 bg-surface-container-low flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div class="text-xs text-on-surface-variant">
+            Tick “Đủ” sẽ tự set Thực tế = YDS (phiếu).
+          </div>
+          <button
+            type="submit"
+            class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+          >
+            <span class="material-symbols-outlined text-base">save</span>
+            Lưu kiểm kho
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <script>
+      function syncRow(idx) {
+        const cb = document.querySelector(`input.full-checkbox[data-idx='${idx}']`);
+        const actual = document.querySelector(`input.actual-input[data-idx='${idx}']`);
+        const expected = document.querySelector(`input[name='expected_${idx}']`);
+        if (!cb || !actual || !expected) return;
+        if (cb.checked) {
+          actual.value = expected.value || actual.value;
+        }
+      }
+
+      document.querySelectorAll('input.full-checkbox').forEach((cb) => {
+        cb.addEventListener('change', (e) => syncRow(e.target.dataset.idx));
+      });
+    </script>
+  {% endif %}
+{% endblock %}

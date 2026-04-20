@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tra cứu</div>
+        <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Bảng định mức đã lưu</h2>
+        <p class="mt-2 text-sm text-on-surface-variant leading-relaxed">
+          Nguồn: Postgres table <code class="font-mono">fabric_data</code>. Chỉ hiển thị các dòng có <span class="font-semibold text-on-surface">YDS tối đa/Pallet &gt; 0</span>.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/wms/tools" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Tools</a>
+        <a href="/wms" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">WMS</a>
+      </div>
+    </div>
+
+    <div class="mt-10 bg-surface-container-low rounded-[2rem] p-8">
+      <form method="get" action="/wms/tools/norms" class="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-end">
+        <div class="flex-1">
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="ma_model">Lọc theo Mã Art</label>
+          <select id="ma_model" name="ma_model" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0" onchange="this.form.submit()">
+            <option value="" {% if not ma_model %}selected{% endif %}>Tất cả</option>
+            {% for m in ma_models %}
+              <option value="{{ m }}" {% if ma_model == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="q">Tìm nhanh</label>
+          <input id="q" name="q" value="{{ q }}" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0" placeholder="VD: 9810014235" />
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+          >
+            <span class="material-symbols-outlined text-base">filter_alt</span>
+            Lọc
+          </button>
+          <a
+            href="/wms/tools/norms"
+            class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors"
+          >
+            Reset
+          </a>
+        </div>
+      </form>
+    </div>
+
+    {% if error %}
+      <div class="mt-8 rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container">
+        {{ error }}
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-surface-container-low text-on-surface-variant">
+          <tr class="text-left">
+            <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Mã Art</th>
+            <th class="px-10 py-4 text-right text-[10px] font-bold uppercase tracking-widest">YDS tối đa/Pallet</th>
+          </tr>
+        </thead>
+        <tbody class="bg-surface-container-lowest">
+          {% for r in rows %}
+            <tr class="hover:bg-surface-container-low transition-colors">
+              <td class="px-10 py-4 font-semibold">{{ r.ma_model }}</td>
+              <td class="px-10 py-4 text-right tabular-nums font-semibold">{{ r.yrd_per_pallet or 0 }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td class="px-10 py-6 text-on-surface-variant" colspan="2">
+                Chưa có dữ liệu trong <code class="font-mono">fabric_data</code>. Hãy scrape/import trước.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Điều chuyển</div>
+        <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Điều chuyển nhu cầu</h2>
+        <p class="mt-2 text-sm text-on-surface-variant leading-relaxed">
+          Chọn nhu cầu hiện tại → tick cây → nhập nhu cầu mới (có log).
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/wms/tools" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Tools</a>
+        <a href="/wms" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">WMS</a>
+      </div>
+    </div>
+
+    {% if request.query_params.get('saved') %}
+      <div class="mt-8 rounded-2xl bg-secondary-container px-6 py-4 text-sm text-on-surface">
+        <span class="font-bold">Đã điều chuyển.</span>
+      </div>
+    {% endif %}
+
+    <div class="mt-10 bg-surface-container-low rounded-[2rem] p-8">
+      <form method="get" action="/wms/tools/demand-transfer" class="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-end">
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="from_nhu_cau">Nhu cầu hiện tại</label>
+          <input
+            id="from_nhu_cau"
+            name="from_nhu_cau"
+            value="{{ from_nhu_cau }}"
+            list="nc_list"
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+            placeholder="Gõ để lọc..."
+          />
+          <datalist id="nc_list">
+            {% for nc in nhu_cau_options %}
+              <option value="{{ nc }}"></option>
+            {% endfor %}
+          </datalist>
+        </div>
+
+        <div class="md:col-span-2 flex flex-wrap gap-3">
+          <button
+            type="submit"
+            class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+          >
+            <span class="material-symbols-outlined text-base">search</span>
+            Xem danh sách
+          </button>
+          <a
+            href="/wms/tools/demand-transfer"
+            class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors"
+          >
+            Reset
+          </a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+    <form method="post" action="/wms/tools/demand-transfer">
+      <input type="hidden" name="from_nhu_cau" value="{{ from_nhu_cau }}" />
+      <input type="hidden" name="row_count" value="{{ rows|length }}" />
+
+      <div class="px-10 py-8 bg-surface-container-low grid grid-cols-1 gap-6 md:grid-cols-3 md:items-end">
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_nhu_cau">Nhu cầu mới</label>
+          <input
+            id="to_nhu_cau"
+            name="to_nhu_cau"
+            list="nc_list"
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+            placeholder="VD: NL-... / NC-TAM"
+            required
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_lot">Lot mới (tuỳ chọn)</label>
+          <input
+            id="to_lot"
+            name="to_lot"
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+            placeholder="VD: DT250..."
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="note">Ghi chú (tuỳ chọn)</label>
+          <input
+            id="note"
+            name="note"
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+            placeholder="..."
+          />
+        </div>
+
+        <div class="md:col-span-3 flex flex-wrap items-center gap-3">
+          <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="selectAll(true)">
+            Chọn tất cả
+          </button>
+          <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="selectAll(false)">
+            Bỏ chọn
+          </button>
+          <button
+            type="submit"
+            class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+          >
+            <span class="material-symbols-outlined text-base">swap_horiz</span>
+            Điều chuyển
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-surface-container-low text-on-surface-variant">
+            <tr class="text-left">
+              <th class="px-10 py-4 w-10"></th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Mã cây</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Lot</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Vị trí</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody class="bg-surface-container-lowest">
+            {% for r in rows %}
+              {% set i = loop.index0 %}
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="px-10 py-4">
+                  <input class="sel-checkbox h-4 w-4 rounded" type="checkbox" name="sel_{{ i }}" />
+                  <input type="hidden" name="ma_cay_{{ i }}" value="{{ r.ma_cay }}" />
+                </td>
+                <td class="px-10 py-4 font-semibold">{{ r.ma_cay }}</td>
+                <td class="px-10 py-4 font-semibold">{{ r.lot or "" }}</td>
+                <td class="px-10 py-4 font-extrabold font-headline text-primary">{{ r.vi_tri or "" }}</td>
+                <td class="px-10 py-4">{{ r.trang_thai or "" }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td class="px-10 py-6 text-on-surface-variant" colspan="5">
+                  Không có cây trong nhu cầu này.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </section>
+
+  <script>
+    function selectAll(flag) {
+      document.querySelectorAll(".sel-checkbox").forEach((el) => {
+        if (el.disabled) return;
+        el.checked = !!flag;
+      });
+    }
+  </script>
+{% endblock %}

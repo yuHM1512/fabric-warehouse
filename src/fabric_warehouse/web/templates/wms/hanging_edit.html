@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Bảng treo</div>
+        <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Chỉnh sửa #{{ tag.id }}</h2>
+        <div class="mt-3 text-sm text-on-surface-variant">
+          <span class="font-bold text-on-surface">Nhu cầu:</span> {{ tag.nhu_cau or "" }}
+          <span class="mx-2 text-on-surface-variant/30">|</span>
+          <span class="font-bold text-on-surface">Lot:</span> {{ tag.lot or "" }}
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/wms/hanging{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Quay lại</a>
+        <a href="/wms/hanging/print?ids={{ tag.id }}" target="_blank" rel="noopener" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Preview</a>
+      </div>
+    </div>
+
+    <div class="mt-10 max-w-2xl bg-surface-container-low rounded-[2rem] p-8">
+      <form method="post" action="/wms/hanging/{{ tag.id }}/edit{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}">
+        <div class="grid grid-cols-1 gap-6">
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="customer">Customer</label>
+            <input
+              id="customer"
+              name="customer"
+              value="{{ tag.customer or '' }}"
+              class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+              placeholder="VD: HIEPTHANH / DELICACY / ..."
+            />
+            <div class="mt-2 text-xs text-on-surface-variant leading-relaxed">
+              Nếu bỏ trống, phần in sẽ dùng <code class="font-mono">Nhà cung cấp</code> hiện có (nếu có).
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="ngay_xuat">Ngày xuất</label>
+            <input
+              id="ngay_xuat"
+              name="ngay_xuat"
+              type="date"
+              value="{{ tag.ngay_xuat or '' }}"
+              class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+            />
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 pt-2">
+            <button
+              type="submit"
+              class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+            >
+              <span class="material-symbols-outlined text-base">save</span>
+              Lưu
+            </button>
+            <a
+              href="/wms/hanging{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}"
+              class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors"
+            >
+              Huỷ
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock %}

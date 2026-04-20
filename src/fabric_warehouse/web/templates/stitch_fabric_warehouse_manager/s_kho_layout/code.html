@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;500;700;800&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-high": "#e7e8e9",
+            "primary-fixed": "#dae2ff",
+            "on-secondary-fixed-variant": "#44474c",
+            "on-primary-fixed": "#001848",
+            "tertiary": "#5d1900",
+            "surface-container": "#edeeef",
+            "outline-variant": "#c3c6d4",
+            "inverse-on-surface": "#f0f1f2",
+            "primary-container": "#0040a1",
+            "tertiary-fixed": "#ffdbd0",
+            "on-tertiary-fixed-variant": "#822803",
+            "on-secondary-fixed": "#191c21",
+            "on-background": "#191c1d",
+            "inverse-primary": "#b2c5ff",
+            "surface": "#f8f9fa",
+            "secondary-fixed": "#e1e2e9",
+            "background": "#f8f9fa",
+            "surface-container-low": "#f3f4f5",
+            "surface-container-highest": "#e1e3e4",
+            "surface-bright": "#f8f9fa",
+            "on-primary-container": "#98b3ff",
+            "on-primary": "#ffffff",
+            "on-tertiary-container": "#ff9c7a",
+            "tertiary-container": "#822803",
+            "primary-fixed-dim": "#b2c5ff",
+            "on-surface": "#191c1d",
+            "inverse-surface": "#2e3132",
+            "error-container": "#ffdad6",
+            "surface-dim": "#d9dadb",
+            "secondary": "#5c5e64",
+            "on-tertiary": "#ffffff",
+            "surface-variant": "#e1e3e4",
+            "error": "#ba1a1a",
+            "outline": "#747784",
+            "secondary-container": "#e1e2e9",
+            "primary": "#002b73",
+            "on-primary-fixed-variant": "#0040a1",
+            "on-surface-variant": "#434652",
+            "surface-tint": "#2c59ba",
+            "secondary-fixed-dim": "#c5c6cd",
+            "on-secondary": "#ffffff",
+            "on-error": "#ffffff",
+            "on-tertiary-fixed": "#390c00",
+            "on-secondary-container": "#62646a",
+            "on-error-container": "#93000a",
+            "tertiary-fixed-dim": "#ffb59d",
+            "surface-container-lowest": "#ffffff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #191c1d; margin: 0; }
+    .font-manrope { font-family: 'Manrope', sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .primary-gradient { background: linear-gradient(135deg, #0040a1 0%, #0056d2 100%); }
+    .cloud-shadow { box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #e7e8e9; border-radius: 10px; }
+  </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- Side Navigation Bar -->
+<aside class="fixed left-0 top-0 h-full w-64 z-40 bg-slate-50 flex flex-col p-6 gap-y-4 font-inter text-sm font-medium leading-relaxed">
+<div class="mb-8">
+<h1 class="font-manrope text-xl font-extrabold text-blue-900">Inventory Portal</h1>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">Academic Editorial Mode</p>
+</div>
+<nav class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-200/50 transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-200/50 transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-white text-blue-800 font-bold rounded-lg cloud-shadow scale-98 transition-transform" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span>Storage Layout</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-200/50 transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined">local_shipping</span>
+<span>Logistics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-200/50 transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span>Analytics</span>
+</a>
+</nav>
+<div class="mt-auto flex flex-col gap-1">
+<button class="primary-gradient text-white rounded-full py-3 px-6 font-bold mb-6 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span>
+        New Entry
+      </button>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-200/50 transition-transform" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-200/50 transition-transform" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen">
+<!-- Top Bar -->
+<header class="fixed top-0 right-0 left-64 h-16 bg-white/80 backdrop-blur-xl z-30 flex justify-between items-center px-8">
+<div class="flex items-center gap-4">
+<div class="bg-surface-container-low px-4 py-2 rounded-lg flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-64" placeholder="Search positions, SKUs..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex gap-4 text-slate-500">
+<span class="material-symbols-outlined cursor-pointer hover:text-blue-800 transition-colors">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-blue-800 transition-colors">history</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-blue-800 transition-colors">account_circle</span>
+</div>
+</div>
+</header>
+<div class="pt-24 px-12 pb-12">
+<!-- Title & Header Strategy -->
+<div class="flex justify-between items-end mb-12">
+<div>
+<h2 class="font-manrope text-[56px] font-extrabold tracking-tighter leading-none text-primary mb-2">Storage Map</h2>
+<p class="text-on-surface-variant font-body text-lg max-w-2xl leading-relaxed">Spatial visualization of the Central Fabric Repository. Use the tiered grid below to monitor volume utilization and workflow bottlenecks.</p>
+</div>
+<div class="flex gap-4 items-center bg-surface-container-lowest p-6 rounded-xl cloud-shadow">
+<div class="flex flex-col items-center gap-1 border-r border-slate-100 pr-6">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Utility</span>
+<span class="text-2xl font-manrope font-extrabold">84.2%</span>
+</div>
+<div class="flex gap-6 pl-6">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+<span class="text-xs font-bold text-slate-600">Low &lt; 60%</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-amber-500"></div>
+<span class="text-xs font-bold text-slate-600">Optimal 60-85%</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-rose-500"></div>
+<span class="text-xs font-bold text-slate-600">Critical &gt; 85%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- LINE 02 SECTION -->
+<section class="mb-16">
+<div class="flex items-center gap-4 mb-8">
+<span class="font-manrope text-2xl font-bold text-primary">Line 02</span>
+<div class="h-[1px] flex-1 bg-surface-container-high"></div>
+<span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Main Distribution Aisle</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+<!-- Position Card 02.01 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl cloud-shadow">
+<div class="flex justify-between items-start mb-6">
+<h4 class="font-manrope font-extrabold text-lg text-slate-800">Vị trí: 02.01</h4>
+<span class="material-symbols-outlined text-slate-300 text-sm">info</span>
+</div>
+<div class="space-y-6">
+<!-- Tier A -->
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier A (Floor)</span>
+<span>1.96 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500 rounded-full" style="width: 65%;"></div>
+</div>
+</div>
+<!-- Tier B -->
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier B (Eye)</span>
+<span>2.88 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-rose-500 rounded-full" style="width: 96%;"></div>
+</div>
+</div>
+<!-- Tier C -->
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier C (High)</span>
+<span>0.42 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 14%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Position Card 02.02 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl cloud-shadow">
+<div class="flex justify-between items-start mb-6">
+<h4 class="font-manrope font-extrabold text-lg text-slate-800">Vị trí: 02.02</h4>
+<span class="material-symbols-outlined text-slate-300 text-sm">info</span>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier A (Floor)</span>
+<span>2.10 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500 rounded-full" style="width: 70%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier B (Eye)</span>
+<span>1.50 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 50%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier C (High)</span>
+<span>2.95 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-rose-500 rounded-full" style="width: 98%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Position Card 02.03 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl cloud-shadow">
+<div class="flex justify-between items-start mb-6">
+<h4 class="font-manrope font-extrabold text-lg text-slate-800">Vị trí: 02.03</h4>
+<span class="material-symbols-outlined text-slate-300 text-sm">info</span>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier A (Floor)</span>
+<span>0.00 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-slate-200 rounded-full" style="width: 0%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier B (Eye)</span>
+<span>0.85 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 28%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier C (High)</span>
+<span>1.20 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 40%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Position Card 02.04 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl cloud-shadow opacity-90 border-dashed border-2 border-surface-container-high border-none">
+<div class="flex justify-between items-start mb-6">
+<h4 class="font-manrope font-extrabold text-lg text-slate-800">Vị trí: 02.04</h4>
+<span class="material-symbols-outlined text-slate-300 text-sm">info</span>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier A (Floor)</span>
+<span>2.45 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500 rounded-full" style="width: 82%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier B (Eye)</span>
+<span>2.30 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500 rounded-full" style="width: 76%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier C (High)</span>
+<span>2.60 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-rose-500 rounded-full" style="width: 87%;"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- LINE 03 SECTION -->
+<section>
+<div class="flex items-center gap-4 mb-8">
+<span class="font-manrope text-2xl font-bold text-primary">Line 03</span>
+<div class="h-[1px] flex-1 bg-surface-container-high"></div>
+<span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Secondary Storage Zone</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+<!-- Position Card 03.01 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl cloud-shadow">
+<div class="flex justify-between items-start mb-6">
+<h4 class="font-manrope font-extrabold text-lg text-slate-800">Vị trí: 03.01</h4>
+<span class="material-symbols-outlined text-slate-300 text-sm">info</span>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier A (Floor)</span>
+<span>3.00 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-rose-500 rounded-full" style="width: 100%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier B (Eye)</span>
+<span>3.00 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-rose-500 rounded-full" style="width: 100%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier C (High)</span>
+<span>1.00 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 33%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Position Card 03.02 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl cloud-shadow">
+<div class="flex justify-between items-start mb-6">
+<h4 class="font-manrope font-extrabold text-lg text-slate-800">Vị trí: 03.02</h4>
+<span class="material-symbols-outlined text-slate-300 text-sm">info</span>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier A (Floor)</span>
+<span>1.20 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 40%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier B (Eye)</span>
+<span>1.10 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 36%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+<span>Tier C (High)</span>
+<span>0.50 / 3.00 m³</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 16%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Empty Position Logic -->
+<div class="p-6 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 gap-3 group hover:bg-white hover:border-transparent hover:shadow-xl transition-all">
+<span class="material-symbols-outlined text-4xl group-hover:text-blue-600 transition-colors">add_circle</span>
+<span class="text-sm font-bold uppercase tracking-widest">Assign Position</span>
+</div>
+<!-- Empty Position Logic -->
+<div class="p-6 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 gap-3 group hover:bg-white hover:border-transparent hover:shadow-xl transition-all">
+<span class="material-symbols-outlined text-4xl group-hover:text-blue-600 transition-colors">add_circle</span>
+<span class="text-sm font-bold uppercase tracking-widest">Assign Position</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Floating Action Button -->
+<button class="fixed bottom-10 right-10 primary-gradient w-16 h-16 rounded-full cloud-shadow flex items-center justify-center text-white z-50 hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl">map</span>
+</button>
+</main>
+<!-- Detail Pop-over (Glassmorphism Context) -->
+<div class="fixed top-24 right-12 w-80 bg-white/70 backdrop-blur-2xl p-8 rounded-2xl cloud-shadow z-20 border border-white/40 hidden lg:block">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-blue-800">verified_user</span>
+<h5 class="font-manrope font-bold text-slate-800">Layout Insights</h5>
+</div>
+<div class="space-y-6">
+<div class="p-4 bg-emerald-50/50 rounded-xl">
+<p class="text-xs text-emerald-800 font-bold mb-1 uppercase tracking-tight">System Health</p>
+<p class="text-sm text-emerald-900 leading-relaxed">Line 03 is operating at 42% capacity. Ideal for incoming raw silk shipment arriving tomorrow.</p>
+</div>
+<div class="p-4 bg-rose-50/50 rounded-xl">
+<p class="text-xs text-rose-800 font-bold mb-1 uppercase tracking-tight">Attention Required</p>
+<p class="text-sm text-rose-900 leading-relaxed">3 locations in Line 02 Tier B are at 95%+ capacity. Consider redistribution to Tier C.</p>
+</div>
+<div class="pt-4 flex justify-center">
+<img class="rounded-lg cloud-shadow object-cover w-full h-32" data-alt="Modern high-bay warehouse interior with clean organized shelves and warm industrial lighting showing depth" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIHEt7xsb-1YyBTcBt1xQYJS10M8fCZwN2wpo-sQW6u5Nno8EGmzGJbBXH9Tsf8wSBuR4DADfyeG7Vj7wkNR2pJ_pgYS9jHecWPvGO5GIFst5LfEXztuG8lc7CXMcZ44Rq7B7WOttsSFoG7i4B3cTriTSGrWYp8tfJAGqxG51Wsyo8QtMFz1jaSV2QoU7GIxbPiUp7DQ6Jk9Ibd2pYB80zDitF2ttu0-S-a3zhUi-FijPz7gRfviIwbF_i8FcflLWatzNz4rBySUU"/>
+</div>
+</div>
+</div>
+</body></html>

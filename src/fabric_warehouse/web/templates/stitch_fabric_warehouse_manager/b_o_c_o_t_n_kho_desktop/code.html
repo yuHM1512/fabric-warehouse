@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Digital Curator | Stock Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#98b3ff",
+                    "secondary-container": "#e1e2e9",
+                    "surface-container": "#edeeef",
+                    "error": "#ba1a1a",
+                    "surface-tint": "#2c59ba",
+                    "on-secondary-fixed-variant": "#44474c",
+                    "tertiary": "#5d1900",
+                    "surface-container-low": "#f3f4f5",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-fixed-dim": "#ffb59d",
+                    "on-error": "#ffffff",
+                    "primary-fixed": "#dae2ff",
+                    "secondary-fixed-dim": "#c5c6cd",
+                    "primary-fixed-dim": "#b2c5ff",
+                    "primary": "#002b73",
+                    "on-primary-fixed": "#001848",
+                    "on-primary-fixed-variant": "#0040a1",
+                    "surface": "#f8f9fa",
+                    "inverse-on-surface": "#f0f1f2",
+                    "on-surface": "#191c1d",
+                    "on-tertiary-fixed": "#390c00",
+                    "secondary-fixed": "#e1e2e9",
+                    "surface-container-high": "#e7e8e9",
+                    "outline-variant": "#c3c6d4",
+                    "on-secondary-fixed": "#191c21",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "background": "#f8f9fa",
+                    "tertiary-fixed": "#ffdbd0",
+                    "tertiary-container": "#822803",
+                    "primary-container": "#0040a1",
+                    "on-secondary-container": "#62646a",
+                    "error-container": "#ffdad6",
+                    "inverse-primary": "#b2c5ff",
+                    "on-surface-variant": "#434652",
+                    "on-error-container": "#93000a",
+                    "surface-bright": "#f8f9fa",
+                    "surface-dim": "#d9dadb",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-tertiary-container": "#ff9c7a",
+                    "on-secondary": "#ffffff",
+                    "outline": "#747784",
+                    "on-background": "#191c1d",
+                    "inverse-surface": "#2e3132",
+                    "on-tertiary-fixed-variant": "#822803",
+                    "secondary": "#5c5e64",
+                    "surface-variant": "#e1e3e4"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(24px); }
+        .cloud-shadow { shadow: 0px 20px 40px rgba(25, 28, 29, 0.05); }
+        .signature-gradient { background: linear-gradient(135deg, #0040a1 0%, #0056d2 100%); }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface flex min-h-screen">
+<!-- SideNavBar Component -->
+<aside class="h-screen w-72 flex-shrink-0 sticky top-0 bg-slate-50 flex flex-col py-8 px-6 space-y-6">
+<div class="text-lg font-black text-blue-900 tracking-tight mb-8">
+            The Digital Curator
+            <span class="block text-xs font-bold uppercase tracking-wider text-slate-400 mt-1">Fabric Warehouse</span>
+</div>
+<nav class="flex-grow space-y-2">
+<a class="flex items-center px-4 py-3 rounded-lg text-slate-500 font-medium hover:text-blue-600 hover:bg-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="dashboard">dashboard</span>
+<span class="text-xs font-bold uppercase tracking-wider">Dashboard</span>
+</a>
+<a class="flex items-center px-4 py-3 rounded-lg text-slate-500 font-medium hover:text-blue-600 hover:bg-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="input">input</span>
+<span class="text-xs font-bold uppercase tracking-wider">Inbound</span>
+</a>
+<a class="flex items-center px-4 py-3 rounded-lg text-slate-500 font-medium hover:text-blue-600 hover:bg-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="output">output</span>
+<span class="text-xs font-bold uppercase tracking-wider">Outbound</span>
+</a>
+<a class="flex items-center px-4 py-3 rounded-lg text-blue-700 font-extrabold border-r-4 border-blue-700 bg-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="assessment">assessment</span>
+<span class="text-xs font-bold uppercase tracking-wider">Reports</span>
+</a>
+</nav>
+<div class="pt-6 border-t border-slate-200 space-y-2">
+<a class="flex items-center px-4 py-3 rounded-lg text-slate-500 font-medium hover:text-blue-600 hover:bg-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="settings">settings</span>
+<span class="text-xs font-bold uppercase tracking-wider">Settings</span>
+</a>
+<a class="flex items-center px-4 py-3 rounded-lg text-slate-500 font-medium hover:text-blue-600 hover:bg-slate-100 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="help">help</span>
+<span class="text-xs font-bold uppercase tracking-wider">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="flex-grow flex flex-col">
+<!-- TopAppBar Component -->
+<header class="sticky top-0 w-full z-40 bg-white/80 backdrop-blur-xl flex items-center justify-between px-10 py-6 max-w-[1920px] mx-auto shadow-[0px_20px_40px_rgba(25,28,29,0.05)]">
+<div class="flex items-center space-x-6">
+<h1 class="font-headline font-bold text-2xl text-primary leading-tight">Fabric Inventory</h1>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="bg-surface-container-low border-none rounded-xl pl-12 pr-6 py-2.5 w-80 focus:ring-0 focus:bg-surface-container-lowest transition-all" placeholder="Quick Search SKUs..." type="text"/>
+</div>
+</div>
+<div class="flex items-center space-x-6">
+<button class="material-symbols-outlined text-on-surface-variant hover:opacity-80 transition-opacity">notifications</button>
+<div class="flex items-center space-x-3 pl-4 border-l border-slate-100">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Close-up professional portrait of a warehouse administrator in a bright office setting, soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBk6OBArA0c0vlN4x8G_A5e3tVWvRs7W3GcBGLrz1fAI0tp6gyFLyHxPahywCqsji1jQmVOn7PPgVv1RnlhjKYFhHDHh32g2wKi74xeG37pZuQYZWycqBS310whje2TjTFC7DD5YO8C5O1c-UPxrbOPoBJIPvZ1h-plDJnJjGq04gMXAdal3WC73QDQZZy7wafoakc8xCPBqQR6-C_etfMrAtKw-q0o729iKFfzTJe5tPAv0F0XLQMFUBEBhVOu0Cp8R29fJKo__w"/>
+<span class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Warehouse Admin</span>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="p-10 space-y-10 max-w-[1920px] mx-auto w-full">
+<!-- Hero Stat & Alerts Section (Asymmetric Bento) -->
+<section class="grid grid-cols-12 gap-8">
+<!-- Main KPI Card -->
+<div class="col-span-8 bg-surface-container-lowest p-10 rounded-xl shadow-[0px_20px_40px_rgba(25,28,29,0.05)] flex justify-between items-end">
+<div>
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4 block">Total Inventory Valuation</span>
+<div class="font-headline text-[56px] font-extrabold text-primary tracking-tighter leading-none">$2.44M</div>
+<p class="text-on-surface-variant mt-4 font-body leading-relaxed max-w-sm">Consolidated value across 12,400 active SKUs and 4 global warehouse sectors.</p>
+</div>
+<div class="signature-gradient w-24 h-24 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-4xl">trending_up</span>
+</div>
+</div>
+<!-- Low Stock Alert Card (Tonal Shift) -->
+<div class="col-span-4 bg-error-container/30 p-10 rounded-xl flex flex-col justify-between">
+<div>
+<div class="flex items-center text-error mb-4">
+<span class="material-symbols-outlined mr-2">error_outline</span>
+<span class="text-xs font-bold uppercase tracking-widest">Low Stock Alerts</span>
+</div>
+<div class="text-3xl font-headline font-bold text-on-error-container">24 Items</div>
+<p class="text-on-error-container/70 text-sm mt-2 leading-relaxed">Critical replenishment required for Velvet and Silk collections.</p>
+</div>
+<button class="bg-error text-white px-6 py-3 rounded-full text-xs font-bold uppercase tracking-widest w-full hover:opacity-90 transition-opacity">
+                        View Alerts
+                    </button>
+</div>
+</section>
+<!-- Material Allocation & Efficiency -->
+<section class="grid grid-cols-12 gap-8">
+<!-- Material Allocation Progress -->
+<div class="col-span-7 bg-surface-container-lowest p-10 rounded-xl shadow-[0px_20px_40px_rgba(25,28,29,0.05)]">
+<h2 class="font-headline font-bold text-2xl text-on-surface mb-8 tracking-tight">Material Allocation Breakdown</h2>
+<div class="space-y-8">
+<!-- Progress Item -->
+<div>
+<div class="flex justify-between items-center mb-3">
+<span class="font-body font-bold text-on-surface">Egyptian Cotton</span>
+<span class="text-on-surface-variant text-sm">4,200 Yards <span class="text-slate-300 mx-2">|</span> 42%</span>
+</div>
+<div class="w-full h-3 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full signature-gradient" style="width: 42%;"></div>
+</div>
+</div>
+<!-- Progress Item -->
+<div>
+<div class="flex justify-between items-center mb-3">
+<span class="font-body font-bold text-on-surface">Raw Mulberry Silk</span>
+<span class="text-on-surface-variant text-sm">2,850 Yards <span class="text-slate-300 mx-2">|</span> 28%</span>
+</div>
+<div class="w-full h-3 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-on-primary-fixed-variant" style="width: 28%;"></div>
+</div>
+</div>
+<!-- Progress Item -->
+<div>
+<div class="flex justify-between items-center mb-3">
+<span class="font-body font-bold text-on-surface">Heavyweight Denim</span>
+<span class="text-on-surface-variant text-sm">1,600 Yards <span class="text-slate-300 mx-2">|</span> 16%</span>
+</div>
+<div class="w-full h-3 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-secondary" style="width: 16%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Storage Efficiency Donut Chart -->
+<div class="col-span-5 bg-surface-container-low p-10 rounded-xl flex flex-col items-center justify-center text-center">
+<h3 class="font-headline font-bold text-xl mb-6">Storage Efficiency</h3>
+<div class="relative w-48 h-48 flex items-center justify-center mb-6">
+<!-- Simulated Donut Chart using SVG -->
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-surface-container-high" cx="96" cy="96" fill="transparent" r="80" stroke="currentColor" stroke-width="16"></circle>
+<circle class="text-primary" cx="96" cy="96" fill="transparent" r="80" stroke="currentColor" stroke-dasharray="502" stroke-dashoffset="120" stroke-width="16"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-3xl font-headline font-bold">78%</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Occupied</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant max-w-[240px] leading-relaxed">Current capacity across Main Warehouse A and Satellite Bay B.</p>
+</div>
+</section>
+<!-- Top Performing SKUs Table (Editorial Style) -->
+<section class="bg-surface-container-lowest p-10 rounded-xl shadow-[0px_20px_40px_rgba(25,28,29,0.05)]">
+<div class="flex justify-between items-center mb-10">
+<h2 class="font-headline font-bold text-2xl text-on-surface tracking-tight">Top Performing SKUs</h2>
+<button class="text-primary font-bold text-xs uppercase tracking-widest hover:underline decoration-2 underline-offset-4">Export Full Audit</button>
+</div>
+<div class="space-y-4">
+<!-- Row 1 -->
+<div class="grid grid-cols-12 gap-4 items-center bg-surface h-[72px] px-8 rounded-lg group hover:bg-surface-container-low transition-colors duration-200">
+<div class="col-span-1">
+<img class="w-12 h-12 rounded-lg object-cover" data-alt="Close-up texture of deep navy blue velvet fabric with rich shadows and soft sheen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyybYI2HbpAUMC1-PG1mumZspOI69pxOJz9cvl2lqZbpzvmavp3xbpTD2SHh4WPXjl_zno990pIKuCm4_5ZP7bM8oIX6-WEGzqGe4mLumpbKVkOBAoj527N_xv4LA7OYFVmKyMsGXX7bxxYTGGwNl-hJaP0S9zPJ1DEq83E0EBUATTmaCPr8fZRUByz09xL3lD0wJd5B_wCOxKDfP4uLYV-J5OBvtetGwvx5gfgTdZgBnjuvjby8BqudIfUiMeP8S1k2GsHci4ruM"/>
+</div>
+<div class="col-span-4">
+<div class="font-body font-bold text-on-surface">Midnight Velvet LX-90</div>
+<div class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">SKU: VEL-NVY-902</div>
+</div>
+<div class="col-span-2 text-center">
+<div class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Turnover</div>
+<div class="font-body font-bold text-on-surface">High</div>
+</div>
+<div class="col-span-3 text-center">
+<div class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Available Yardage</div>
+<div class="font-body font-bold text-on-surface">420 yd</div>
+</div>
+<div class="col-span-2 text-right">
+<div class="font-headline font-bold text-primary">$12,400</div>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="grid grid-cols-12 gap-4 items-center bg-surface-container-low h-[72px] px-8 rounded-lg group hover:bg-surface-container-highest transition-colors duration-200">
+<div class="col-span-1">
+<img class="w-12 h-12 rounded-lg object-cover" data-alt="Macro photo of natural cream linen fabric showing intricate weave pattern and earthy texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQrp6Pf1xf3Mf9o1Sqt679lm8wnUKaPiJJZ-gxEn6nz_6W7KHlQSOkH7MrXnYA8PPiFTe1807RifjdAR_AUs7BIZ70BtXHzXlQg_j0GYJMhH5wLmQdOT3oeoVGHSFKhLL6yProC4KCqIdUAQi57z0Wpds-rW3PQbL6l3taZ_cnbMjvXKun9i5sEUwHAf5qChIjAKfrCuOCPVOj4sz4dRCIK2fKKP7AkBAhvnzuffMzvTQoC92WPlneePo0vOpxcd6RPLY1FSrJbh4"/>
+</div>
+<div class="col-span-4">
+<div class="font-body font-bold text-on-surface">Artisan Linen Cream</div>
+<div class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">SKU: LIN-CRM-441</div>
+</div>
+<div class="col-span-2 text-center">
+<div class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Turnover</div>
+<div class="font-body font-bold text-on-surface">Medium</div>
+</div>
+<div class="col-span-3 text-center">
+<div class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Available Yardage</div>
+<div class="font-body font-bold text-on-surface">1,150 yd</div>
+</div>
+<div class="col-span-2 text-right">
+<div class="font-headline font-bold text-primary">$8,900</div>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="grid grid-cols-12 gap-4 items-center bg-surface h-[72px] px-8 rounded-lg group hover:bg-surface-container-low transition-colors duration-200">
+<div class="col-span-1">
+<img class="w-12 h-12 rounded-lg object-cover" data-alt="Textured grey charcoal herringbone wool fabric with visible grain and professional tailoring aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxakkDm4Q_W3UicBd7CzcqWsW3dXzOGg9fFE1MctNmSRlW9CYv2a8ke_I8z8V2CQDz1WR5TzudGrXt7L9YhkspEcbWjtvk9xQGFYzWPJ49JPyO6QZH98RzZ1BzKXbEj5WCw_ydXNIfBYilvn6wj2pjw0IwJ7vmz2bHtGzJj0GbddqR65tl9-YoS-Y5KzDaZN8tNsT9LPm_Mpx-IA7aQMP-v8r98E-KJR1C9XdP_GWpdSXzXJ7i-pmU3eqFjhYkTPKYwOsNnQbKhpw"/>
+</div>
+<div class="col-span-4">
+<div class="font-body font-bold text-on-surface">Charcoal Herringbone Wool</div>
+<div class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">SKU: WOO-CHR-112</div>
+</div>
+<div class="col-span-2 text-center">
+<div class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Turnover</div>
+<div class="font-body font-bold text-on-surface">Seasonal</div>
+</div>
+<div class="col-span-3 text-center">
+<div class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Available Yardage</div>
+<div class="font-body font-bold text-on-surface">280 yd</div>
+</div>
+<div class="col-span-2 text-right">
+<div class="font-headline font-bold text-primary">$7,150</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

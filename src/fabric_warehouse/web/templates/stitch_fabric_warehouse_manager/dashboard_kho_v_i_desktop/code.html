@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#98b3ff",
+                    "secondary-container": "#e1e2e9",
+                    "surface-container": "#edeeef",
+                    "error": "#ba1a1a",
+                    "surface-tint": "#2c59ba",
+                    "on-secondary-fixed-variant": "#44474c",
+                    "tertiary": "#5d1900",
+                    "surface-container-low": "#f3f4f5",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-fixed-dim": "#ffb59d",
+                    "on-error": "#ffffff",
+                    "primary-fixed": "#dae2ff",
+                    "secondary-fixed-dim": "#c5c6cd",
+                    "primary-fixed-dim": "#b2c5ff",
+                    "primary": "#002b73",
+                    "on-primary-fixed": "#001848",
+                    "on-primary-fixed-variant": "#0040a1",
+                    "surface": "#f8f9fa",
+                    "inverse-on-surface": "#f0f1f2",
+                    "on-surface": "#191c1d",
+                    "on-tertiary-fixed": "#390c00",
+                    "secondary-fixed": "#e1e2e9",
+                    "surface-container-high": "#e7e8e9",
+                    "outline-variant": "#c3c6d4",
+                    "on-secondary-fixed": "#191c21",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "background": "#f8f9fa",
+                    "tertiary-fixed": "#ffdbd0",
+                    "tertiary-container": "#822803",
+                    "primary-container": "#0040a1",
+                    "on-secondary-container": "#62646a",
+                    "error-container": "#ffdad6",
+                    "inverse-primary": "#b2c5ff",
+                    "on-surface-variant": "#434652",
+                    "on-error-container": "#93000a",
+                    "surface-bright": "#f8f9fa",
+                    "surface-dim": "#d9dadb",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-tertiary-container": "#ff9c7a",
+                    "on-secondary": "#ffffff",
+                    "outline": "#747784",
+                    "on-background": "#191c1d",
+                    "inverse-surface": "#2e3132",
+                    "on-tertiary-fixed-variant": "#822803",
+                    "secondary": "#5c5e64",
+                    "surface-variant": "#e1e3e4"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .cloud-shadow {
+            box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);
+        }
+        .soul-gradient {
+            background: linear-gradient(135deg, #0040a1 0%, #0056d2 100%);
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased flex min-h-screen">
+<!-- Shared Component: SideNavBar -->
+<aside class="h-screen w-72 flex-shrink-0 sticky top-0 bg-slate-50 dark:bg-slate-900 flex flex-col py-8 px-6 space-y-6">
+<div class="text-lg font-black text-blue-900 dark:text-blue-100 tracking-tight mb-8">
+<div class="flex flex-col">
+<span class="text-xl font-extrabold leading-none">The Digital Curator</span>
+<span class="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Fabric Warehouse</span>
+</div>
+</div>
+<nav class="flex-1 space-y-2">
+<!-- Active Tab: Dashboard -->
+<a class="flex items-center px-4 py-3 text-blue-700 dark:text-blue-400 font-extrabold border-r-4 border-blue-700 dark:border-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="dashboard">dashboard</span>
+<span class="text-xs font-bold uppercase tracking-wider">Dashboard</span>
+</a>
+<a class="flex items-center px-4 py-3 text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="input">input</span>
+<span class="text-xs font-bold uppercase tracking-wider">Inbound</span>
+</a>
+<a class="flex items-center px-4 py-3 text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="output">output</span>
+<span class="text-xs font-bold uppercase tracking-wider">Outbound</span>
+</a>
+<a class="flex items-center px-4 py-3 text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="assessment">assessment</span>
+<span class="text-xs font-bold uppercase tracking-wider">Reports</span>
+</a>
+</nav>
+<div class="pt-8 space-y-2">
+<button class="w-full soul-gradient text-white rounded-full py-3 px-6 text-sm font-bold flex items-center justify-center transition-transform active:scale-95 duration-150">
+<span class="material-symbols-outlined mr-2 text-lg" data-icon="add">add</span>
+                Add New Fabric
+            </button>
+<div class="mt-8 space-y-2">
+<a class="flex items-center px-4 py-2 text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="settings">settings</span>
+<span class="text-xs font-bold uppercase tracking-wider">Settings</span>
+</a>
+<a class="flex items-center px-4 py-2 text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="help">help</span>
+<span class="text-xs font-bold uppercase tracking-wider">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="flex-1 flex flex-col min-w-0">
+<!-- Shared Component: TopAppBar -->
+<header class="sticky top-0 w-full z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl shadow-[0px_20px_40px_rgba(25,28,29,0.05)]">
+<div class="flex items-center justify-between px-10 py-6 max-w-[1920px] mx-auto">
+<div class="flex items-center bg-surface-container-low px-6 py-2 rounded-xl min-w-[400px]">
+<span class="material-symbols-outlined text-outline mr-3" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder-outline" placeholder="Quick Search" type="text"/>
+</div>
+<div class="flex items-center space-x-6">
+<button class="text-slate-400 hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-2xl" data-icon="notifications">notifications</span>
+</button>
+<div class="flex items-center space-x-3 pl-6">
+<div class="text-right">
+<p class="text-xs font-bold text-on-surface uppercase tracking-tighter leading-none">Warehouse Admin</p>
+<p class="text-[10px] text-on-surface-variant font-medium">Curator Access</p>
+</div>
+<img alt="Warehouse Admin" class="w-10 h-10 rounded-full object-cover" data-alt="Close-up portrait of a professional man in a minimalist grey workspace, soft natural lighting, high-end editorial style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAW5POP2uxVGsMB9i3iCWdPYnf_yQELzTYoz_t86loAUfOwiXw4nOLGdCFeJyX-lvvbfheenA2n_j2TQZ0FxtBBGTAnIC_dYlQDJhW13op0v4zwNudqBcBRGxpfXq9wMWk_xw1d4p25E6W6vF1r8EWdytBmtWO6E_cVx_C6zQIC3dAGLoTOg3xB4-DOlr3-wNCTjDUx1z9XgVnE-k5ITiuk6y0gQcECM3C1As4vwSVucjb8pWfjZJpfg4qnp4WNEhOy_tnVdjZQRcU"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="p-10 space-y-10 max-w-[1920px] mx-auto w-full">
+<!-- Hero Welcome -->
+<section class="flex justify-between items-end">
+<div>
+<h1 class="text-[56px] font-extrabold tracking-[-0.02em] leading-tight text-on-surface">Operational Overview</h1>
+<p class="text-on-surface-variant text-lg font-body max-w-xl mt-2 leading-[1.6]">A curated snapshot of current warehouse throughput, fabric curation velocity, and storage integrity.</p>
+</div>
+<div class="flex space-x-4 mb-2">
+<button class="px-6 py-3 rounded-full text-sm font-bold bg-surface-container-high text-on-surface-variant hover:opacity-80 transition-opacity">
+                        Export Report
+                    </button>
+<button class="px-6 py-3 rounded-full text-sm font-bold soul-gradient text-white shadow-sm hover:opacity-90 transition-opacity">
+                        Quick Inbound
+                    </button>
+</div>
+</section>
+<!-- KPI Grid -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest cloud-shadow p-8 rounded-xl flex flex-col justify-between h-48 group hover:bg-primary transition-all duration-300">
+<div class="flex justify-between">
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant group-hover:text-primary-fixed">Total Fabric Rolls</span>
+<span class="material-symbols-outlined text-primary group-hover:text-white" data-icon="inventory_2">inventory_2</span>
+</div>
+<div>
+<p class="text-4xl font-extrabold text-on-surface group-hover:text-white leading-none">12,842</p>
+<p class="text-sm font-medium text-green-600 mt-2 flex items-center group-hover:text-green-300">
+<span class="material-symbols-outlined text-sm mr-1" data-icon="trending_up">trending_up</span>
+                            +4.2% from last month
+                        </p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest cloud-shadow p-8 rounded-xl flex flex-col justify-between h-48 group hover:bg-primary transition-all duration-300">
+<div class="flex justify-between">
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant group-hover:text-primary-fixed">Storage Utilization</span>
+<span class="material-symbols-outlined text-primary group-hover:text-white" data-icon="shelves">shelves</span>
+</div>
+<div>
+<div class="flex items-end space-x-2">
+<p class="text-4xl font-extrabold text-on-surface group-hover:text-white leading-none">78%</p>
+<p class="text-xs font-bold text-on-surface-variant group-hover:text-primary-fixed mb-1 uppercase">Capacity</p>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full mt-4 overflow-hidden group-hover:bg-primary-container">
+<div class="bg-primary group-hover:bg-white h-full" style="width: 78%"></div>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest cloud-shadow p-8 rounded-xl flex flex-col justify-between h-48 group hover:bg-primary transition-all duration-300">
+<div class="flex justify-between">
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant group-hover:text-primary-fixed">Pending Shipments</span>
+<span class="material-symbols-outlined text-primary group-hover:text-white" data-icon="local_shipping">local_shipping</span>
+</div>
+<div>
+<p class="text-4xl font-extrabold text-on-surface group-hover:text-white leading-none">24</p>
+<p class="text-sm font-medium text-orange-600 mt-2 group-hover:text-orange-200">12 flagged for QC priority</p>
+</div>
+</div>
+</section>
+<!-- Main Insights Layout -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+<!-- Warehouse Throughput Chart Placeholder -->
+<div class="lg:col-span-8 bg-surface-container-lowest cloud-shadow rounded-xl p-10 flex flex-col">
+<div class="flex justify-between items-center mb-10">
+<div>
+<h2 class="text-2xl font-extrabold tracking-tight text-on-surface">Warehouse Throughput</h2>
+<p class="text-sm text-on-surface-variant">Fabric movement velocity across all sectors</p>
+</div>
+<div class="flex items-center space-x-4">
+<div class="flex items-center">
+<span class="w-3 h-3 rounded-full bg-primary mr-2"></span>
+<span class="text-xs font-bold uppercase tracking-tighter">Inbound</span>
+</div>
+<div class="flex items-center">
+<span class="w-3 h-3 rounded-full bg-blue-300 mr-2"></span>
+<span class="text-xs font-bold uppercase tracking-tighter">Outbound</span>
+</div>
+</div>
+</div>
+<!-- Chart Visualization (Abstracted for UI) -->
+<div class="flex-1 flex items-end justify-between space-x-4 min-h-[300px]">
+<div class="w-full flex flex-col items-center space-y-4">
+<div class="w-full flex items-end space-x-1 justify-center">
+<div class="bg-primary w-full rounded-t-lg" style="height: 120px"></div>
+<div class="bg-blue-200 w-full rounded-t-lg" style="height: 80px"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Mon</span>
+</div>
+<div class="w-full flex flex-col items-center space-y-4">
+<div class="w-full flex items-end space-x-1 justify-center">
+<div class="bg-primary w-full rounded-t-lg" style="height: 150px"></div>
+<div class="bg-blue-200 w-full rounded-t-lg" style="height: 110px"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Tue</span>
+</div>
+<div class="w-full flex flex-col items-center space-y-4">
+<div class="w-full flex items-end space-x-1 justify-center">
+<div class="bg-primary w-full rounded-t-lg" style="height: 220px"></div>
+<div class="bg-blue-200 w-full rounded-t-lg" style="height: 160px"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Wed</span>
+</div>
+<div class="w-full flex flex-col items-center space-y-4">
+<div class="w-full flex items-end space-x-1 justify-center">
+<div class="bg-primary w-full rounded-t-lg" style="height: 180px"></div>
+<div class="bg-blue-200 w-full rounded-t-lg" style="height: 130px"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Thu</span>
+</div>
+<div class="w-full flex flex-col items-center space-y-4">
+<div class="w-full flex items-end space-x-1 justify-center">
+<div class="bg-primary w-full rounded-t-lg" style="height: 260px"></div>
+<div class="bg-blue-200 w-full rounded-t-lg" style="height: 190px"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Fri</span>
+</div>
+<div class="w-full flex flex-col items-center space-y-4">
+<div class="w-full flex items-end space-x-1 justify-center">
+<div class="bg-primary w-full rounded-t-lg" style="height: 100px"></div>
+<div class="bg-blue-200 w-full rounded-t-lg" style="height: 60px"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Sat</span>
+</div>
+<div class="w-full flex flex-col items-center space-y-4">
+<div class="w-full flex items-end space-x-1 justify-center">
+<div class="bg-primary w-full rounded-t-lg" style="height: 80px"></div>
+<div class="bg-blue-200 w-full rounded-t-lg" style="height: 40px"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Sun</span>
+</div>
+</div>
+</div>
+<!-- Action Center -->
+<div class="lg:col-span-4 bg-surface-container-low rounded-xl p-8 flex flex-col space-y-6">
+<h2 class="text-xl font-extrabold tracking-tight text-on-surface">Action Center</h2>
+<div class="space-y-4">
+<button class="w-full text-left bg-white p-4 rounded-xl flex items-center hover:bg-primary group transition-all duration-300">
+<div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center mr-4 group-hover:bg-on-primary-container">
+<span class="material-symbols-outlined text-primary group-hover:text-white" data-icon="barcode_scanner">barcode_scanner</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface group-hover:text-white">Batch Scan Incoming</p>
+<p class="text-xs text-on-surface-variant group-hover:text-blue-100">8 containers arriving at Dock A</p>
+</div>
+</button>
+<button class="w-full text-left bg-white p-4 rounded-xl flex items-center hover:bg-primary group transition-all duration-300">
+<div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center mr-4 group-hover:bg-on-primary-container">
+<span class="material-symbols-outlined text-primary group-hover:text-white" data-icon="biotech">biotech</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface group-hover:text-white">Approve Fabric QC</p>
+<p class="text-xs text-on-surface-variant group-hover:text-blue-100">14 new arrivals pending check</p>
+</div>
+</button>
+<button class="w-full text-left bg-white p-4 rounded-xl flex items-center hover:bg-primary group transition-all duration-300">
+<div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center mr-4 group-hover:bg-on-primary-container">
+<span class="material-symbols-outlined text-primary group-hover:text-white" data-icon="pallet">pallet</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface group-hover:text-white">Optimize Bin Space</p>
+<p class="text-xs text-on-surface-variant group-hover:text-blue-100">Sector 4 recommendations ready</p>
+</div>
+</button>
+</div>
+<div class="flex-1 border-t-2 border-dashed border-outline-variant/20 pt-6 flex flex-col justify-end">
+<div class="bg-primary p-6 rounded-xl text-white relative overflow-hidden">
+<div class="relative z-10">
+<h3 class="text-sm font-bold uppercase tracking-widest mb-1">Curation Tip</h3>
+<p class="text-xs opacity-90 leading-relaxed">Ensure high-denier linens are stored in humidity-controlled Sector G to maintain fiber integrity.</p>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-20">
+<span class="material-symbols-outlined text-8xl" data-icon="lightbulb">lightbulb</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- New Curations (Recently Added Fabrics) -->
+<section class="space-y-6">
+<div class="flex justify-between items-center">
+<h2 class="text-2xl font-extrabold tracking-tight text-on-surface">New Curations</h2>
+<a class="text-sm font-bold text-primary hover:underline" href="#">View Entire Collection</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+<!-- Fabric Item 1 -->
+<div class="bg-surface-container-lowest cloud-shadow rounded-xl overflow-hidden group">
+<div class="h-48 overflow-hidden">
+<img alt="Azure Silk Blend" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Close-up of luxurious azure blue silk fabric with elegant ripples and soft highlights, high resolution textile texture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqOG8QSiupx6WWL-S69mkCTq7jB7yoCuveLTEj-EBk0DImjXeKQtKVS1r3ctRzEFSjVTrlBn4XXc4gtfC21lUN_KdzU8FiTrzTIL_mWzxn_pwyzNIusC0l6bVMD-hJyOtVSMfltbbxdb0iAfQcn2jAMpdbzA4sV563tZ7u1QbDhpRnrxhkTLh3JJmJnzFpz5zx1n4lW5DOa-iQiVIO_9r9LxzwLnIRrqOS0ROiZV3kGmgaFaVgAemcmN-9jRs42SGPLLBUufd_EjU"/>
+</div>
+<div class="p-6 space-y-1">
+<div class="flex justify-between items-start">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">SKU: AS-0042</p>
+<span class="px-2 py-1 bg-surface-container-low text-[10px] font-bold text-primary rounded">SILK</span>
+</div>
+<h3 class="text-lg font-bold text-on-surface pt-2">Azure Silk Blend</h3>
+<p class="text-xs text-on-surface-variant">220 GSM • 140cm Width • Italy</p>
+</div>
+</div>
+<!-- Fabric Item 2 -->
+<div class="bg-surface-container-lowest cloud-shadow rounded-xl overflow-hidden group">
+<div class="h-48 overflow-hidden">
+<img alt="Charcoal Merino Wool" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Richly textured charcoal grey merino wool fabric, heavy weight, showing detailed weave patterns under warm directional studio lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4mgLhnpDTn9K8euSty-OUFvP-0-NvH3-UQQD81BqHiK0gC1BvrFumdZnHjL7T83EPNFNaRcTW8ZhVnl_-1ii48I4EJ1h8-nGDtrL3AWfVQI1bIqQZlQzzeIRIoLFygYNHWHGT4dhd58JvuwFpgfvBkzB7b6osWthkf4bt6zEH0iR7O9moGGPnTuSufdU-ivof17lWLRitiLP-A3uNGKBI6WtDUG6dG6jS4FASjmmflpB1donfW_1JOgqnWrjpKgRIot9-IH9iHUQ"/>
+</div>
+<div class="p-6 space-y-1">
+<div class="flex justify-between items-start">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">SKU: MW-8821</p>
+<span class="px-2 py-1 bg-surface-container-low text-[10px] font-bold text-primary rounded">WOOL</span>
+</div>
+<h3 class="text-lg font-bold text-on-surface pt-2">Charcoal Merino</h3>
+<p class="text-xs text-on-surface-variant">380 GSM • 155cm Width • New Zealand</p>
+</div>
+</div>
+<!-- Fabric Item 3 -->
+<div class="bg-surface-container-lowest cloud-shadow rounded-xl overflow-hidden group">
+<div class="h-48 overflow-hidden">
+<img alt="Ochre Stonewashed Linen" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Ochre yellow stonewashed linen fabric with natural creases and organic texture, soft afternoon sunlight from a side window." src="https://lh3.googleusercontent.com/aida-public/AB6AXuARsG0HgjRgDQCvCmV1XdHy1xDh7m8kaxHBsCodsC1VKQfEhV5OwDDutLJdU_S43clleAP0cbv0r1XOnU548HMQ3JRG1L8mOID3S4IhLGiYNDyFEVftwoFsNARKPZUoLWn3auIPVEJdOJOq3CbojaqhrYgnurvjYa4611vCxeX1VsldxUVjVzy9M5tY2LLpbci4zAkradgi4nkNoZH7zwqX1YYaMK7sFyeFylvmbRo1d_QAqJCQ1uHHdZjewwGzYMFw0jkLt_DcwxI"/>
+</div>
+<div class="p-6 space-y-1">
+<div class="flex justify-between items-start">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">SKU: LN-1209</p>
+<span class="px-2 py-1 bg-surface-container-low text-[10px] font-bold text-primary rounded">LINEN</span>
+</div>
+<h3 class="text-lg font-bold text-on-surface pt-2">Stonewashed Linen</h3>
+<p class="text-xs text-on-surface-variant">180 GSM • 135cm Width • Belgium</p>
+</div>
+</div>
+<!-- Fabric Item 4 -->
+<div class="bg-surface-container-lowest cloud-shadow rounded-xl overflow-hidden group">
+<div class="h-48 overflow-hidden">
+<img alt="Raw Denim Indigo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Deep indigo raw denim fabric showing the crisp twill weave and slight metallic sheen of unwashed cotton, industrial aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQXw7qq-zd4LLOz-Mg_Y-hHugIslY7PYFXK2OW3mczTgInOvnzUvOa_l4iV_hf5c_mQGktFBxiHhGFSjf3olCe_Rw8gZP0GussMB8b-u-IYtLEvtYB7nqdHDwi_o47qV3qiRaD1j1dqZn-jbzzF9x9hMyK-6ihEBnz7KqQDHh4xmTspxqBLVBhJocGh8E6ZVaoSSt42DkS2lQGzP63gS1xuhV7e99resJFXmLPIMr_EZ_hFOTp72x1w96dbdHmpARKFs-7NEnYThw"/>
+</div>
+<div class="p-6 space-y-1">
+<div class="flex justify-between items-start">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">SKU: DM-5540</p>
+<span class="px-2 py-1 bg-surface-container-low text-[10px] font-bold text-primary rounded">COTTON</span>
+</div>
+<h3 class="text-lg font-bold text-on-surface pt-2">Raw Indigo Denim</h3>
+<p class="text-xs text-on-surface-variant">14.5 OZ • 80cm Width • Japan</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Subtle Footer -->
+<footer class="mt-auto px-10 py-6 text-on-surface-variant text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between border-t border-surface-container-high/20">
+<span>The Digital Curator © 2024 Inventory Management System</span>
+<span>Version 4.1.2_Stable • Node_West_02</span>
+</footer>
+</main>
+</body></html>

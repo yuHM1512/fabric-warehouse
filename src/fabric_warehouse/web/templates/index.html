@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+    <div class="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Fabric Warehouse</div>
+        <h2 class="mt-2 text-3xl font-extrabold font-headline text-on-surface">Tổng quan</h2>
+        <p class="mt-3 text-sm text-on-surface-variant leading-relaxed">
+          Khung dự án WMS (FastAPI + Tailwind + PostgreSQL). Mục tiêu: import Excel → tạo bảng treo → nhập kho → định danh vị trí → xuất kho → tái nhập.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a
+          href="/wms"
+          class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+        >
+          <span class="material-symbols-outlined text-base">dashboard</span>
+          Vào WMS
+        </a>
+      </div>
+    </div>
+  </section>
+{% endblock %}

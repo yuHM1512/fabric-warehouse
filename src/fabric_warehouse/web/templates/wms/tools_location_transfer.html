@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Điều chuyển</div>
+        <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Điều chuyển vị trí</h2>
+        <p class="mt-2 text-sm text-on-surface-variant leading-relaxed">
+          Chọn vị trí hiện tại → tick cây → chọn vị trí mới (có log).
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/wms/tools" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Tools</a>
+        <a href="/wms" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">WMS</a>
+      </div>
+    </div>
+
+    {% if request.query_params.get('saved') %}
+      <div class="mt-8 rounded-2xl bg-secondary-container px-6 py-4 text-sm text-on-surface">
+        <span class="font-bold">Đã điều chuyển vị trí.</span>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+    <form method="get" action="/wms/tools/location-transfer" class="grid grid-cols-1 gap-6 md:grid-cols-4 md:items-end">
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="tang">Tầng</label>
+        <select id="tang" name="tang" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
+          {% for t in tang_options %}
+            <option value="{{ t }}" {% if tang == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="line">Line</label>
+        <select id="line" name="line" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
+          {% for l in line_options %}
+            <option value="{{ l }}" {% if line == l %}selected{% endif %}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="pallet">Pallet</label>
+        <select id="pallet" name="pallet" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
+          {% for p in pallet_options %}
+            <option value="{{ p }}" {% if pallet == p %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex items-center gap-3">
+        <button
+          type="submit"
+          class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+        >
+          <span class="material-symbols-outlined text-base">search</span>
+          Xem
+        </button>
+        <div class="text-xs text-on-surface-variant">Vị trí hiện tại: <span class="font-extrabold font-headline text-on-surface">{{ vi_tri }}</span></div>
+      </div>
+    </form>
+  </section>
+
+  <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+    <form method="post" action="/wms/tools/location-transfer">
+      <input type="hidden" name="row_count" value="{{ rows|length }}" />
+
+      <div class="px-10 py-8 bg-surface-container-low grid grid-cols-1 gap-6 md:grid-cols-4 md:items-end">
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Vị trí mới</div>
+          <label class="mt-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_tang">Tầng</label>
+          <select id="to_tang" name="to_tang" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+            {% for t in tang_options %}
+              <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_line">Line</label>
+          <select id="to_line" name="to_line" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+            {% for l in line_options %}
+              <option value="{{ l }}">{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_pallet">Pallet</label>
+          <select id="to_pallet" name="to_pallet" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+            {% for p in pallet_options %}
+              <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="note">Ghi chú</label>
+          <input id="note" name="note" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0" placeholder="(tuỳ chọn)" />
+        </div>
+
+        <div class="md:col-span-4 flex flex-wrap items-center gap-3">
+          <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="selectAll(true)">
+            Chọn tất cả
+          </button>
+          <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="selectAll(false)">
+            Bỏ chọn
+          </button>
+          <button
+            type="submit"
+            class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+          >
+            <span class="material-symbols-outlined text-base">swap_horiz</span>
+            Điều chuyển
+          </button>
+          <div class="text-xs text-on-surface-variant">Chỉ list cây “Đang lưu” tại vị trí hiện tại.</div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-surface-container-low text-on-surface-variant">
+            <tr class="text-left">
+              <th class="px-10 py-4 w-10"></th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Mã cây</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Nhu cầu</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Lot</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Vị trí</th>
+            </tr>
+          </thead>
+          <tbody class="bg-surface-container-lowest">
+            {% for r in rows %}
+              {% set i = loop.index0 %}
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="px-10 py-4">
+                  <input class="sel-checkbox h-4 w-4 rounded" type="checkbox" name="sel_{{ i }}" />
+                  <input type="hidden" name="ma_cay_{{ i }}" value="{{ r.ma_cay }}" />
+                </td>
+                <td class="px-10 py-4 font-semibold">{{ r.ma_cay }}</td>
+                <td class="px-10 py-4 font-semibold">{{ r.nhu_cau or "" }}</td>
+                <td class="px-10 py-4 font-semibold">{{ r.lot or "" }}</td>
+                <td class="px-10 py-4 font-extrabold font-headline text-primary">{{ r.vi_tri or "" }}</td>
+              </tr>
+            {% else %}
+              <tr><td class="px-10 py-6 text-on-surface-variant" colspan="5">Không có cây tại vị trí này.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </section>
+
+  <script>
+    function selectAll(flag) {
+      document.querySelectorAll(".sel-checkbox").forEach((el) => {
+        if (el.disabled) return;
+        el.checked = !!flag;
+      });
+    }
+  </script>
+{% endblock %}

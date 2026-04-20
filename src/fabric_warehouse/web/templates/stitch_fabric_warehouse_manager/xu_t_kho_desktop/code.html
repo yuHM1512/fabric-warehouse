@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Digital Curator | Outbound Logistics</title>
+<!-- Google Fonts: Manrope & Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#98b3ff",
+                    "secondary-container": "#e1e2e9",
+                    "surface-container": "#edeeef",
+                    "error": "#ba1a1a",
+                    "surface-tint": "#2c59ba",
+                    "on-secondary-fixed-variant": "#44474c",
+                    "tertiary": "#5d1900",
+                    "surface-container-low": "#f3f4f5",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-fixed-dim": "#ffb59d",
+                    "on-error": "#ffffff",
+                    "primary-fixed": "#dae2ff",
+                    "secondary-fixed-dim": "#c5c6cd",
+                    "primary-fixed-dim": "#b2c5ff",
+                    "primary": "#002b73",
+                    "on-primary-fixed": "#001848",
+                    "on-primary-fixed-variant": "#0040a1",
+                    "surface": "#f8f9fa",
+                    "inverse-on-surface": "#f0f1f2",
+                    "on-surface": "#191c1d",
+                    "on-tertiary-fixed": "#390c00",
+                    "secondary-fixed": "#e1e2e9",
+                    "surface-container-high": "#e7e8e9",
+                    "outline-variant": "#c3c6d4",
+                    "on-secondary-fixed": "#191c21",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "background": "#f8f9fa",
+                    "tertiary-fixed": "#ffdbd0",
+                    "tertiary-container": "#822803",
+                    "primary-container": "#0040a1",
+                    "on-secondary-container": "#62646a",
+                    "error-container": "#ffdad6",
+                    "inverse-primary": "#b2c5ff",
+                    "on-surface-variant": "#434652",
+                    "on-error-container": "#93000a",
+                    "surface-bright": "#f8f9fa",
+                    "surface-dim": "#d9dadb",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-tertiary-container": "#ff9c7a",
+                    "on-secondary": "#ffffff",
+                    "outline": "#747784",
+                    "on-background": "#191c1d",
+                    "inverse-surface": "#2e3132",
+                    "on-tertiary-fixed-variant": "#822803",
+                    "secondary": "#5c5e64",
+                    "surface-variant": "#e1e3e4"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .font-headline { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #0040a1 0%, #0056d2 100%);
+        }
+        .cloud-shadow {
+            box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);
+        }
+        .glass-effect {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+        /* Custom line height for academic editorial feel */
+        .academic-body { line-height: 1.6; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface flex min-h-screen">
+<!-- SIDEBAR ANCHOR: Mapping JSON SideNavBar -->
+<aside class="h-screen w-72 flex-shrink-0 sticky top-0 bg-slate-50 dark:bg-slate-900 flex flex-col py-8 px-6 space-y-6">
+<div class="text-lg font-black text-blue-900 dark:text-blue-100 tracking-tight mb-8">
+            The Digital Curator
+            <span class="block text-xs font-bold uppercase tracking-wider text-slate-500 mt-1">Fabric Warehouse</span>
+</div>
+<nav class="flex-1 space-y-2">
+<!-- Dashboard Tab -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-xs font-bold uppercase tracking-wider">Dashboard</span>
+</a>
+<!-- Inbound Tab -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined" data-icon="input">input</span>
+<span class="text-xs font-bold uppercase tracking-wider">Inbound</span>
+</a>
+<!-- Outbound Tab (ACTIVE STATE MAPPING) -->
+<a class="flex items-center gap-3 px-4 py-3 text-blue-700 dark:text-blue-400 font-extrabold border-r-4 border-blue-700 dark:border-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined" data-icon="output" style="font-variation-settings: 'FILL' 1;">output</span>
+<span class="text-xs font-bold uppercase tracking-wider">Outbound</span>
+</a>
+<!-- Reports Tab -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+<span class="text-xs font-bold uppercase tracking-wider">Reports</span>
+</a>
+</nav>
+<div class="pt-6 mt-6 border-t border-slate-200/20 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-xs font-bold uppercase tracking-wider">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="text-xs font-bold uppercase tracking-wider">Support</span>
+</a>
+</div>
+<div class="mt-auto flex items-center gap-4 px-4 py-4 bg-surface-container-high rounded-xl">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Warehouse Admin profile portrait with a professional neutral expression and cinematic soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATTasXBUeALg9XLCWItNb9FBVxcL_UlXFu5FeL8K6xGzmgKuRpGr7y5iJ4-0Pmgpzw1RfxmLnd4TFEExBMTqPMdoslEZJIVumUoLlztDGPsQqNmZuNK3BVU-I_udU55lx30orbeFyrYwvh1rQSKnGOJaHn2d7iWtSTsCbHlFzVZiuIV7mWeKdsRx03HSgt11nzLhSsegy1UBNboakCJChElXZbzcqOgmHG9ppIVg65c35AixLRfNdYuY0iT2kuwj3BXysh228vhcc"/>
+<div class="overflow-hidden">
+<p class="text-xs font-bold truncate">Curator Profile</p>
+<p class="text-[10px] text-on-surface-variant truncate">Master Archivist</p>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0">
+<!-- TOP APP BAR ANCHOR: Mapping JSON TopAppBar -->
+<header class="sticky top-0 w-full z-40 bg-white/80 backdrop-blur-xl shadow-[0px_20px_40px_rgba(25,28,29,0.05)]">
+<div class="flex items-center justify-between px-10 py-6 max-w-[1920px] mx-auto">
+<div class="flex items-center gap-8 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-md pl-10 pr-4 py-2.5 focus:bg-surface-container-lowest focus:ring-0 transition-all text-sm" placeholder="Quick Search" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="signature-gradient text-white px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-opacity active:scale-95">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                        New Issue Order
+                    </button>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="p-2 hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</div>
+</div>
+</header>
+<!-- CONTENT CANVAS -->
+<div class="px-10 py-10 max-w-[1920px] mx-auto w-full space-y-12">
+<!-- HEADER & STATS: Asymmetric Layout -->
+<section class="flex flex-col md:flex-row md:items-end justify-between gap-8">
+<div class="space-y-2">
+<h1 class="text-5xl font-headline font-extrabold tracking-tight text-primary">Outbound Logistics</h1>
+<p class="text-on-surface-variant academic-body text-lg">Managing the flow of archival textiles to global ateliers.</p>
+</div>
+<!-- BENTO-INSPIRED STATS -->
+<div class="flex gap-4">
+<div class="bg-surface-container-lowest cloud-shadow p-6 rounded-xl flex flex-col min-w-[160px]">
+<span class="text-[10px] font-bold uppercase tracking-widest text-outline mb-1">Pending</span>
+<span class="text-3xl font-headline font-bold text-primary">12</span>
+<span class="text-[10px] text-on-surface-variant mt-auto">Awaiting Pick</span>
+</div>
+<div class="bg-surface-container-lowest cloud-shadow p-6 rounded-xl border-l-4 border-error flex flex-col min-w-[160px]">
+<span class="text-[10px] font-bold uppercase tracking-widest text-error mb-1">High Priority</span>
+<span class="text-3xl font-headline font-bold text-on-surface">04</span>
+<span class="text-[10px] text-on-surface-variant mt-auto">Due Today</span>
+</div>
+<div class="bg-surface-container-lowest cloud-shadow p-6 rounded-xl flex flex-col min-w-[160px]">
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-primary-fixed-variant mb-1">Ready</span>
+<span class="text-3xl font-headline font-bold text-primary">28</span>
+<span class="text-[10px] text-on-surface-variant mt-auto">Manifested</span>
+</div>
+</div>
+</section>
+<!-- EDITORIAL GRID OF ORDER CARDS -->
+<section class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+<!-- CARD 1 -->
+<div class="group bg-surface-container-lowest rounded-xl p-6 cloud-shadow flex flex-col transition-all hover:scale-[1.02]">
+<div class="flex justify-between items-start mb-6">
+<div class="h-24 w-24 rounded-lg bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close-up of deep navy premium wool fabric texture with elegant weave pattern and soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSPOxREC0F0-aNvNSTuM_UDhRfb06NGcFogGMqpCIpY_y0IeVvSHDYPlwmTd9Mhoscjf7XGbs3amI259gHvaQiEk8o_iI9ZIgEFZVZ3L0h3_7SER83_6sQGJdSQzh4j6XLWJWwjS4C9r2m0ANMav-jyW3_GLWANcKJQ_5SwgRds5dNqQWxu0tgFz9Yv9dEBD7sbj1fmoQCqy07_dRQ1gjIJQ6Xbk9z3rw6N_g_U0frwg4wo4R3LXoDELdr2hw1DwaE6Z9ccOQDyVA"/>
+</div>
+<div class="text-right">
+<div class="bg-error-container text-on-error-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter">Urgent Issue</div>
+<p class="text-[10px] text-outline mt-2 font-bold uppercase tracking-widest">SKU: WV-90234</p>
+</div>
+</div>
+<div class="mb-8">
+<h3 class="text-xl font-headline font-bold text-on-surface leading-tight">Regent Tailoring London</h3>
+<p class="text-sm text-on-surface-variant mt-1">Order #88291 • Standard Export</p>
+</div>
+<div class="mt-auto flex items-center justify-between pt-6 bg-surface-container-low rounded-lg px-4 py-3">
+<div>
+<p class="text-[10px] font-bold uppercase text-outline">Yardage</p>
+<p class="text-sm font-bold text-primary">45.00 m</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] font-bold uppercase text-outline">Status</p>
+<p class="text-sm font-bold text-secondary">Awaiting Batching</p>
+</div>
+</div>
+</div>
+<!-- CARD 2 -->
+<div class="group bg-surface-container-lowest rounded-xl p-6 cloud-shadow flex flex-col transition-all hover:scale-[1.02]">
+<div class="flex justify-between items-start mb-6">
+<div class="h-24 w-24 rounded-lg bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Fine silk textile with a delicate floral jacquard weave in champagne tones, high detail macro shot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwtEv3eDe0WHPa4XREO_QCcgIOT2gz4jp5tQONrLcSfkBqtSkcyK3Tam-TWhgw2hQj70jIhyb2ZLVCSS5FZrJwkTrmRPohBwDRvMj2OUadk1pBBoEc0fwra8WvKLmuNuS6C4Gfl9xsMn8ETuCgL1DUcBrN4DlADLnpDSuI-yoFGL8MOg-W07Cx0LOWzySY9pvawyUTk5zzhpLuvkfuscFFX_SOy2Cym4416QCDwsOXLR2Sgis3LVmh4w0B0u6br-lnTEZcSfcgUUA"/>
+</div>
+<div class="text-right">
+<div class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter">Standard</div>
+<p class="text-[10px] text-outline mt-2 font-bold uppercase tracking-widest">SKU: SLK-1102</p>
+</div>
+</div>
+<div class="mb-8">
+<h3 class="text-xl font-headline font-bold text-on-surface leading-tight">Milanese Fashion House</h3>
+<p class="text-sm text-on-surface-variant mt-1">Order #88295 • Air Freight</p>
+</div>
+<div class="mt-auto flex items-center justify-between pt-6 bg-surface-container-low rounded-lg px-4 py-3">
+<div>
+<p class="text-[10px] font-bold uppercase text-outline">Yardage</p>
+<p class="text-sm font-bold text-primary">122.50 m</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] font-bold uppercase text-outline">Status</p>
+<p class="text-sm font-bold text-secondary">Rolling in progress</p>
+</div>
+</div>
+</div>
+<!-- CARD 3 -->
+<div class="group bg-surface-container-lowest rounded-xl p-6 cloud-shadow flex flex-col transition-all hover:scale-[1.02]">
+<div class="flex justify-between items-start mb-6">
+<div class="h-24 w-24 rounded-lg bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Coarse textured raw linen fabric in natural oatmeal color, rustic aesthetic with soft directional lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfpxGUI8s_qj_pOc8ilaYqqbIfN5vIsDMC7oq68YWgBIBtTizdphLj-XZHoCopJAxzrUZmE-qDzCkgG7LNqT9OVNuSjvmcVncfeqId3iw1LpqcaxGSiwA97jwdihlojo0lbrbrhdw0BR28VwA-khwZQ36gAcDfbEy8yLUGMac5pQur5uyxs4yEde9bNSCOqaGXg5QbyuA3avIeCdiogGamfCo7SNqhYpKUqnpsjiw3b_NNKKVA7mOVTYFcaGl7UjDbpsCly_rZxSU"/>
+</div>
+<div class="text-right">
+<div class="bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter">Verified Ready</div>
+<p class="text-[10px] text-outline mt-2 font-bold uppercase tracking-widest">SKU: LIN-5541</p>
+</div>
+</div>
+<div class="mb-8">
+<h3 class="text-xl font-headline font-bold text-on-surface leading-tight">Savile Row Bespoke</h3>
+<p class="text-sm text-on-surface-variant mt-1">Order #88302 • Local Courier</p>
+</div>
+<div class="mt-auto flex items-center justify-between pt-6 bg-surface-container-low rounded-lg px-4 py-3">
+<div>
+<p class="text-[10px] font-bold uppercase text-outline">Yardage</p>
+<p class="text-sm font-bold text-primary">12.00 m</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] font-bold uppercase text-outline">Status</p>
+<p class="text-sm font-bold text-on-primary-fixed-variant">Ready for Pickup</p>
+</div>
+</div>
+</div>
+<!-- CARD 4 -->
+<div class="group bg-surface-container-lowest rounded-xl p-6 cloud-shadow flex flex-col transition-all hover:scale-[1.02]">
+<div class="flex justify-between items-start mb-6">
+<div class="h-24 w-24 rounded-lg bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Plush velvet fabric in deep emerald green with rich highlights and shadows, luxurious textile close-up" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6aXqSP-7wUO2bryG6hOG_fbzC_uec4u6rMGQN78gvOHDoctv2-pjrbeLwSTbC9mK1zco33xNtQEcpLUfJQYwxf1wUMl1YLBMrnkj4UeHAdE8c7bstIkwpctVQHUNpRstDS7GGWKUQzE8q2_ZHNtL_-rpOx7-S7o_7R2dbNfI6NHwECNel1LPT1l3XPIfc8-uOmlXM4ShvARk7JzOaymzuS7g7NxEAziLJvnhUaLuc4UbBSjSi4N1DQdeF8MpRXY6JcIpekxwgzos"/>
+</div>
+<div class="text-right">
+<div class="bg-error-container text-on-error-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter">High Priority</div>
+<p class="text-[10px] text-outline mt-2 font-bold uppercase tracking-widest">SKU: VEL-0082</p>
+</div>
+</div>
+<div class="mb-8">
+<h3 class="text-xl font-headline font-bold text-on-surface leading-tight">Antwerp Designer Loft</h3>
+<p class="text-sm text-on-surface-variant mt-1">Order #88310 • Priority International</p>
+</div>
+<div class="mt-auto flex items-center justify-between pt-6 bg-surface-container-low rounded-lg px-4 py-3">
+<div>
+<p class="text-[10px] font-bold uppercase text-outline">Yardage</p>
+<p class="text-sm font-bold text-primary">310.00 m</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] font-bold uppercase text-outline">Status</p>
+<p class="text-sm font-bold text-secondary">Awaiting Batching</p>
+</div>
+</div>
+</div>
+<!-- CARD 5 -->
+<div class="group bg-surface-container-lowest rounded-xl p-6 cloud-shadow flex flex-col transition-all hover:scale-[1.02]">
+<div class="flex justify-between items-start mb-6">
+<div class="h-24 w-24 rounded-lg bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Matte black performance technical fabric with micro-grid texture, minimalist modern apparel material" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpQp2k79tWhSjkY7tGDDvYthyzZ2buSxl6yp5c_2qVyx5H7uUHvyXM3IqWpZ9PL1xPbR_4Onbjnmpxkdx8j-9oYiC6t3KYUDXznjjHPbd6NM2mKdGwPqZB1DGSjSZ4YPyHi-1lZRrtaf4p3096AGy_yrvz43ARm2UQjgPmduidH4__MdFm5QwJALkuNEd537dBxDPovJN7ANO4GcdGp8g65I7rk1UZMr_Jf489ZEBqg1bDtisfToP8zrL-KECzpmpwaUhXfgpUfVY"/>
+</div>
+<div class="text-right">
+<div class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter">Standard</div>
+<p class="text-[10px] text-outline mt-2 font-bold uppercase tracking-widest">SKU: TEC-4491</p>
+</div>
+</div>
+<div class="mb-8">
+<h3 class="text-xl font-headline font-bold text-on-surface leading-tight">Tokyo Concept Store</h3>
+<p class="text-sm text-on-surface-variant mt-1">Order #88315 • Sea Freight</p>
+</div>
+<div class="mt-auto flex items-center justify-between pt-6 bg-surface-container-low rounded-lg px-4 py-3">
+<div>
+<p class="text-[10px] font-bold uppercase text-outline">Yardage</p>
+<p class="text-sm font-bold text-primary">540.00 m</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] font-bold uppercase text-outline">Status</p>
+<p class="text-sm font-bold text-secondary">Staging Area 4</p>
+</div>
+</div>
+</div>
+<!-- CARD 6 -->
+<div class="group bg-surface-container-lowest rounded-xl p-6 cloud-shadow flex flex-col transition-all hover:scale-[1.02]">
+<div class="flex justify-between items-start mb-6">
+<div class="h-24 w-24 rounded-lg bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Assorted high-end fabric rolls stacked in a warehouse setting, soft focused background with vibrant textile colors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwDebjn273mVImZwE1QNjw3wwJRQk4eWyLGh3Wz9XbLOVb7QyldeFLIvRGl43AKEUK-RdqeqV9D9q7yvQNMsUGdTQJTyDW1CNoeZjozDW93161qSfa1TNKS4zWQxuAk6ZFfnOMwYWNQ6Zwnp--D5neKL2aujGN-APVwqBrdiRuTYHaAXUqotO0e0eYSz3K5VAmk-50Q9-Gcx363Sz-OGE0wmWU-KXP5JDtY4B3ya-zQVmgUYlvs_1MBznaRA1ylQwqWmvQ8slPLAg"/>
+</div>
+<div class="text-right">
+<div class="bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter">Bulk Export</div>
+<p class="text-[10px] text-outline mt-2 font-bold uppercase tracking-widest">SKU: MIX-9900</p>
+</div>
+</div>
+<div class="mb-8">
+<h3 class="text-xl font-headline font-bold text-on-surface leading-tight">Berlin Art Collective</h3>
+<p class="text-sm text-on-surface-variant mt-1">Order #88322 • Ground Logistic</p>
+</div>
+<div class="mt-auto flex items-center justify-between pt-6 bg-surface-container-low rounded-lg px-4 py-3">
+<div>
+<p class="text-[10px] font-bold uppercase text-outline">Yardage</p>
+<p class="text-sm font-bold text-primary">88.50 m</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] font-bold uppercase text-outline">Status</p>
+<p class="text-sm font-bold text-secondary">Pending QC</p>
+</div>
+</div>
+</div>
+</section>
+<!-- PAGINATION / FOOTER AREA: Tonal Layering -->
+<footer class="flex items-center justify-between py-8 border-t-0 bg-surface-container-low rounded-2xl px-8">
+<div class="flex items-center gap-4">
+<button class="p-2 bg-surface-container-lowest rounded-full hover:bg-white transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<span class="text-xs font-bold uppercase tracking-widest text-outline">Page 01 / 08</span>
+<button class="p-2 bg-surface-container-lowest rounded-full hover:bg-white transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+<div class="academic-body text-xs text-on-surface-variant italic">
+                    Showing 1-6 of 42 outbound issue orders
+                </div>
+</footer>
+</div>
+</main>
+</body></html>

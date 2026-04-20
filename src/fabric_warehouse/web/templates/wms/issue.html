@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Xuất kho</div>
+        <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Outbound</h2>
+        <p class="mt-2 text-sm text-on-surface-variant leading-relaxed">
+          Chọn Nhu cầu → Lot → tick các cây “Đang lưu” để xuất.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/wms/stock/returns" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Tái nhập</a>
+        <a href="/wms" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">WMS</a>
+      </div>
+    </div>
+
+    {% if request.query_params.get('saved') %}
+      <div class="mt-8 rounded-2xl bg-secondary-container px-6 py-4 text-sm text-on-surface">
+        <span class="font-bold">Đã xuất kho.</span>
+      </div>
+    {% endif %}
+
+    <div class="mt-10 flex flex-wrap gap-3 text-sm">
+      <a
+        class="rounded-full px-6 py-3 font-bold transition-colors {% if tab == 'issue' %}text-white soul-gradient cloud-shadow{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+        href="/wms/issue?tab=issue{% if nhu_cau %}&nhu_cau={{ nhu_cau|urlencode }}{% endif %}{% if lot %}&lot={{ lot|urlencode }}{% endif %}"
+      >
+        Xuất kho
+      </a>
+      <a
+        class="rounded-full px-6 py-3 font-bold transition-colors {% if tab == 'history' %}text-white soul-gradient cloud-shadow{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+        href="/wms/issue?tab=history"
+      >
+        Lịch sử
+      </a>
+    </div>
+  </section>
+
+  {% if tab == 'issue' %}
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+      <form method="get" action="/wms/issue" class="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <input type="hidden" name="tab" value="issue" />
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="nhu_cau">Nhu cầu</label>
+          <select
+            id="nhu_cau"
+            name="nhu_cau"
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0"
+            onchange="this.form.submit()"
+          >
+            <option value="" {% if not nhu_cau %}selected{% endif %}>Chọn...</option>
+            {% for nc in nhu_cau_options %}
+              <option value="{{ nc }}" {% if nhu_cau == nc %}selected{% endif %}>{{ nc }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="lot">Lot</label>
+          <select
+            id="lot"
+            name="lot"
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0 disabled:opacity-50"
+            onchange="this.form.submit()"
+            {% if not nhu_cau %}disabled{% endif %}
+          >
+            <option value="" {% if not lot %}selected{% endif %}>Chọn...</option>
+            {% for l in lot_options %}
+              <option value="{{ l }}" {% if lot == l %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="flex items-end">
+          <a
+            class="inline-flex items-center gap-2 rounded-full bg-surface-container-low px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors"
+            href="/wms/issue?tab=issue{% if nhu_cau %}&nhu_cau={{ nhu_cau|urlencode }}{% endif %}"
+          >
+            <span class="material-symbols-outlined text-base">refresh</span>
+            Reset lọc
+          </a>
+        </div>
+      </form>
+    </section>
+
+    {% if nhu_cau and lot %}
+      <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+        <form method="post" action="/wms/issue">
+          <input type="hidden" name="nhu_cau" value="{{ nhu_cau }}" />
+          <input type="hidden" name="lot" value="{{ lot }}" />
+          <input type="hidden" name="row_count" value="{{ candidates|length }}" />
+
+          <div class="px-10 py-8 bg-surface-container-low grid grid-cols-1 gap-6 md:grid-cols-4 md:items-end">
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="ngay_xuat">Ngày xuất</label>
+              <input id="ngay_xuat" name="ngay_xuat" type="date" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0" required />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="status">Mục đích</label>
+              <select id="status" name="status" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                <option value="Cấp phát sản xuất">Cấp phát sản xuất</option>
+                <option value="Trả Mẹ Nhu">Trả Mẹ Nhu</option>
+              </select>
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="note">Ghi chú</label>
+              <input id="note" name="note" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0" placeholder="(tuỳ chọn)" />
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-surface-container-low text-on-surface-variant">
+                <tr class="text-left">
+                  <th class="px-10 py-4 w-10"></th>
+                  <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Mã cây</th>
+                  <th class="px-10 py-4 w-32 text-[10px] font-bold uppercase tracking-widest">Vị trí</th>
+                  <th class="px-10 py-4 w-28 text-right text-[10px] font-bold uppercase tracking-widest">YDS</th>
+                </tr>
+              </thead>
+              <tbody class="bg-surface-container-lowest">
+                {% for r in candidates %}
+                  {% set i = loop.index0 %}
+                  <tr class="hover:bg-surface-container-low transition-colors">
+                    <td class="px-10 py-4">
+                      <input class="h-4 w-4 rounded" type="checkbox" name="sel_{{ i }}" />
+                      <input type="hidden" name="ma_cay_{{ i }}" value="{{ r.ma_cay }}" />
+                    </td>
+                    <td class="px-10 py-4 font-semibold">{{ r.ma_cay }}</td>
+                    <td class="px-10 py-4 font-extrabold font-headline text-primary">{{ r.vi_tri or "" }}</td>
+                    <td class="px-10 py-4 text-right tabular-nums font-semibold">{{ r.actual_yards or "" }}</td>
+                  </tr>
+                {% else %}
+                  <tr><td class="px-10 py-6 text-on-surface-variant" colspan="4">Không có cây “Đang lưu” để xuất.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="px-10 py-8 bg-surface-container-low flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div class="text-xs text-on-surface-variant">Chỉ liệt kê cây có trạng thái “Đang lưu”.</div>
+            <button
+              type="submit"
+              class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+            >
+              <span class="material-symbols-outlined text-base">move_item</span>
+              Xuất kho
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <script>
+        // default date = today
+        (function () {
+          const el = document.getElementById("ngay_xuat");
+          if (el && !el.value) {
+            const d = new Date();
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            el.value = `${yyyy}-${mm}-${dd}`;
+          }
+        })();
+      </script>
+    {% endif %}
+  {% endif %}
+
+  {% if tab == 'history' %}
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+      <form method="get" action="/wms/issue" class="flex flex-col gap-6 md:flex-row md:items-end">
+        <input type="hidden" name="tab" value="history" />
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="from">Từ ngày</label>
+          <input id="from" name="from" type="date" class="mt-2 rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to">Đến ngày</label>
+          <input id="to" name="to" type="date" class="mt-2 rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+        </div>
+        <button
+          type="submit"
+          class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+        >
+          <span class="material-symbols-outlined text-base">filter_alt</span>
+          Lọc
+        </button>
+      </form>
+    </section>
+
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-surface-container-low text-on-surface-variant">
+            <tr class="text-left">
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">ID</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Ngày</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Nhu cầu</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Lot</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Mục đích</th>
+              <th class="px-10 py-4 text-right text-[10px] font-bold uppercase tracking-widest">Số cây</th>
+            </tr>
+          </thead>
+          <tbody class="bg-surface-container-lowest">
+            {% for it in issues %}
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="px-10 py-4 font-semibold">#{{ it.id }}</td>
+                <td class="px-10 py-4">{{ it.ngay_xuat }}</td>
+                <td class="px-10 py-4 font-semibold">{{ it.nhu_cau }}</td>
+                <td class="px-10 py-4 font-semibold">{{ it.lot }}</td>
+                <td class="px-10 py-4">{{ it.status }}</td>
+                <td class="px-10 py-4 text-right tabular-nums font-semibold">{{ issue_counts.get(it.id, 0) }}</td>
+              </tr>
+            {% else %}
+              <tr><td class="px-10 py-6 text-on-surface-variant" colspan="6">Chưa có lịch sử.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

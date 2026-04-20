@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Kho</div>
+        <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Định danh vị trí (Pallet)</h2>
+        <p class="mt-2 text-sm text-on-surface-variant leading-relaxed">
+          Điều kiện: cây vải phải <span class="font-semibold text-on-surface">đã kiểm kho</span> (có số thực tế).
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/wms/stock" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Kiểm kho</a>
+        <a href="/wms" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">WMS</a>
+      </div>
+    </div>
+
+    {% if request.query_params.get('saved') %}
+      <div class="mt-8 rounded-2xl bg-secondary-container px-6 py-4 text-sm text-on-surface">
+        <span class="font-bold">Đã gán vị trí</span> cho các cây đã chọn.
+      </div>
+    {% endif %}
+
+    <div class="mt-10 bg-surface-container-low rounded-[2rem] p-8">
+      <form method="get" action="/wms/stock/locations" class="grid grid-cols-1 gap-6 md:grid-cols-4">
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="nhu_cau">Nhu cầu</label>
+          <select
+            id="nhu_cau"
+            name="nhu_cau"
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+            onchange="this.form.submit()"
+          >
+            <option value="" {% if not nhu_cau %}selected{% endif %}>Chọn...</option>
+            {% for nc in nhu_cau_options %}
+              <option value="{{ nc }}" {% if nhu_cau == nc %}selected{% endif %}>{{ nc }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="anh_mau">Ánh màu</label>
+          <select
+            id="anh_mau"
+            name="anh_mau"
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0 disabled:opacity-50"
+            onchange="this.form.submit()"
+            {% if not nhu_cau %}disabled{% endif %}
+          >
+            <option value="" {% if not anh_mau %}selected{% endif %}>Tất cả</option>
+            {% for am in anh_mau_options %}
+              <option value="{{ am }}" {% if anh_mau == am %}selected{% endif %}>{{ am }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="lot">Lot</label>
+          <select
+            id="lot"
+            name="lot"
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0 disabled:opacity-50"
+            onchange="this.form.submit()"
+            {% if not nhu_cau %}disabled{% endif %}
+          >
+            <option value="" {% if not lot %}selected{% endif %}>Chọn...</option>
+            {% for l in lot_options %}
+              <option value="{{ l }}" {% if lot == l %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="flex items-end">
+          <a
+            class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors"
+            href="/wms/stock/locations{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}"
+          >
+            <span class="material-symbols-outlined text-base">refresh</span>
+            Reset lọc
+          </a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  {% if nhu_cau and lot %}
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+      <form method="post" action="/wms/stock/locations">
+        <input type="hidden" name="nhu_cau" value="{{ nhu_cau }}" />
+        <input type="hidden" name="anh_mau" value="{{ anh_mau or '' }}" />
+        <input type="hidden" name="lot" value="{{ lot }}" />
+        <input type="hidden" name="row_count" value="{{ rows|length }}" />
+
+        <div class="px-10 py-8 bg-surface-container-low flex flex-col gap-6">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="tang">Tầng</label>
+              <select id="tang" name="tang" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                {% for t in tang_options %}
+                  <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="line">Line</label>
+              <select id="line" name="line" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                {% for l in line_options %}
+                  <option value="{{ l }}">{{ l }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="pallet">Pallet</label>
+              <select id="pallet" name="pallet" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                {% for p in pallet_options %}
+                  <option value="{{ p }}">{{ p }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="selectAll(true)">
+              Chọn tất cả
+            </button>
+            <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="selectAll(false)">
+              Bỏ chọn
+            </button>
+            <button
+              type="submit"
+              class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+            >
+              <span class="material-symbols-outlined text-base">save</span>
+              Gán vị trí
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-surface-container-low text-on-surface-variant">
+              <tr class="text-left">
+                <th class="px-10 py-4 w-10"></th>
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Mã cây</th>
+                <th class="px-10 py-4 w-36 text-right text-[10px] font-bold uppercase tracking-widest">YDS (phiếu)</th>
+                <th class="px-10 py-4 w-36 text-right text-[10px] font-bold uppercase tracking-widest">Thực tế</th>
+                <th class="px-10 py-4 w-32 text-[10px] font-bold uppercase tracking-widest">Vị trí</th>
+                <th class="px-10 py-4 w-32 text-[10px] font-bold uppercase tracking-widest">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody class="bg-surface-container-lowest">
+              {% for r in rows %}
+                {% set i = loop.index0 %}
+                <tr class="hover:bg-surface-container-low transition-colors">
+                  <td class="px-10 py-4">
+                    <input
+                      class="sel-checkbox h-4 w-4 rounded"
+                      type="checkbox"
+                      name="sel_{{ i }}"
+                      {% if r.actual_yards is none %}disabled{% endif %}
+                      {% if r.vi_tri %}disabled{% endif %}
+                    />
+                    <input type="hidden" name="ma_cay_{{ i }}" value="{{ r.ma_cay }}" />
+                  </td>
+                  <td class="px-10 py-4 font-semibold">{{ r.ma_cay }}</td>
+                  <td class="px-10 py-4 text-right tabular-nums font-semibold">{{ r.expected_yards or "" }}</td>
+                  <td class="px-10 py-4 text-right tabular-nums">
+                    {% if r.actual_yards is none %}
+                      <span class="text-amber-700 font-semibold">Chưa kiểm kho</span>
+                    {% else %}
+                      <span class="font-semibold">{{ r.actual_yards }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-10 py-4">
+                    {% if r.vi_tri %}
+                      <span class="font-extrabold font-headline text-primary">{{ r.vi_tri }}</span>
+                    {% else %}
+                      <span class="text-on-surface-variant">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-10 py-4">
+                    {% if r.trang_thai %}
+                      <span class="inline-flex items-center rounded-full bg-secondary-container px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-on-surface">{{ r.trang_thai }}</span>
+                    {% else %}
+                      <span class="text-on-surface-variant">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td class="px-10 py-6 text-on-surface-variant" colspan="6">Không có dữ liệu cho bộ lọc này.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="px-10 py-8 bg-surface-container-low">
+          <div class="text-xs text-on-surface-variant">
+            Chỉ chọn các cây đã kiểm kho và chưa có vị trí.
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <script>
+      function selectAll(flag) {
+        document.querySelectorAll(".sel-checkbox").forEach((el) => {
+          if (el.disabled) return;
+          el.checked = !!flag;
+        });
+      }
+    </script>
+  {% endif %}
+{% endblock %}

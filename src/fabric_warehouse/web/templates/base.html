@@ -1,0 +1,235 @@
+<!doctype html>
+<html class="light" lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title or "Fabric Warehouse" }}</title>
+
+    {# Tailwind CDN for fast iteration. Replace with compiled CSS later. #}
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary-container": "#98b3ff",
+              "secondary-container": "#e1e2e9",
+              "surface-container": "#edeeef",
+              error: "#ba1a1a",
+              "surface-tint": "#2c59ba",
+              "on-secondary-fixed-variant": "#44474c",
+              tertiary: "#5d1900",
+              "surface-container-low": "#f3f4f5",
+              "on-tertiary": "#ffffff",
+              "tertiary-fixed-dim": "#ffb59d",
+              "on-error": "#ffffff",
+              "primary-fixed": "#dae2ff",
+              "secondary-fixed-dim": "#c5c6cd",
+              "primary-fixed-dim": "#b2c5ff",
+              primary: "#002b73",
+              "on-primary-fixed": "#001848",
+              "on-primary-fixed-variant": "#0040a1",
+              surface: "#f8f9fa",
+              "inverse-on-surface": "#f0f1f2",
+              "on-surface": "#191c1d",
+              "on-tertiary-fixed": "#390c00",
+              "secondary-fixed": "#e1e2e9",
+              "surface-container-high": "#e7e8e9",
+              "outline-variant": "#c3c6d4",
+              "on-secondary-fixed": "#191c21",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#ffffff",
+              background: "#f8f9fa",
+              "tertiary-fixed": "#ffdbd0",
+              "tertiary-container": "#822803",
+              "primary-container": "#0040a1",
+              "on-secondary-container": "#62646a",
+              "error-container": "#ffdad6",
+              "inverse-primary": "#b2c5ff",
+              "on-surface-variant": "#434652",
+              "on-error-container": "#93000a",
+              "surface-bright": "#f8f9fa",
+              "surface-dim": "#d9dadb",
+              "surface-container-highest": "#e1e3e4",
+              "on-tertiary-container": "#ff9c7a",
+              "on-secondary": "#ffffff",
+              outline: "#747784",
+              "on-background": "#191c1d",
+              "inverse-surface": "#2e3132",
+              "on-tertiary-fixed-variant": "#822803",
+              secondary: "#5c5e64",
+              "surface-variant": "#e1e3e4",
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+            fontFamily: {
+              headline: ["Manrope"],
+              body: ["Inter"],
+              label: ["Inter"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f8f9fa;
+      }
+
+      h1,
+      h2,
+      h3,
+      .font-headline {
+        font-family: "Manrope", sans-serif;
+        letter-spacing: -0.02em;
+      }
+
+      .material-symbols-outlined {
+        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+      }
+
+      .cloud-shadow {
+        box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);
+      }
+
+      .soul-gradient {
+        background: linear-gradient(135deg, #0040a1 0%, #0056d2 100%);
+      }
+
+      .glass-effect {
+        background-color: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(24px);
+      }
+    </style>
+  </head>
+
+  <body class="bg-surface text-on-surface antialiased flex min-h-screen">
+    {% set path = request.url.path %}
+
+    <aside class="h-screen w-72 flex-shrink-0 sticky top-0 bg-surface-container-lowest flex flex-col py-8 px-6">
+      <div class="mb-8">
+        <div class="flex flex-col">
+          <span class="text-xl font-extrabold leading-none font-headline">{{ app_name or "Fabric Warehouse" }}</span>
+          <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em] mt-2">WMS Portal</span>
+        </div>
+      </div>
+
+      <nav class="flex-1 space-y-1 text-sm">
+        <a
+          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path == '/' %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
+          href="/"
+        >
+          <span class="material-symbols-outlined">home</span>
+          <span class="text-[11px] font-bold uppercase tracking-widest">Tổng quan</span>
+        </a>
+
+        <a
+          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path == '/wms' %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
+          href="/wms"
+        >
+          <span class="material-symbols-outlined">dashboard</span>
+          <span class="text-[11px] font-bold uppercase tracking-widest">WMS</span>
+        </a>
+
+        <div class="pt-4">
+          <div class="px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Modules</div>
+        </div>
+
+        <a
+          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/receipts') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
+          href="/wms/receipts"
+        >
+          <span class="material-symbols-outlined">upload_file</span>
+          <span class="text-[11px] font-bold uppercase tracking-widest">Phiếu nhập</span>
+        </a>
+
+        <a
+          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/hanging') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
+          href="/wms/hanging"
+        >
+          <span class="material-symbols-outlined">qr_code_2</span>
+          <span class="text-[11px] font-bold uppercase tracking-widest">Bảng treo</span>
+        </a>
+
+        <a
+          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path == '/wms/stock' %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
+          href="/wms/stock"
+        >
+          <span class="material-symbols-outlined">fact_check</span>
+          <span class="text-[11px] font-bold uppercase tracking-widest">Nhập kho</span>
+        </a>
+
+        <a
+          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/stock/locations') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
+          href="/wms/stock/locations"
+        >
+          <span class="material-symbols-outlined">grid_view</span>
+          <span class="text-[11px] font-bold uppercase tracking-widest">Vị trí</span>
+        </a>
+
+        <a
+          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/issue') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
+          href="/wms/issue"
+        >
+          <span class="material-symbols-outlined">move_item</span>
+          <span class="text-[11px] font-bold uppercase tracking-widest">Xuất kho</span>
+        </a>
+
+        <a
+          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/stock/returns') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
+          href="/wms/stock/returns"
+        >
+          <span class="material-symbols-outlined">assignment_return</span>
+          <span class="text-[11px] font-bold uppercase tracking-widest">Tái nhập</span>
+        </a>
+
+        <a
+          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/tools') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
+          href="/wms/tools"
+        >
+          <span class="material-symbols-outlined">build</span>
+          <span class="text-[11px] font-bold uppercase tracking-widest">Tính năng khác</span>
+        </a>
+      </nav>
+
+      <div class="mt-8 rounded-2xl bg-surface-container-low p-5">
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Environment</div>
+        <div class="mt-2 text-sm font-semibold text-on-surface">{{ env_label or "Local" }}</div>
+        {% if settings_env %}
+          <div class="mt-1 text-xs text-on-surface-variant truncate">{{ settings_env }}</div>
+        {% endif %}
+      </div>
+    </aside>
+
+    <main class="flex-1 min-w-0">
+      <header class="sticky top-0 z-30 glass-effect">
+        <div class="mx-auto max-w-7xl px-10 py-6 flex items-center justify-between">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Trang</div>
+            <h1 class="text-2xl font-extrabold font-headline">{{ title or "Fabric Warehouse" }}</h1>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            {% block header_actions %}{% endblock %}
+          </div>
+        </div>
+      </header>
+
+      <div class="mx-auto max-w-7xl px-10 py-10">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </body>
+</html>

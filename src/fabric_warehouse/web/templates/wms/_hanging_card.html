@@ -1,0 +1,42 @@
+<div class="hang-card">
+  <table class="hang-table">
+    <tr>
+      <th colspan="3" class="hang-title">{{ (t.khach_hang or "DECATHLON") }}</th>
+    </tr>
+    <tr>
+      <th>NHÀ CUNG CẤP<br />(Supplier)</th>
+      <td colspan="2" class="hang-bold hang-value">{{ t.nha_cung_cap or t.customer or "" }}</td>
+    </tr>
+    <tr>
+      <th>NGÀY NHẬP HÀNG<br />(Date of import)</th>
+      <td colspan="2" class="hang-bold hang-value">{{ t.ngay_nhap_hang or "" }}</td>
+    </tr>
+    <tr>
+      <th>MÃ HÀNG</th>
+      <td colspan="2" class="hang-bold hang-value">{{ t.ma_hang or "" }}</td>
+    </tr>
+    <tr>
+      <th>NHU CẦU NGUYÊN LIỆU</th>
+      <td colspan="2" class="hang-bold hang-center hang-value">{{ t.nhu_cau or "" }}</td>
+    </tr>
+    <tr>
+      <th>LOẠI VẢI - MÃ VẢI<br />(Description - Model)</th>
+      <td class="hang-small">{{ t.loai_vai or "" }}</td>
+      <td class="hang-code hang-bold hang-center">{{ t.ma_art or "" }}</td>
+    </tr>
+    <tr>
+      <th>MÀU - MÃ MÀU<br />(Color - Item)</th>
+      <td class="hang-small">{{ t.mau_vai or "" }}</td>
+      <td class="hang-code hang-bold hang-center">{{ t.ma_mau or "" }}</td>
+    </tr>
+    <tr>
+      <th>LOT:</th>
+      <td colspan="2" class="hang-lot hang-bold hang-center">{{ t.lot or "" }}</td>
+    </tr>
+    <tr>
+      <th>KẾT QUẢ KIỂM TRA<br />(Result of check)</th>
+      <td class="hang-center hang-bold">ĐẠT<br />(Pass)</td>
+      <td class="hang-center hang-bold">{{ t.ket_qua_kiem_tra or "OK" }}</td>
+    </tr>
+  </table>
+</div>

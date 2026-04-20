@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title or "In bảng treo" }}</title>
+    <style>
+      @page {
+        size: A4 landscape;
+        margin: 0;
+      }
+
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #f1f5f9;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        font-family: "Times New Roman", Times, serif;
+      }
+
+      .toolbar {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 9999;
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn {
+        appearance: none;
+        border: 1px solid #0f172a;
+        background: #0f172a;
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .btn.secondary {
+        background: #fff;
+        color: #0f172a;
+      }
+
+      .wrap {
+        padding: 24px 18px;
+      }
+
+      .page {
+        width: 297mm;
+        height: 210mm;
+        margin: 0 auto 14px auto;
+        background: #fff;
+        box-sizing: border-box;
+        padding: 8mm 6mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .row {
+        display: flex;
+        gap: 6mm;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .hang-card {
+        width: 138mm;
+        height: 195mm;
+        background: #fff;
+        box-sizing: border-box;
+        border: 1px solid #222;
+        display: flex;
+      }
+
+      .hang-table {
+        width: 100%;
+        height: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 12px;
+        word-break: break-word;
+      }
+
+      .hang-table th, .hang-table td {
+        border: 1px solid #222;
+        padding: 4px 6px;
+        vertical-align: middle;
+      }
+
+      .hang-table th {
+        background: #f5f5f5;
+        font-weight: 700;
+        text-align: center;
+        font-size: 12px;
+      }
+
+      .hang-table th.hang-title {
+        font-size: 52px;
+        line-height: 1.1;
+        letter-spacing: 2px;
+        padding: 10px 0 8px 0;
+        background: #fff !important;
+      }
+
+      .hang-bold { font-weight: 700; }
+      .hang-center { text-align: center; }
+      .hang-value { font-size: 22px; }
+      .hang-small { font-size: 15px; }
+      .hang-code { font-size: 22px; }
+      .hang-lot { font-size: 44px; }
+
+      @media print {
+        body { background: #fff; }
+        .wrap { padding: 0; }
+        .toolbar { display: none; }
+        .page { margin: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <button class="btn" onclick="window.print()">In / Lưu PDF</button>
+      <button class="btn secondary" onclick="window.close()">Đóng</button>
+    </div>
+
+    <div class="wrap">
+      {% if not tags or tags|length == 0 %}
+        <div style="max-width: 900px; margin: 72px auto; padding: 18px; background: #fff; border: 1px solid #cbd5e1; border-radius: 14px;">
+          <div style="font-weight: 700; font-size: 18px;">Không có bảng treo để in</div>
+          <div style="margin-top: 6px; color: #475569;">Quay lại tab Bảng treo và chọn Nhu cầu hoặc tick các bảng treo.</div>
+        </div>
+      {% endif %}
+
+      {% for i in range(0, tags|length, 2) %}
+        <div class="page">
+          <div class="row">
+            {% set t = tags[i] %}
+            {% include "wms/_hanging_card.html" %}
+            {% if i + 1 < tags|length %}
+              {% set t = tags[i + 1] %}
+              {% include "wms/_hanging_card.html" %}
+            {% else %}
+              <div class="hang-card" style="border-color: transparent;"></div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </body>
+</html>

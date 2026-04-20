@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Nhập kho</div>
+        <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Tái nhập kho</h2>
+        <p class="mt-2 text-sm text-on-surface-variant leading-relaxed">
+          Chọn cây đã xuất nhưng chưa tái nhập để ghi nhận dư/hoàn và (nếu cần) gán nhu cầu + vị trí mới.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/wms/issue" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Xuất kho</a>
+        <a href="/wms" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">WMS</a>
+      </div>
+    </div>
+
+    {% if request.query_params.get('saved') %}
+      <div class="mt-8 rounded-2xl bg-secondary-container px-6 py-4 text-sm text-on-surface">
+        <span class="font-bold">Đã ghi nhận tái nhập.</span>
+      </div>
+    {% endif %}
+
+    <div class="mt-10 flex flex-wrap gap-3 text-sm">
+      <a
+        class="rounded-full px-6 py-3 font-bold transition-colors {% if tab == 'todo' %}text-white soul-gradient cloud-shadow{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+        href="/wms/stock/returns?tab=todo"
+      >
+        Chưa tái nhập
+      </a>
+      <a
+        class="rounded-full px-6 py-3 font-bold transition-colors {% if tab == 'history' %}text-white soul-gradient cloud-shadow{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+        href="/wms/stock/returns?tab=history"
+      >
+        Lịch sử
+      </a>
+    </div>
+  </section>
+
+  {% if tab == 'todo' %}
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-surface-container-low text-on-surface-variant">
+            <tr class="text-left">
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Ngày xuất</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Nhu cầu</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Lot</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Mã cây</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Vị trí</th>
+              <th class="px-10 py-4 text-right text-[10px] font-bold uppercase tracking-widest">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody class="bg-surface-container-lowest">
+            {% for r in candidates %}
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="px-10 py-4">{{ r.ngay_xuat }}</td>
+                <td class="px-10 py-4 font-semibold">{{ r.nhu_cau }}</td>
+                <td class="px-10 py-4 font-semibold">{{ r.lot }}</td>
+                <td class="px-10 py-4 font-extrabold font-headline">{{ r.ma_cay }}</td>
+                <td class="px-10 py-4 font-extrabold font-headline text-primary">{{ r.vi_tri or "" }}</td>
+                <td class="px-10 py-4 text-right">
+                  <button
+                    class="text-primary font-bold hover:opacity-80"
+                    type="button"
+                    onclick="openForm({{ r.issue_line_id }}, '{{ r.ma_cay }}', '{{ r.nhu_cau }}', '{{ r.lot }}')"
+                  >
+                    Tái nhập
+                  </button>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td class="px-10 py-6 text-on-surface-variant" colspan="6">Không còn cây nào chờ tái nhập.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div id="modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-3xl bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+        <div class="px-10 py-8 bg-surface-container-low flex items-start justify-between gap-6">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Ghi nhận</div>
+            <div class="mt-2 text-lg font-extrabold font-headline" id="modalTitle">—</div>
+          </div>
+          <button class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" type="button" onclick="closeForm()">
+            Đóng
+          </button>
+        </div>
+
+        <form class="px-10 py-8 grid grid-cols-1 gap-6 md:grid-cols-2" method="post" action="/wms/stock/returns">
+          <input type="hidden" name="issue_line_id" id="issue_line_id" />
+          <input type="hidden" name="ma_cay" id="ma_cay" />
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="ngay_tai_nhap">Ngày tái nhập</label>
+            <input id="ngay_tai_nhap" name="ngay_tai_nhap" type="date" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" required />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="status">Trạng thái</label>
+            <select id="status" name="status" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" onchange="toggleLocation()">
+              <option value="Tái nhập kho">Tái nhập kho</option>
+              <option value="Trả Mẹ Nhu">Trả Mẹ Nhu</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="yds_du">YDS dư</label>
+            <input id="yds_du" name="yds_du" type="text" inputmode="decimal" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" placeholder="VD: 12.5" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="nhu_cau_moi">Nhu cầu mới</label>
+            <input id="nhu_cau_moi" name="nhu_cau_moi" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" placeholder="VD: NC-TAM" />
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="lot_moi">Lot mới</label>
+            <input id="lot_moi" name="lot_moi" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" placeholder="(tuỳ chọn)" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="note">Ghi chú</label>
+            <input id="note" name="note" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" placeholder="(tuỳ chọn)" />
+          </div>
+
+          <div id="locFields" class="md:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-3 bg-surface-container-low rounded-[2rem] p-6">
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="tang">Tầng</label>
+              <select id="tang" name="tang" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                {% for t in tang_options %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="line">Line</label>
+              <select id="line" name="line" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                {% for l in line_options %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="pallet">Pallet</label>
+              <select id="pallet" name="pallet" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                {% for p in pallet_options %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="md:col-span-2 flex items-center justify-end gap-3 pt-2">
+            <button
+              type="submit"
+              class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+            >
+              <span class="material-symbols-outlined text-base">save</span>
+              Lưu
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      function openForm(issueLineId, maCay, nhuCau, lot) {
+        document.getElementById("issue_line_id").value = issueLineId;
+        document.getElementById("ma_cay").value = maCay;
+        document.getElementById("modalTitle").textContent = `${maCay} — ${nhuCau} / ${lot}`;
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        document.getElementById("ngay_tai_nhap").value = `${yyyy}-${mm}-${dd}`;
+        document.getElementById("modal").classList.remove("hidden");
+        document.getElementById("modal").classList.add("flex");
+        document.getElementById("nhu_cau_moi").value = "NC-TAM";
+        toggleLocation();
+      }
+
+      function closeForm() {
+        document.getElementById("modal").classList.add("hidden");
+        document.getElementById("modal").classList.remove("flex");
+      }
+
+      function toggleLocation() {
+        const st = document.getElementById("status").value;
+        const el = document.getElementById("locFields");
+        if (st === "Tái nhập kho") el.style.display = "grid";
+        else el.style.display = "none";
+      }
+    </script>
+  {% endif %}
+
+  {% if tab == 'history' %}
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+      <form method="get" action="/wms/stock/returns" class="flex flex-col gap-6 md:flex-row md:items-end">
+        <input type="hidden" name="tab" value="history" />
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="from">Từ ngày</label>
+          <input id="from" name="from" type="date" class="mt-2 rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to">Đến ngày</label>
+          <input id="to" name="to" type="date" class="mt-2 rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+        </div>
+        <button
+          type="submit"
+          class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+        >
+          <span class="material-symbols-outlined text-base">filter_alt</span>
+          Lọc
+        </button>
+      </form>
+    </section>
+
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-surface-container-low text-on-surface-variant">
+            <tr class="text-left">
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Ngày</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Mã cây</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Trạng thái</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">YDS dư</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Nhu cầu mới</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Lot mới</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Vị trí mới</th>
+            </tr>
+          </thead>
+          <tbody class="bg-surface-container-lowest">
+            {% for it in history %}
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="px-10 py-4">{{ it.ngay_tai_nhap }}</td>
+                <td class="px-10 py-4 font-semibold">{{ it.ma_cay }}</td>
+                <td class="px-10 py-4">{{ it.status }}</td>
+                <td class="px-10 py-4">{{ it.yds_du or "" }}</td>
+                <td class="px-10 py-4">{{ it.nhu_cau_moi or "" }}</td>
+                <td class="px-10 py-4">{{ it.lot_moi or "" }}</td>
+                <td class="px-10 py-4 font-extrabold font-headline text-primary">{{ it.vi_tri_moi or "" }}</td>
+              </tr>
+            {% else %}
+              <tr><td class="px-10 py-6 text-on-surface-variant" colspan="7">Chưa có lịch sử.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}
