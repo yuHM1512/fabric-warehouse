@@ -1,25 +1,345 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
-    <div class="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+  <section>
+    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
       <div>
-        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Fabric Warehouse</div>
-        <h2 class="mt-2 text-3xl font-extrabold font-headline text-on-surface">Tổng quan</h2>
-        <p class="mt-3 text-sm text-on-surface-variant leading-relaxed">
-          Khung dự án WMS (FastAPI + Tailwind + PostgreSQL). Mục tiêu: import Excel → tạo bảng treo → nhập kho → định danh vị trí → xuất kho → tái nhập.
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Dashboard</div>
+        <h2 class="mt-2 text-3xl font-extrabold font-headline text-on-surface">Tổng quan kho</h2>
+        <p class="mt-3 text-sm text-on-surface-variant leading-relaxed max-w-3xl">
+          KPI và biểu đồ lấy trực tiếp từ dữ liệu Postgres (nhập/xuất/kiểm kho/vị trí/định mức).
         </p>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
         <a
-          href="/wms"
+          href="/wms/receipts"
           class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
         >
-          <span class="material-symbols-outlined text-base">dashboard</span>
-          Vào WMS
+          <span class="material-symbols-outlined text-base">upload_file</span>
+          Import Excel
         </a>
       </div>
     </div>
+
+    <div class="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div class="bg-white rounded-[2rem] cloud-shadow p-8">
+        <div class="flex items-start justify-between gap-6">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tổng số cây vải</div>
+            <div class="mt-4 text-4xl font-extrabold font-headline tabular-nums">{{ total_rolls_stored or 0 }}</div>
+            <div class="mt-2 text-xs text-on-surface-variant">Đếm theo mã cây đang lưu kho</div>
+          </div>
+          <div class="h-10 w-10 rounded-xl soul-gradient cloud-shadow flex items-center justify-center text-white">
+            <span class="material-symbols-outlined">barcode</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-[2rem] cloud-shadow p-8">
+        <div class="flex items-start justify-between gap-6">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Số pallet chứa vải</div>
+            <div class="mt-4 text-4xl font-extrabold font-headline tabular-nums">
+              {{ pallet_kpis.pallets_has_fabric if pallet_kpis else 0 }}<span class="text-on-surface-variant"> / </span>{{ pallet_kpis.total_pallets if pallet_kpis else 0 }}
+            </div>
+            <div class="mt-2 text-xs text-on-surface-variant">Chỉ tính vị trí trạng thái “Đang lưu”</div>
+          </div>
+          <div class="h-10 w-10 rounded-xl bg-secondary-container flex items-center justify-center text-primary">
+            <span class="material-symbols-outlined">inventory_2</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-[2rem] cloud-shadow p-8">
+        <div class="flex items-start justify-between gap-6">
+          <div class="min-w-0">
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Sức chứa khả dụng</div>
+            <div class="mt-2 flex items-baseline gap-3">
+              <div class="text-4xl font-extrabold font-headline tabular-nums">
+                {{ "%.1f"|format(pallet_kpis.available_percent) if pallet_kpis else "0.0" }}%
+              </div>
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Capacity</div>
+            </div>
+            <div class="mt-3 h-2 w-full rounded-full bg-surface-container-low overflow-hidden">
+              <div
+                class="h-full rounded-full soul-gradient"
+                data-capacity-width="{{ pallet_kpis.available_percent if pallet_kpis else 0 }}"
+                style="width: 0%"
+              ></div>
+            </div>
+            <div class="mt-3 text-xs text-on-surface-variant truncate">
+              {{ "%.2f"|format(pallet_kpis.available_m3) if pallet_kpis else "0.00" }} m³ khả dụng
+            </div>
+          </div>
+
+          <div class="flex flex-col items-end gap-2">
+            <div class="h-10 w-10 rounded-xl bg-surface-container-low flex items-center justify-center text-primary">
+              <span class="material-symbols-outlined">insights</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">&nbsp;</div>
+      </div>
+    </div>
   </section>
+
+  <section class="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <div class="lg:col-span-2 bg-white rounded-[2rem] cloud-shadow p-10 min-h-[520px] flex flex-col">
+      <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div class="inline-flex items-center rounded-2xl bg-primary-container px-5 py-3 text-white font-extrabold font-headline">
+          Biểu đồ NHẬP - XUẤT theo ngày
+        </div>
+
+        <form method="get" action="/" class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:items-end">
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="from">From</label>
+            <input id="from" name="from" type="date" value="{{ from_day }}" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to">To</label>
+            <input id="to" name="to" type="date" value="{{ to_day }}" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+          </div>
+          <div class="sm:col-span-2 flex justify-end">
+            <button type="submit" class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity">
+              <span class="material-symbols-outlined text-base">filter_alt</span>
+              Áp dụng
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="mt-8 flex-1 min-h-[260px] relative">
+        <canvas id="inoutChart"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-[2rem] cloud-shadow p-10 min-h-[520px] flex flex-col">
+      <div>
+        <div class="inline-flex items-center rounded-2xl bg-primary-container px-5 py-3 text-white font-extrabold font-headline">
+          Thời gian lưu kho
+        </div>
+        <p class="mt-4 text-sm text-on-surface-variant leading-relaxed">Quy đổi theo số khối (m³).</p>
+      </div>
+
+      {% if not age_split or (age_split.total_m3 <= 0) %}
+        <div class="mt-8 text-sm text-on-surface-variant">Chưa đủ dữ liệu để tính donut.</div>
+      {% else %}
+        <div class="mt-8 flex-1 flex flex-col items-center justify-center">
+          <div class="relative w-[220px] h-[220px]">
+            <canvas id="ageDonut"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <div class="text-2xl font-extrabold font-headline tabular-nums">{{ "%.0f"|format(age_split.total_m3) }}</div>
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">m³</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-8 flex items-center gap-3">
+          <div class="flex items-center gap-3 bg-surface-container-low rounded-2xl px-5 py-3">
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-[#10b981]"></span>
+            <div class="text-sm font-bold">Dưới 6 tháng</div>
+          </div>
+          <div class="flex items-center gap-3 bg-surface-container-low rounded-2xl px-5 py-3">
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-[#ef4444]"></span>
+            <div class="text-sm font-bold">Trên 6 tháng</div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {# Keep all server-rendered values out of inline JS to avoid editor JS parse errors #}
+  <script id="dashboard-data" type="application/json">
+    {{
+      {
+        "labelsIso": chart_labels,
+        "inData": chart_in,
+        "outData": chart_out,
+        "inYds": chart_in_yds,
+        "outYds": chart_out_yds,
+        "age": {
+          "underM3": (age_split.under_6m_m3 if age_split else 0.0),
+          "overM3": (age_split.over_6m_m3 if age_split else 0.0)
+        }
+      } | tojson
+    }}
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+  <script>
+    (function () {
+      const dataEl = document.getElementById("dashboard-data");
+      let dashboard = {};
+      try {
+        dashboard = dataEl ? JSON.parse(dataEl.textContent || "{}") : {};
+      } catch (e) {
+        dashboard = {};
+      }
+
+      // Set capacity bar width (avoid inline Jinja CSS parsing warnings in editors)
+      document.querySelectorAll("[data-capacity-width]").forEach((el) => {
+        const raw = String(el.getAttribute("data-capacity-width") || "0");
+        const v = Math.max(0, Math.min(100, Number.parseFloat(raw) || 0));
+        el.style.width = `${v}%`;
+      });
+
+      const labelsIso = dashboard.labelsIso || [];
+      const inData = dashboard.inData || [];
+      const outData = dashboard.outData || [];
+      const inYds = dashboard.inYds || [];
+      const outYds = dashboard.outYds || [];
+
+      const labels = (labelsIso || []).map((s) => {
+        const parts = String(s || "").split("-");
+        if (parts.length !== 3) return s;
+        return `${parts[2]}-${parts[1]}`; // dd-mm
+      });
+
+      const ctx = document.getElementById("inoutChart");
+      if (ctx && labels && labels.length) {
+        if (window.__inoutChart) {
+          try { window.__inoutChart.destroy(); } catch (e) {}
+          window.__inoutChart = null;
+        }
+
+        window.__inoutChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "IN (m³)",
+                data: inData,
+                backgroundColor: "rgba(0, 64, 161, 0.85)",
+                borderRadius: 10,
+                borderSkipped: false,
+                barPercentage: 0.9,
+                categoryPercentage: 0.9,
+                maxBarThickness: 28,
+              },
+              {
+                label: "OUT (m³)",
+                data: outData,
+                backgroundColor: "rgba(152, 179, 255, 0.9)",
+                borderRadius: 10,
+                borderSkipped: false,
+                barPercentage: 0.9,
+                categoryPercentage: 0.9,
+                maxBarThickness: 28,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: {
+                position: "top",
+                align: "end",
+                labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle" },
+              },
+              tooltip: {
+                enabled: true,
+                callbacks: {
+                  label: (c) => {
+                    const idx = c.dataIndex;
+                    const m3 = Number(c.parsed.y || 0);
+                    const yds = c.datasetIndex === 0 ? Number(inYds?.[idx] || 0) : Number(outYds?.[idx] || 0);
+                    return `${c.dataset.label}: ${m3.toFixed(3)} m³ (${yds.toFixed(1)} yds)`;
+                  },
+                },
+              },
+              datalabels: {
+                color: "#191c1d",
+                anchor: "end",
+                align: "end",
+                offset: 2,
+                clamp: true,
+                font: { size: 10, weight: "700" },
+                formatter: (v, ctx) => {
+                  const idx = ctx.dataIndex;
+                  const yds = ctx.datasetIndex === 0 ? Number(inYds?.[idx] || 0) : Number(outYds?.[idx] || 0);
+                  if (!yds || yds <= 0) return "";
+                  return `${Math.round(yds)}`;
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false, drawBorder: false },
+                border: { display: false },
+                ticks: { maxTicksLimit: 8, font: { size: 10 }, color: "#434652" },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { display: false, drawBorder: false },
+                border: { display: false },
+                ticks: { display: false },
+              },
+            },
+          },
+          plugins: [ChartDataLabels],
+        });
+      }
+
+      const ageEl = document.getElementById("ageDonut");
+      if (ageEl) {
+        const underM3 = (dashboard.age && dashboard.age.underM3) ? dashboard.age.underM3 : 0;
+        const overM3 = (dashboard.age && dashboard.age.overM3) ? dashboard.age.overM3 : 0;
+        const total = Number(underM3 || 0) + Number(overM3 || 0);
+
+        if (window.__ageDonut) {
+          try { window.__ageDonut.destroy(); } catch (e) {}
+          window.__ageDonut = null;
+        }
+
+        if (total > 0) {
+          window.__ageDonut = new Chart(ageEl, {
+            type: "doughnut",
+            data: {
+              labels: ["Dưới 6 tháng", "Trên 6 tháng"],
+              datasets: [{
+                data: [underM3, overM3],
+                backgroundColor: ["#10b981", "#ef4444"],
+                borderWidth: 0,
+                hoverOffset: 6,
+              }],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: "72%",
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  enabled: true,
+                  callbacks: {
+                    label: (ctx) => {
+                      const v = Number(ctx.parsed || 0);
+                      const pct = total ? (v / total * 100) : 0;
+                      return `${ctx.label}: ${v.toFixed(3)} m³ (${pct.toFixed(1)}%)`;
+                    },
+                  },
+                },
+                datalabels: {
+                  color: "#ffffff",
+                  font: { size: 12, weight: "800" },
+                  formatter: (v) => {
+                    const val = Number(v || 0);
+                    if (!val || val <= 0) return "";
+                    const pct = total ? (val / total * 100) : 0;
+                    return `${pct.toFixed(0)}%`;
+                  },
+                },
+              },
+            },
+            plugins: [ChartDataLabels],
+          });
+        }
+      }
+    })();
+  </script>
 {% endblock %}
