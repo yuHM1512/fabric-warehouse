@@ -30,3 +30,17 @@ def fmt_gmt7(value: Any) -> str:
 
     local = dt.astimezone(VN_TZ)
     return local.strftime("%Y-%m-%d %H:%M")
+
+
+def clean_note(value: Any) -> str:
+    """
+    Hide internal migration markers from UI.
+    """
+    if value is None:
+        return ""
+    s = str(value).strip()
+    if not s:
+        return ""
+    if s.lower() == "migrated_from_sqlite":
+        return ""
+    return s

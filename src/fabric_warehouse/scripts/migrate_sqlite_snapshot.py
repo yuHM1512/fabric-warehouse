@@ -216,7 +216,6 @@ def upsert_stored_rolls(db: Session, rows: list[StoredRollRow]) -> dict[str, int
                 ma_cay=r.ma_cay,
                 expected_yards=r.expected_yards,
                 actual_yards=r.actual_yards,
-                note="migrated_from_sqlite",
                 updated_at=(r.updated_at or now),
             )
             db.add(sc)
@@ -226,8 +225,6 @@ def upsert_stored_rolls(db: Session, rows: list[StoredRollRow]) -> dict[str, int
             sc.actual_yards = r.actual_yards
             if r.updated_at:
                 sc.updated_at = r.updated_at
-            if not (sc.note and sc.note.strip()):
-                sc.note = "migrated_from_sqlite"
             db.add(sc)
 
         la = db.query(LocationAssignment).filter(LocationAssignment.ma_cay == r.ma_cay).first()
@@ -338,4 +335,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

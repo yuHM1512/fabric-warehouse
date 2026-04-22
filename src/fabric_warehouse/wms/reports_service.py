@@ -183,6 +183,10 @@ def ton_kho_by_age_split(
     *,
     limit: int = 5000,
     split_days: int = 183,
+    bucket: str | None = None,  # "under_6m" | "over_6m" | None
+    nhu_cau: str | None = None,
+    lot: str | None = None,
+    sort: str = "nearest",  # "nearest" | "farthest"
 ) -> tuple[AgeSplitKpis, list[StockAgeRow]]:
     """
     Rolls currently stored, split into 2 buckets:
@@ -194,7 +198,7 @@ def ton_kho_by_age_split(
     now = datetime.now(timezone.utc)
     split_at = now - timedelta(days=int(split_days))
 
-    pairs = (
+    q = (
         db.query(LocationAssignment, StockCheck)
         .outerjoin(
             StockCheck,
@@ -205,10 +209,24 @@ def ton_kho_by_age_split(
             ),
         )
         .filter(LocationAssignment.trang_thai == _DANG_LUU)
-        .order_by(LocationAssignment.assigned_at.asc().nulls_last(), LocationAssignment.updated_at.desc())
-        .limit(limit)
-        .all()
     )
+
+    if nhu_cau:
+        q = q.filter(LocationAssignment.nhu_cau == nhu_cau)
+    if lot:
+        q = q.filter(LocationAssignment.lot == lot)
+
+    if bucket == "under_6m":
+        q = q.filter(LocationAssignment.assigned_at.isnot(None)).filter(LocationAssignment.assigned_at >= split_at)
+    elif bucket == "over_6m":
+        q = q.filter(LocationAssignment.assigned_at.isnot(None)).filter(LocationAssignment.assigned_at < split_at)
+
+    if sort == "farthest":
+        q = q.order_by(LocationAssignment.assigned_at.asc().nulls_last(), LocationAssignment.updated_at.desc())
+    else:
+        q = q.order_by(LocationAssignment.assigned_at.desc().nulls_last(), LocationAssignment.updated_at.desc())
+
+    pairs = q.limit(limit).all()
 
     under_rolls = 0
     over_rolls = 0

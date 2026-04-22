@@ -68,7 +68,7 @@ from fabric_warehouse.wms.tools_service import (
     transfer_demand,
     transfer_location,
 )
-from fabric_warehouse.web.jinja_filters import fmt_gmt7
+from fabric_warehouse.web.jinja_filters import clean_note, fmt_gmt7
 from fabric_warehouse.config import settings
 from fabric_warehouse.db.models.user import User
 
@@ -79,6 +79,7 @@ templates = Jinja2Templates(
     )
 )
 templates.env.filters["gmt7"] = fmt_gmt7
+templates.env.filters["clean_note"] = clean_note
 
 router = APIRouter()
 
@@ -955,7 +956,51 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
     tab = (request.query_params.get("tab") or "nhu_cau").strip()
 
     if view == "age":
-        kpis, roll_rows = ton_kho_by_age_split(db, limit=8000, split_days=183)
+        bucket = (request.query_params.get("bucket") or "").strip()
+        nhu_cau = (request.query_params.get("nhu_cau") or "").strip()
+        lot = (request.query_params.get("lot") or "").strip()
+        sort = (request.query_params.get("sort") or "nearest").strip()
+
+        bucket_val = bucket if bucket in {"under_6m", "over_6m"} else None
+        nhu_cau_val = nhu_cau or None
+        lot_val = lot or None
+        sort_val = sort if sort in {"nearest", "farthest"} else "nearest"
+
+        kpis, roll_rows = ton_kho_by_age_split(
+            db,
+            limit=8000,
+            split_days=183,
+            bucket=bucket_val,
+            nhu_cau=nhu_cau_val,
+            lot=lot_val,
+            sort=sort_val,
+        )
+
+        # Options for quick-filter UI
+        try:
+            nc_rows = (
+                db.query(LocationAssignment.nhu_cau)
+                .filter(LocationAssignment.trang_thai == "Đang lưu")
+                .distinct()
+                .order_by(LocationAssignment.nhu_cau)
+                .all()
+            )
+            nhu_cau_options = [str(r[0]) for r in nc_rows if r and r[0]]
+        except Exception:
+            nhu_cau_options = []
+
+        try:
+            lot_rows = (
+                db.query(LocationAssignment.lot)
+                .filter(LocationAssignment.trang_thai == "Đang lưu")
+                .distinct()
+                .order_by(LocationAssignment.lot)
+                .all()
+            )
+            lot_options = [str(r[0]) for r in lot_rows if r and r[0]]
+        except Exception:
+            lot_options = []
+
         return templates.TemplateResponse(
             request,
             "reports/index.html",
@@ -965,6 +1010,12 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
                 "tab": tab,
                 "age_kpis": kpis,
                 "age_rows": roll_rows,
+                "bucket": bucket_val or "",
+                "nhu_cau": nhu_cau,
+                "lot": lot,
+                "sort": sort_val,
+                "nhu_cau_options": nhu_cau_options,
+                "lot_options": lot_options,
             },
         )
 

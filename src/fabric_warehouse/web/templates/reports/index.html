@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
 {% block content %}
-{% set view = view or "ton_kho" %}
 <div class="space-y-8 pb-16">
 
   <!-- Hero -->
@@ -13,12 +12,12 @@
     </div>
   </section>
 
-  <!-- Main tab bar (Tồn kho is the only module for now) -->
+  <!-- Main tab bar -->
   <div class="flex gap-2">
     <a
       href="/reports"
       class="px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-colors
-             {% if view == 'ton_kho' %}bg-primary text-white shadow-sm{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+             {% if view != 'age' %}bg-primary text-white shadow-sm{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
     >
       Tồn kho
     </a>
@@ -32,136 +31,208 @@
   </div>
 
   {% if view == "age" %}
-    <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden p-8 md:p-10" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
-      <div class="flex items-end justify-between gap-6 flex-wrap">
-        <div>
-          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tồn kho theo thời gian</div>
-          <h2 class="mt-2 text-3xl md:text-4xl font-extrabold font-headline text-on-surface">Thời gian lưu kho</h2>
-          <p class="mt-3 text-sm text-on-surface-variant leading-relaxed max-w-3xl">
-            Chia 2 nhóm chính: <span class="font-semibold text-on-surface">Dưới 6 tháng</span> và <span class="font-semibold text-on-surface">Trên 6 tháng</span>,
-            dựa theo mốc <span class="font-semibold text-on-surface">ngày xác nhận lưu kho (assigned_at)</span>.
-          </p>
-        </div>
+    <!-- ── KPI + Chart ── -->
+    <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
+      <div class="mb-10">
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tồn kho theo thời gian</div>
+        <h2 class="mt-2 text-3xl md:text-4xl font-extrabold font-headline text-on-surface">Thời gian lưu kho</h2>
+        <p class="mt-3 text-sm text-on-surface-variant leading-relaxed max-w-xl">
+          Phân thành 2 nhóm — <span class="font-semibold text-on-surface">Dưới 6 tháng</span> và
+          <span class="font-semibold text-on-surface">Trên 6 tháng</span> — dựa theo ngày xác nhận lưu kho.
+        </p>
       </div>
 
-      <div class="mt-10 grid grid-cols-12 gap-8 items-start">
+      <div class="grid grid-cols-12 gap-6 items-start">
+        <!-- KPI stack -->
         <div class="col-span-12 lg:col-span-5 space-y-4">
-          <div class="rounded-2xl bg-surface-container-low p-6 border border-black/5">
+          <div class="rounded-2xl bg-surface-container-low p-6">
             <div class="flex items-center justify-between">
-              <div class="text-xs font-bold uppercase tracking-[0.2em] text-on-surface-variant">Dưới 6 tháng</div>
-              <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
-                Under
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Dưới 6 tháng</div>
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                <span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>Tươi
               </span>
             </div>
-            <div class="mt-3 flex items-end justify-between">
+            <div class="mt-4 flex items-end gap-2">
               <div class="text-4xl font-extrabold font-headline tabular-nums text-on-surface">{{ age_kpis.under_rolls }}</div>
-              <div class="text-sm font-semibold tabular-nums text-on-surface-variant">{{ "%.2f"|format(age_kpis.under_yds) }} yds</div>
+              <div class="mb-1 text-sm font-semibold text-on-surface-variant">cây</div>
             </div>
-            <div class="mt-1 text-xs text-on-surface-variant">Số cây / Tổng YDS</div>
+            <div class="mt-1 text-sm tabular-nums text-on-surface-variant">{{ "%.2f"|format(age_kpis.under_yds) }} yds</div>
           </div>
 
-          <div class="rounded-2xl bg-surface-container-low p-6 border border-black/5">
+          <div class="rounded-2xl bg-rose-50 p-6">
             <div class="flex items-center justify-between">
-              <div class="text-xs font-bold uppercase tracking-[0.2em] text-on-surface-variant">Trên 6 tháng</div>
-              <span class="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
-                <span class="inline-block h-2 w-2 rounded-full bg-rose-500"></span>
-                Over
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-700/60">Trên 6 tháng</div>
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-700">
+                <span class="inline-block h-2 w-2 rounded-full bg-rose-400"></span>Cũ
               </span>
             </div>
-            <div class="mt-3 flex items-end justify-between">
-              <div class="text-4xl font-extrabold font-headline tabular-nums text-on-surface">{{ age_kpis.over_rolls }}</div>
-              <div class="text-sm font-semibold tabular-nums text-on-surface-variant">{{ "%.2f"|format(age_kpis.over_yds) }} yds</div>
+            <div class="mt-4 flex items-end gap-2">
+              <div class="text-4xl font-extrabold font-headline tabular-nums text-rose-800">{{ age_kpis.over_rolls }}</div>
+              <div class="mb-1 text-sm font-semibold text-rose-500">cây</div>
             </div>
-            <div class="mt-1 text-xs text-on-surface-variant">Số cây / Tổng YDS</div>
+            <div class="mt-1 text-sm tabular-nums text-rose-500">{{ "%.2f"|format(age_kpis.over_yds) }} yds</div>
           </div>
 
-          <div class="rounded-2xl bg-primary-fixed p-6 border border-black/5">
-            <div class="text-xs font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tổng tồn</div>
-            <div class="mt-2 flex items-end justify-between">
-              <div class="text-3xl font-extrabold font-headline tabular-nums text-on-surface">{{ age_kpis.total_rolls }}</div>
-              <div class="text-sm font-bold tabular-nums text-primary">{{ "%.2f"|format(age_kpis.total_yds) }} yds</div>
+          <div class="rounded-2xl soul-gradient p-6 text-white">
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">Tổng tồn kho</div>
+            <div class="mt-4 flex items-end gap-2">
+              <div class="text-4xl font-extrabold font-headline tabular-nums">{{ age_kpis.total_rolls }}</div>
+              <div class="mb-1 text-sm font-semibold text-white/70">cây</div>
             </div>
+            <div class="mt-1 text-sm tabular-nums text-white/70">{{ "%.2f"|format(age_kpis.total_yds) }} yds</div>
           </div>
         </div>
 
-        <div class="col-span-12 lg:col-span-7 rounded-[1.5rem] bg-surface-container-low border border-black/5 p-8 relative">
-          <div class="flex items-center justify-between">
+        <!-- Donut chart -->
+        <div class="col-span-12 lg:col-span-7 rounded-2xl bg-surface-container-low p-8">
+          <div class="flex items-start justify-between">
             <div>
-              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Chart</div>
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Phân bổ</div>
               <div class="mt-1 text-lg font-extrabold font-headline text-on-surface">Tỷ trọng số cây theo nhóm</div>
             </div>
-            <span class="material-symbols-outlined text-on-surface-variant/60">donut_large</span>
+            <span class="material-symbols-outlined text-on-surface-variant/40">donut_large</span>
           </div>
-
-          <div class="mt-8 h-[260px] relative">
+          <div class="mt-8 h-[220px]">
             <canvas id="ageSplitDonut"></canvas>
+          </div>
+          <div class="mt-6 flex items-center justify-center gap-8">
+            <div class="flex items-center gap-2">
+              <span class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+              <span class="text-xs font-semibold text-on-surface-variant">Dưới 6 tháng</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="inline-block h-2.5 w-2.5 rounded-full bg-rose-400"></span>
+              <span class="text-xs font-semibold text-on-surface-variant">Trên 6 tháng</span>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- ── Detail table ── -->
     <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
-      <div class="px-8 pt-8 pb-6 border-b border-black/5 flex items-end justify-between gap-6 flex-wrap">
+      <div class="px-8 pt-8 pb-6 bg-surface-container-low flex items-end justify-between gap-4 flex-wrap">
         <div>
           <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Danh sách cây</div>
-          <h3 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Chi tiết tồn kho theo cây vải</h3>
-          <div class="mt-2 text-xs text-on-surface-variant">{{ age_rows|length }} dòng</div>
+          <h3 class="mt-1 text-2xl font-extrabold font-headline text-on-surface">Chi tiết tồn kho theo cây vải</h3>
         </div>
+        <div class="text-sm font-semibold text-on-surface-variant tabular-nums" data-age-visible-count>{{ age_rows|length }} cây</div>
       </div>
 
-      <div class="overflow-x-auto p-4 md:p-6">
-        <table class="min-w-full text-sm border-separate border-spacing-0 overflow-hidden rounded-2xl">
-          <thead class="bg-primary-container text-white">
-            <tr class="text-left">
-              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Nhu cầu</th>
-              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Lot</th>
-              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Mã cây</th>
-              <th class="px-5 py-4 text-right text-[11px] font-extrabold uppercase tracking-widest">Số lượng</th>
-              <th class="px-5 py-4 text-right text-[11px] font-extrabold uppercase tracking-widest">Thực tế</th>
-              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Ghi chú</th>
-              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Vị trí</th>
-              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Lưu kho</th>
-              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Trạng thái</th>
-              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Ngày cập nhật</th>
+      <div class="px-8 pb-6 bg-surface-container-low border-t border-black/5">
+        <form method="get" action="/reports" class="grid grid-cols-1 gap-4 md:grid-cols-4 md:items-end">
+          <input type="hidden" name="view" value="age" />
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="bucket">Thời gian lưu kho</label>
+            <select id="bucket" name="bucket" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+              <option value="" {% if not bucket %}selected{% endif %}>Tất cả</option>
+              <option value="under_6m" {% if bucket == 'under_6m' %}selected{% endif %}>Dưới 6 tháng</option>
+              <option value="over_6m" {% if bucket == 'over_6m' %}selected{% endif %}>Trên 6 tháng</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="nhu_cau">Nhu cầu</label>
+            <input
+              id="nhu_cau"
+              name="nhu_cau"
+              list="nhu-cau-list"
+              value="{{ nhu_cau or '' }}"
+              placeholder="Gõ để lọc…"
+              class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+            />
+            <datalist id="nhu-cau-list">
+              {% for v in nhu_cau_options or [] %}
+                <option value="{{ v }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="lot">Lot vải</label>
+            <input
+              id="lot"
+              name="lot"
+              list="lot-list"
+              value="{{ lot or '' }}"
+              placeholder="Gõ để lọc…"
+              class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+            />
+            <datalist id="lot-list">
+              {% for v in lot_options or [] %}
+                <option value="{{ v }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+
+          <div class="flex flex-wrap gap-3 justify-end md:justify-start">
+            <div class="min-w-[180px] flex-1 md:flex-none">
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="sort">Sắp xếp</label>
+              <select id="sort" name="sort" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                <option value="nearest" {% if sort == 'nearest' %}selected{% endif %}>Gần nhất</option>
+                <option value="farthest" {% if sort == 'farthest' %}selected{% endif %}>Xa nhất</option>
+              </select>
+            </div>
+
+            <button type="submit" class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity">
+              <span class="material-symbols-outlined text-base">filter_alt</span>
+              Lọc
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border-separate border-spacing-0">
+          <thead>
+            <tr class="bg-primary text-white">
+              <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.22em] text-white border-b border-white/15 border-r border-white/10">Nhu cầu</th>
+              <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.22em] text-white border-b border-white/15 border-r border-white/10">Lot</th>
+              <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.22em] text-white border-b border-white/15 border-r border-white/10">Mã cây</th>
+              <th class="px-5 py-3 text-right text-[10px] font-black uppercase tracking-[0.22em] text-white border-b border-white/15 border-r border-white/10">Số lượng</th>
+              <th class="px-5 py-3 text-right text-[10px] font-black uppercase tracking-[0.22em] text-white border-b border-white/15 border-r border-white/10">Thực tế</th>
+              <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.22em] text-white border-b border-white/15 border-r border-white/10">Ghi chú</th>
+              <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.22em] text-white border-b border-white/15 border-r border-white/10">Vị trí</th>
+              <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.22em] text-white border-b border-white/15 border-r border-white/10">Lưu kho</th>
+              <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.22em] text-white border-b border-white/15 last:border-r-0 border-r border-white/10">Ngày cập nhật</th>
             </tr>
           </thead>
-          <tbody class="bg-white">
+          <tbody id="age-rows-body">
             {% for r in age_rows %}
-              <tr class="border-b border-black/5 last:border-0 hover:bg-surface-container-low transition-colors">
-                <td class="px-5 py-4 text-on-surface-variant">{{ r.nhu_cau }}</td>
-                <td class="px-5 py-4 text-on-surface-variant">{{ r.lot }}</td>
-                <td class="px-5 py-4 font-extrabold text-emerald-700">{{ r.ma_cay }}</td>
-                <td class="px-5 py-4 text-right tabular-nums text-on-surface-variant">{{ "%.2f"|format(r.so_luong) if r.so_luong is not none else "—" }}</td>
-                <td class="px-5 py-4 text-right tabular-nums text-on-surface-variant">{{ "%.2f"|format(r.thuc_te) if r.thuc_te is not none else "—" }}</td>
-                <td class="px-5 py-4 text-on-surface-variant">{{ r.ghi_chu or "" }}</td>
-                <td class="px-5 py-4 font-semibold text-on-surface-variant">{{ r.vi_tri or "—" }}</td>
-                <td class="px-5 py-4">
+              <tr
+                class="{% if loop.index is odd %}bg-surface-container-lowest{% else %}bg-surface-container-low/20{% endif %} hover:bg-primary-fixed/50 transition-colors"
+                data-nhu-cau="{{ (r.nhu_cau or '')|lower }}"
+                data-lot="{{ (r.lot or '')|lower }}"
+                data-bucket="{{ r.bucket }}"
+              >
+                <td class="px-5 py-3.5 text-on-surface-variant border-b border-black/5 border-r border-black/5">{{ r.nhu_cau or "" }}</td>
+                <td class="px-5 py-3.5 text-on-surface-variant border-b border-black/5 border-r border-black/5">{{ r.lot or "" }}</td>
+                <td class="px-5 py-3.5 font-bold font-mono text-xs tracking-wide text-on-surface border-b border-black/5 border-r border-black/5">{{ r.ma_cay }}</td>
+                <td class="px-5 py-3.5 text-right tabular-nums text-on-surface-variant border-b border-black/5 border-r border-black/5">{{ "%.2f"|format(r.so_luong) if r.so_luong is not none else "" }}</td>
+                <td class="px-5 py-3.5 text-right tabular-nums text-on-surface-variant border-b border-black/5 border-r border-black/5">{{ "%.2f"|format(r.thuc_te) if r.thuc_te is not none else "" }}</td>
+                <td class="px-5 py-3.5 text-xs text-on-surface-variant border-b border-black/5 border-r border-black/5">{{ (r.ghi_chu | clean_note) }}</td>
+                <td class="px-5 py-3.5 font-semibold text-on-surface-variant border-b border-black/5 border-r border-black/5">{{ r.vi_tri or "" }}</td>
+                <td class="px-5 py-3.5 border-b border-black/5 border-r border-black/5">
                   {% if r.bucket == 'over_6m' %}
-                    <span class="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
-                      > 6 tháng{% if r.age_days is not none %} ({{ r.age_days }}d){% endif %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
+                      <span class="inline-block h-1.5 w-1.5 rounded-full bg-rose-400"></span>
+                      > 6 tháng{% if r.age_days is not none %} · {{ r.age_days }}d{% endif %}
                     </span>
                   {% elif r.bucket == 'under_6m' %}
-                    <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                      ≤ 6 tháng{% if r.age_days is not none %} ({{ r.age_days }}d){% endif %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                      <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                      ≤ 6 tháng{% if r.age_days is not none %} · {{ r.age_days }}d{% endif %}
                     </span>
                   {% else %}
-                    <span class="text-xs text-on-surface-variant">—</span>
+                    <span class="text-xs text-on-surface-variant/40"></span>
                   {% endif %}
                 </td>
-                <td class="px-5 py-4">
-                  <span class="inline-flex items-center gap-2 text-on-surface-variant">
-                    <span class="inline-flex h-5 w-5 items-center justify-center rounded bg-emerald-500/90 text-white">
-                      <span class="material-symbols-outlined text-[16px]">check</span>
-                    </span>
-                    {{ r.trang_thai or "Đang lưu" }}
-                  </span>
-                </td>
-                <td class="px-5 py-4 text-on-surface-variant tabular-nums whitespace-nowrap">{{ r.ngay_cap_nhat | gmt7 }}</td>
+                <td class="px-5 py-3.5 text-xs tabular-nums whitespace-nowrap text-on-surface-variant border-b border-black/5 last:border-r-0">{{ r.ngay_cap_nhat | gmt7 }}</td>
               </tr>
             {% else %}
               <tr>
-                <td class="px-5 py-16 text-center text-on-surface-variant" colspan="10">Chưa có dữ liệu tồn kho.</td>
+                <td class="px-5 py-20 text-center text-on-surface-variant" colspan="9">Chưa có dữ liệu tồn kho.</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -170,12 +241,7 @@
     </section>
 
     <script id="age-split-data" type="application/json">
-      {{
-        {
-          "under_rolls": age_kpis.under_rolls,
-          "over_rolls": age_kpis.over_rolls
-        } | tojson
-      }}
+      {{ {"under_rolls": age_kpis.under_rolls, "over_rolls": age_kpis.over_rolls} | tojson }}
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -186,8 +252,8 @@
         const dataEl = document.getElementById("age-split-data");
         if (!el || !dataEl) return;
 
-        let payload = null;
-        try { payload = JSON.parse(dataEl.textContent || "{}"); } catch (e) { payload = {}; }
+        let payload = {};
+        try { payload = JSON.parse(dataEl.textContent || "{}"); } catch (e) {}
 
         const under = Number(payload.under_rolls || 0);
         const over = Number(payload.over_rolls || 0);
@@ -204,15 +270,15 @@
             labels: ["Dưới 6 tháng", "Trên 6 tháng"],
             datasets: [{
               data: [under, over],
-              backgroundColor: ["#10b981", "#ef4444"],
+              backgroundColor: ["#34d399", "#fb7185"],
               borderWidth: 0,
-              hoverOffset: 8,
+              hoverOffset: 10,
             }],
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: "72%",
+            cutout: "74%",
             plugins: {
               legend: { display: false },
               tooltip: {
@@ -227,10 +293,10 @@
               },
               datalabels: {
                 color: "#ffffff",
-                font: { size: 12, weight: "800" },
+                font: { size: 13, weight: "800" },
                 formatter: (v) => {
                   const val = Number(v || 0);
-                  if (!val || val <= 0) return "";
+                  if (!val) return "";
                   const pct = total ? (val / total * 100) : 0;
                   return `${pct.toFixed(0)}%`;
                 },
@@ -239,6 +305,50 @@
           },
           plugins: [ChartDataLabels],
         });
+      })();
+    </script>
+
+    <script>
+      (function () {
+        const body = document.getElementById("age-rows-body");
+        if (!body) return;
+
+        const nhuCauInput = document.getElementById("nhu_cau");
+        const lotInput = document.getElementById("lot");
+        const bucketSelect = document.getElementById("bucket");
+
+        const countEl = document.querySelector('[data-age-visible-count]');
+        const rows = Array.from(body.querySelectorAll("tr[data-nhu-cau]"));
+
+        function applyFilters() {
+          const needNc = String((nhuCauInput && nhuCauInput.value) || "").trim().toLowerCase();
+          const needLot = String((lotInput && lotInput.value) || "").trim().toLowerCase();
+          const needBucket = String((bucketSelect && bucketSelect.value) || "").trim();
+
+          let visible = 0;
+          for (const tr of rows) {
+            const nc = tr.getAttribute("data-nhu-cau") || "";
+            const lot = tr.getAttribute("data-lot") || "";
+            const bucket = tr.getAttribute("data-bucket") || "";
+
+            const okNc = !needNc || nc.includes(needNc);
+            const okLot = !needLot || lot.includes(needLot);
+            const okBucket = !needBucket || bucket === needBucket;
+
+            const ok = okNc && okLot && okBucket;
+            tr.classList.toggle("hidden", !ok);
+            if (ok) visible += 1;
+          }
+
+          if (countEl) countEl.textContent = `${visible} cây`;
+        }
+
+        // live filter while typing
+        if (nhuCauInput) nhuCauInput.addEventListener("input", applyFilters);
+        if (lotInput) lotInput.addEventListener("input", applyFilters);
+        if (bucketSelect) bucketSelect.addEventListener("change", applyFilters);
+
+        applyFilters();
       })();
     </script>
   {% else %}
