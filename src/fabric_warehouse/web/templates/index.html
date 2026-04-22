@@ -138,7 +138,7 @@
                           </div>
                         </div>
                         <div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
-                          <div class="h-full {{ bar }} rounded-full" style="width: {{ used }}%;"></div>
+                          <div class="h-full {{ bar }} rounded-full" data-pct="{{ used }}"></div>
                         </div>
                       </div>
                     {% endfor %}
@@ -541,4 +541,9 @@
     })();
   </script>
   {% endif %}
+  <script>
+    document.querySelectorAll('[data-pct]').forEach(function(el) {
+      el.style.width = el.dataset.pct + '%';
+    });
+  </script>
 {% endblock %}
