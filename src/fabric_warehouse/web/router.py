@@ -13,6 +13,13 @@ from sqlalchemy.orm import Session
 
 from fabric_warehouse.db.session import get_db
 from fabric_warehouse.wms.hanging_pdf import render_hanging_tag_pdf, render_merged_hanging_tag_pdf
+from fabric_warehouse.wms.reports_service import (
+    ton_kho_by_age_split,
+    ton_kho_by_loai_vai,
+    ton_kho_by_lot,
+    ton_kho_by_mau_vai,
+    ton_kho_by_nhu_cau,
+)
 from fabric_warehouse.wms.hanging_service import backfill_hanging_tags, fill_missing_hanging_fields
 from fabric_warehouse.wms.pdf import render_receipt_pdf
 from fabric_warehouse.wms.receipts_service import (
@@ -942,6 +949,61 @@ def tools_norms(request: Request, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/reports", response_class=HTMLResponse)
+def reports_home(request: Request, db: Session = Depends(get_db)):
+    view = (request.query_params.get("view") or "ton_kho").strip()
+    tab = (request.query_params.get("tab") or "nhu_cau").strip()
+
+    if view == "age":
+        kpis, roll_rows = ton_kho_by_age_split(db, limit=8000, split_days=183)
+        return templates.TemplateResponse(
+            request,
+            "reports/index.html",
+            {
+                "title": "Báo cáo",
+                "view": "age",
+                "tab": tab,
+                "age_kpis": kpis,
+                "age_rows": roll_rows,
+            },
+        )
+
+    col_labels = {
+        "nhu_cau": "Nhu cầu",
+        "lot": "Lot vải",
+        "loai_vai": "Loại vải",
+        "mau_vai": "Màu vải",
+    }
+    handlers = {
+        "nhu_cau": ton_kho_by_nhu_cau,
+        "lot": ton_kho_by_lot,
+        "loai_vai": ton_kho_by_loai_vai,
+        "mau_vai": ton_kho_by_mau_vai,
+    }
+    if tab not in handlers:
+        tab = "nhu_cau"
+
+    rows = handlers[tab](db)
+    total_so_cay = sum(r.so_cay for r in rows)
+    total_tong_yds = sum(r.tong_yds for r in rows)
+    total_da_dinh_danh = sum(r.da_dinh_danh for r in rows)
+
+    return templates.TemplateResponse(
+        request,
+        "reports/index.html",
+        {
+            "title": "Báo cáo",
+            "view": "ton_kho",
+            "tab": tab,
+            "col_label": col_labels[tab],
+            "rows": rows,
+            "total_so_cay": total_so_cay,
+            "total_tong_yds": total_tong_yds,
+            "total_da_dinh_danh": total_da_dinh_danh,
+        },
+    )
+
+
 @router.get("/wms/pallets/{vi_tri}/fragment", response_class=HTMLResponse)
 def pallet_rolls_fragment(request: Request, vi_tri: str, db: Session = Depends(get_db)):
     rows = list_pallet_roll_rows(db, vi_tri=vi_tri)
@@ -950,4 +1012,3 @@ def pallet_rolls_fragment(request: Request, vi_tri: str, db: Session = Depends(g
         "wms/_pallet_rolls_fragment.html",
         {"vi_tri": vi_tri, "rows": rows},
     )
-

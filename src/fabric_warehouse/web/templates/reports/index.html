@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set view = view or "ton_kho" %}
+<div class="space-y-8 pb-16">
+
+  <!-- Hero -->
+  <section class="relative bg-gradient-to-br from-primary to-primary-container rounded-[2rem] overflow-hidden p-10 md:p-16 text-white min-h-[220px] flex flex-col justify-end" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
+    <div class="absolute -top-32 -right-32 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="relative z-10">
+      <div class="text-[12px] font-bold uppercase tracking-widest text-white/70 mb-3">Phân tích dữ liệu</div>
+      <h1 class="text-[40px] md:text-[52px] font-headline font-extrabold leading-tight tracking-[-0.02em]">Báo Cáo</h1>
+    </div>
+  </section>
+
+  <!-- Main tab bar (Tồn kho is the only module for now) -->
+  <div class="flex gap-2">
+    <a
+      href="/reports"
+      class="px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-colors
+             {% if view == 'ton_kho' %}bg-primary text-white shadow-sm{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+    >
+      Tồn kho
+    </a>
+    <a
+      href="/reports?view=age"
+      class="px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-colors
+             {% if view == 'age' %}bg-primary text-white shadow-sm{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+    >
+      Thời gian lưu kho
+    </a>
+  </div>
+
+  {% if view == "age" %}
+    <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden p-8 md:p-10" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
+      <div class="flex items-end justify-between gap-6 flex-wrap">
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tồn kho theo thời gian</div>
+          <h2 class="mt-2 text-3xl md:text-4xl font-extrabold font-headline text-on-surface">Thời gian lưu kho</h2>
+          <p class="mt-3 text-sm text-on-surface-variant leading-relaxed max-w-3xl">
+            Chia 2 nhóm chính: <span class="font-semibold text-on-surface">Dưới 6 tháng</span> và <span class="font-semibold text-on-surface">Trên 6 tháng</span>,
+            dựa theo mốc <span class="font-semibold text-on-surface">ngày xác nhận lưu kho (assigned_at)</span>.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-10 grid grid-cols-12 gap-8 items-start">
+        <div class="col-span-12 lg:col-span-5 space-y-4">
+          <div class="rounded-2xl bg-surface-container-low p-6 border border-black/5">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-bold uppercase tracking-[0.2em] text-on-surface-variant">Dưới 6 tháng</div>
+              <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+                Under
+              </span>
+            </div>
+            <div class="mt-3 flex items-end justify-between">
+              <div class="text-4xl font-extrabold font-headline tabular-nums text-on-surface">{{ age_kpis.under_rolls }}</div>
+              <div class="text-sm font-semibold tabular-nums text-on-surface-variant">{{ "%.2f"|format(age_kpis.under_yds) }} yds</div>
+            </div>
+            <div class="mt-1 text-xs text-on-surface-variant">Số cây / Tổng YDS</div>
+          </div>
+
+          <div class="rounded-2xl bg-surface-container-low p-6 border border-black/5">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-bold uppercase tracking-[0.2em] text-on-surface-variant">Trên 6 tháng</div>
+              <span class="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
+                <span class="inline-block h-2 w-2 rounded-full bg-rose-500"></span>
+                Over
+              </span>
+            </div>
+            <div class="mt-3 flex items-end justify-between">
+              <div class="text-4xl font-extrabold font-headline tabular-nums text-on-surface">{{ age_kpis.over_rolls }}</div>
+              <div class="text-sm font-semibold tabular-nums text-on-surface-variant">{{ "%.2f"|format(age_kpis.over_yds) }} yds</div>
+            </div>
+            <div class="mt-1 text-xs text-on-surface-variant">Số cây / Tổng YDS</div>
+          </div>
+
+          <div class="rounded-2xl bg-primary-fixed p-6 border border-black/5">
+            <div class="text-xs font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tổng tồn</div>
+            <div class="mt-2 flex items-end justify-between">
+              <div class="text-3xl font-extrabold font-headline tabular-nums text-on-surface">{{ age_kpis.total_rolls }}</div>
+              <div class="text-sm font-bold tabular-nums text-primary">{{ "%.2f"|format(age_kpis.total_yds) }} yds</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-span-12 lg:col-span-7 rounded-[1.5rem] bg-surface-container-low border border-black/5 p-8 relative">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Chart</div>
+              <div class="mt-1 text-lg font-extrabold font-headline text-on-surface">Tỷ trọng số cây theo nhóm</div>
+            </div>
+            <span class="material-symbols-outlined text-on-surface-variant/60">donut_large</span>
+          </div>
+
+          <div class="mt-8 h-[260px] relative">
+            <canvas id="ageSplitDonut"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
+      <div class="px-8 pt-8 pb-6 border-b border-black/5 flex items-end justify-between gap-6 flex-wrap">
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Danh sách cây</div>
+          <h3 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Chi tiết tồn kho theo cây vải</h3>
+          <div class="mt-2 text-xs text-on-surface-variant">{{ age_rows|length }} dòng</div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto p-4 md:p-6">
+        <table class="min-w-full text-sm border-separate border-spacing-0 overflow-hidden rounded-2xl">
+          <thead class="bg-primary-container text-white">
+            <tr class="text-left">
+              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Nhu cầu</th>
+              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Lot</th>
+              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Mã cây</th>
+              <th class="px-5 py-4 text-right text-[11px] font-extrabold uppercase tracking-widest">Số lượng</th>
+              <th class="px-5 py-4 text-right text-[11px] font-extrabold uppercase tracking-widest">Thực tế</th>
+              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Ghi chú</th>
+              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Vị trí</th>
+              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Lưu kho</th>
+              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Trạng thái</th>
+              <th class="px-5 py-4 text-[11px] font-extrabold uppercase tracking-widest">Ngày cập nhật</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white">
+            {% for r in age_rows %}
+              <tr class="border-b border-black/5 last:border-0 hover:bg-surface-container-low transition-colors">
+                <td class="px-5 py-4 text-on-surface-variant">{{ r.nhu_cau }}</td>
+                <td class="px-5 py-4 text-on-surface-variant">{{ r.lot }}</td>
+                <td class="px-5 py-4 font-extrabold text-emerald-700">{{ r.ma_cay }}</td>
+                <td class="px-5 py-4 text-right tabular-nums text-on-surface-variant">{{ "%.2f"|format(r.so_luong) if r.so_luong is not none else "—" }}</td>
+                <td class="px-5 py-4 text-right tabular-nums text-on-surface-variant">{{ "%.2f"|format(r.thuc_te) if r.thuc_te is not none else "—" }}</td>
+                <td class="px-5 py-4 text-on-surface-variant">{{ r.ghi_chu or "" }}</td>
+                <td class="px-5 py-4 font-semibold text-on-surface-variant">{{ r.vi_tri or "—" }}</td>
+                <td class="px-5 py-4">
+                  {% if r.bucket == 'over_6m' %}
+                    <span class="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
+                      > 6 tháng{% if r.age_days is not none %} ({{ r.age_days }}d){% endif %}
+                    </span>
+                  {% elif r.bucket == 'under_6m' %}
+                    <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                      ≤ 6 tháng{% if r.age_days is not none %} ({{ r.age_days }}d){% endif %}
+                    </span>
+                  {% else %}
+                    <span class="text-xs text-on-surface-variant">—</span>
+                  {% endif %}
+                </td>
+                <td class="px-5 py-4">
+                  <span class="inline-flex items-center gap-2 text-on-surface-variant">
+                    <span class="inline-flex h-5 w-5 items-center justify-center rounded bg-emerald-500/90 text-white">
+                      <span class="material-symbols-outlined text-[16px]">check</span>
+                    </span>
+                    {{ r.trang_thai or "Đang lưu" }}
+                  </span>
+                </td>
+                <td class="px-5 py-4 text-on-surface-variant tabular-nums whitespace-nowrap">{{ r.ngay_cap_nhat | gmt7 }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td class="px-5 py-16 text-center text-on-surface-variant" colspan="10">Chưa có dữ liệu tồn kho.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <script id="age-split-data" type="application/json">
+      {{
+        {
+          "under_rolls": age_kpis.under_rolls,
+          "over_rolls": age_kpis.over_rolls
+        } | tojson
+      }}
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <script>
+      (function () {
+        const el = document.getElementById("ageSplitDonut");
+        const dataEl = document.getElementById("age-split-data");
+        if (!el || !dataEl) return;
+
+        let payload = null;
+        try { payload = JSON.parse(dataEl.textContent || "{}"); } catch (e) { payload = {}; }
+
+        const under = Number(payload.under_rolls || 0);
+        const over = Number(payload.over_rolls || 0);
+        const total = under + over;
+
+        if (window.__ageSplitDonut) {
+          try { window.__ageSplitDonut.destroy(); } catch (e) {}
+          window.__ageSplitDonut = null;
+        }
+
+        window.__ageSplitDonut = new Chart(el, {
+          type: "doughnut",
+          data: {
+            labels: ["Dưới 6 tháng", "Trên 6 tháng"],
+            datasets: [{
+              data: [under, over],
+              backgroundColor: ["#10b981", "#ef4444"],
+              borderWidth: 0,
+              hoverOffset: 8,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "72%",
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                enabled: true,
+                callbacks: {
+                  label: (ctx) => {
+                    const v = Number(ctx.parsed || 0);
+                    const pct = total ? (v / total * 100) : 0;
+                    return `${ctx.label}: ${Math.round(v)} cây (${pct.toFixed(1)}%)`;
+                  },
+                },
+              },
+              datalabels: {
+                color: "#ffffff",
+                font: { size: 12, weight: "800" },
+                formatter: (v) => {
+                  const val = Number(v || 0);
+                  if (!val || val <= 0) return "";
+                  const pct = total ? (val / total * 100) : 0;
+                  return `${pct.toFixed(0)}%`;
+                },
+              },
+            },
+          },
+          plugins: [ChartDataLabels],
+        });
+      })();
+    </script>
+  {% else %}
+    <!-- Sub-tab bar -->
+    <div class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
+      <div class="px-8 pt-6 border-b border-black/5 flex flex-wrap gap-2">
+        {% set sub_tabs = [
+          ("nhu_cau",  "Nhu cầu"),
+          ("lot",      "Lot vải"),
+          ("loai_vai", "Loại vải"),
+          ("mau_vai",  "Màu vải"),
+        ] %}
+        {% for tab_key, tab_label in sub_tabs %}
+          <a
+            href="/reports?tab={{ tab_key }}"
+            class="px-5 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-widest transition-colors
+                   {% if tab == tab_key %}
+                     bg-primary/10 text-primary border-b-2 border-primary
+                   {% else %}
+                     text-on-surface-variant hover:bg-surface-container-low
+                   {% endif %}"
+          >
+            {{ tab_label }}
+          </a>
+        {% endfor %}
+      </div>
+
+      <!-- KPI summary bar -->
+      <div class="px-8 py-5 flex flex-wrap gap-6 border-b border-black/5 bg-surface-container-low/40">
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tổng số cây</div>
+          <div class="mt-1 text-2xl font-extrabold font-headline text-on-surface">{{ total_so_cay }}</div>
+        </div>
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tổng YDS</div>
+          <div class="mt-1 text-2xl font-extrabold font-headline text-on-surface">{{ "%.2f"|format(total_tong_yds) }}</div>
+        </div>
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Đã định danh</div>
+          <div class="mt-1 text-2xl font-extrabold font-headline text-on-surface">{{ total_da_dinh_danh }}</div>
+        </div>
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Số nhóm</div>
+          <div class="mt-1 text-2xl font-extrabold font-headline text-on-surface">{{ rows|length }}</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="overflow-x-auto p-4 md:p-6">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left border-b border-black/5">
+              <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">{{ col_label }}</th>
+              {% if tab == "lot" %}
+                <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Nhu cầu</th>
+              {% endif %}
+              {% if tab == "mau_vai" %}
+                <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mã màu</th>
+              {% endif %}
+              <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số cây</th>
+              <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Tổng YDS</th>
+              <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Đã định danh</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0">
+                <td class="px-4 py-3 font-semibold text-on-surface">{{ row.nhom }}</td>
+                {% if tab == "lot" %}
+                  <td class="px-4 py-3 text-on-surface-variant">{{ row.nhom_phu or "—" }}</td>
+                {% endif %}
+                {% if tab == "mau_vai" %}
+                  <td class="px-4 py-3 text-on-surface-variant font-mono text-xs">{{ row.nhom_phu or "—" }}</td>
+                {% endif %}
+                <td class="px-4 py-3 text-right font-bold text-on-surface">{{ row.so_cay }}</td>
+                <td class="px-4 py-3 text-right text-on-surface-variant">
+                  {% if row.tong_yds %}{{ "%.2f"|format(row.tong_yds) }}{% else %}—{% endif %}
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <span class="inline-flex items-center gap-1 text-on-surface-variant">
+                    {{ row.da_dinh_danh }}
+                    {% if row.so_cay > 0 %}
+                      <span class="text-[10px] text-on-surface-variant/60">
+                        ({{ (row.da_dinh_danh / row.so_cay * 100)|round|int }}%)
+                      </span>
+                    {% endif %}
+                  </span>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td class="px-4 py-16 text-center text-on-surface-variant" colspan="6">Chưa có dữ liệu tồn kho.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          {% if rows %}
+            <tfoot>
+              <tr class="border-t-2 border-black/10 bg-surface-container-low/60 font-bold">
+                <td class="px-4 py-3 text-on-surface font-extrabold" colspan="{{ 2 if (tab == 'lot' or tab == 'mau_vai') else 1 }}">Tổng cộng</td>
+                <td class="px-4 py-3 text-right text-on-surface">{{ total_so_cay }}</td>
+                <td class="px-4 py-3 text-right text-on-surface">{{ "%.2f"|format(total_tong_yds) }}</td>
+                <td class="px-4 py-3 text-right text-on-surface">{{ total_da_dinh_danh }}</td>
+              </tr>
+            </tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

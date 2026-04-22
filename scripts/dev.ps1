@@ -6,7 +6,7 @@ if (!(Test-Path ".\\.venv\\Scripts\\python.exe")) {
 }
 
 $env:PYTHONPATH = "src"
-& .\.venv\Scripts\python.exe -m uvicorn fabric_warehouse.main:app --reload --host 0.0.0.0 --port 8000
+& .\.venv\Scripts\python.exe -m uvicorn fabric_warehouse.main:app --reload --host 0.0.0.0 --port 8014
 
 # Reset WMS data for testing (purge/seed)
 # Examples:

@@ -118,8 +118,8 @@
       .nav-link {
         display: flex;
         align-items: center;
-        gap: 1rem;
-        padding: 0.75rem 1rem;
+        gap: 0.75rem;
+        padding: 0.6rem 0.9rem;
         border-radius: 0.75rem;
         border-right: 4px solid transparent;
         font-weight: 500;
@@ -139,13 +139,13 @@
         background-color: #f1f5f9;
       }
       .nav-link .material-symbols-outlined {
-        font-size: 24px;
+        font-size: 22px;
       }
       .nav-link span:last-child {
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.06em;
       }
 
       /* ── KPI card hover (reference UI) ── */
@@ -186,14 +186,14 @@
   <body class="bg-surface text-on-surface antialiased flex min-h-screen">
     {% set path = request.url.path %}
 
-    <aside class="h-screen w-72 flex-shrink-0 sticky top-0 bg-slate-50 flex flex-col py-5 px-6 space-y-6 shadow-sm">
-      <div class="mb-6 flex items-center justify-center">
-        <a href="/" class="block w-[80%]">
+    <aside class="h-screen w-72 flex-shrink-0 sticky top-0 bg-slate-50 flex flex-col py-4 px-5 space-y-4 shadow-sm overflow-y-auto">
+      <div class="mb-2 flex items-center justify-center">
+        <a href="/" class="block w-[85%]">
           <img src="/static/Marex.jpg" alt="Marex Project" class="w-full h-auto object-contain mix-blend-multiply" />
         </a>
       </div>
 
-      <nav class="flex-1 space-y-2">
+      <nav class="flex-1 space-y-1">
         <a class="nav-link {% if path == '/' %}active{% endif %}" href="/">
           <span class="material-symbols-outlined">dashboard</span>
           <span>Dashboard</span>
@@ -204,7 +204,7 @@
           <span>Hướng dẫn</span>
         </a>
 
-        <div class="pt-4 pb-1">
+        <div class="pt-3 pb-1">
           <div class="px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Modules</div>
         </div>
 
@@ -242,9 +242,18 @@
           <span class="material-symbols-outlined">build</span>
           <span>Tính năng khác</span>
         </a>
+
+        <div class="pt-3 pb-1">
+          <div class="px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Báo cáo</div>
+        </div>
+
+        <a class="nav-link {% if path.startswith('/reports') %}active{% endif %}" href="/reports">
+          <span class="material-symbols-outlined">bar_chart</span>
+          <span>Báo cáo</span>
+        </a>
       </nav>
 
-      <div class="mt-8 rounded-2xl bg-surface-container-low p-5">
+      <div class="mt-4 rounded-2xl bg-surface-container-low p-4">
         <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Environment</div>
         <div class="mt-2 text-sm font-semibold text-on-surface">{{ env_label or "Local" }}</div>
         {% if settings_env %}
