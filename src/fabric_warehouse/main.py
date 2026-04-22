@@ -6,12 +6,14 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 from urllib.parse import quote
 
 from fabric_warehouse.api.router import router as api_router
 from fabric_warehouse.config import settings
+from fabric_warehouse.db.models.issue import Issue
 from fabric_warehouse.db.models.location_assignment import LocationAssignment
 from fabric_warehouse.db.session import get_db
 from fabric_warehouse.wms.dashboard_service import compute_age_split_for_stored, list_in_out_by_day
@@ -122,9 +124,28 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         except Exception:
             pallet_layout = None
 
-    # Chart: IN/OUT for last 7 days by default
+    # Chart: IN/OUT for last 7 days by default.
+    # Default to the latest activity date in DB so production (historical) data still shows.
     today = date.today()
-    to_day = _parse_day("to") or today
+    to_param = _parse_day("to")
+    if to_param:
+        to_day = to_param
+    else:
+        latest_days: list[date] = []
+        try:
+            max_assigned = db.query(func.max(func.date(LocationAssignment.assigned_at))).scalar()
+            if max_assigned:
+                latest_days.append(max_assigned)
+        except Exception:
+            pass
+        try:
+            max_issue = db.query(func.max(func.date(Issue.created_at))).scalar()
+            if max_issue:
+                latest_days.append(max_issue)
+        except Exception:
+            pass
+        to_day = max(latest_days) if latest_days else today
+
     from_day = _parse_day("from") or (to_day - timedelta(days=7))
     if from_day > to_day:
         from_day, to_day = to_day, from_day
