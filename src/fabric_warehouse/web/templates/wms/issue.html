@@ -39,37 +39,49 @@
   </section>
 
   {% if tab == 'issue' %}
-    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
-      <form method="get" action="/wms/issue" class="grid grid-cols-1 gap-6 md:grid-cols-3">
+    <div id="issue-ajax">
+      <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+        <form
+          method="get"
+          action="/wms/issue"
+          class="grid grid-cols-1 gap-6 md:grid-cols-3"
+          data-ajax-filter
+          data-ajax-target="#issue-ajax"
+          data-ajax-debounce="100"
+        >
         <input type="hidden" name="tab" value="issue" />
         <div>
           <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="nhu_cau">Nhu cầu</label>
-          <select
+          <input
             id="nhu_cau"
             name="nhu_cau"
+            list="nhu_cau_list"
+            value="{{ nhu_cau or '' }}"
+            autocomplete="off"
+            data-ajax-change
+            placeholder="Gõ hoặc chọn..."
             class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0"
-            onchange="this.form.submit()"
-          >
-            <option value="" {% if not nhu_cau %}selected{% endif %}>Chọn...</option>
-            {% for nc in nhu_cau_options %}
-              <option value="{{ nc }}" {% if nhu_cau == nc %}selected{% endif %}>{{ nc }}</option>
-            {% endfor %}
-          </select>
+          />
+          <datalist id="nhu_cau_list">
+            {% for nc in nhu_cau_options %}<option value="{{ nc }}">{% endfor %}
+          </datalist>
         </div>
         <div>
-          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="lot">Lot</label>
-          <select
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="lot">Lot vải</label>
+          <input
             id="lot"
             name="lot"
-            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0 disabled:opacity-50"
-            onchange="this.form.submit()"
+            list="lot_list"
+            value="{{ lot or '' }}"
+            autocomplete="off"
+            data-ajax-change
+            placeholder="{% if not nhu_cau %}Chọn Nhu Cầu trước{% else %}Gõ hoặc chọn...{% endif %}"
             {% if not nhu_cau %}disabled{% endif %}
-          >
-            <option value="" {% if not lot %}selected{% endif %}>Chọn...</option>
-            {% for l in lot_options %}
-              <option value="{{ l }}" {% if lot == l %}selected{% endif %}>{{ l }}</option>
-            {% endfor %}
-          </select>
+            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0 disabled:opacity-50"
+          />
+          <datalist id="lot_list">
+            {% for l in lot_options %}<option value="{{ l }}">{% endfor %}
+          </datalist>
         </div>
         <div class="flex items-end">
           <a
@@ -80,8 +92,8 @@
             Reset lọc
           </a>
         </div>
-      </form>
-    </section>
+        </form>
+      </section>
 
     {% if nhu_cau and lot %}
       <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
@@ -164,6 +176,7 @@
         })();
       </script>
     {% endif %}
+    </div>
   {% endif %}
 
   {% if tab == 'history' %}

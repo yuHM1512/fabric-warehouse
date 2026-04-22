@@ -1,0 +1,43 @@
+<div class="flex items-start justify-between gap-6">
+  <div>
+    <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Pallet</div>
+    <div class="mt-2 text-lg font-extrabold font-headline text-on-surface">{{ vi_tri }}</div>
+    <div class="mt-1 text-xs text-on-surface-variant">{{ rows|length }} cây</div>
+  </div>
+  <button
+    type="button"
+    class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors"
+    onclick="(function(){ const m=document.getElementById('palletModal'); if(m) m.classList.add('hidden'); const c=document.getElementById('palletModalContent'); if(c) c.innerHTML=''; })()"
+  >
+    Đóng
+  </button>
+</div>
+
+<div class="mt-6 overflow-x-auto rounded-2xl border border-black/5">
+  <table class="min-w-full text-sm">
+    <thead class="bg-surface-container-low text-on-surface-variant">
+      <tr class="text-left">
+        <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Mã Cây</th>
+        <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Nhu cầu</th>
+        <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Lot</th>
+        <th class="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest">Số Yds</th>
+        <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Xác nhận lưu kho</th>
+        <th class="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest">Lưu kho (ngày)</th>
+      </tr>
+    </thead>
+    <tbody class="bg-surface-container-lowest">
+      {% for r in rows %}
+        <tr class="hover:bg-surface-container-low transition-colors border-t border-black/5">
+          <td class="px-6 py-4 font-extrabold font-headline text-primary">{{ r.ma_cay }}</td>
+          <td class="px-6 py-4 font-semibold">{{ r.nhu_cau }}</td>
+          <td class="px-6 py-4 font-semibold">{{ r.lot }}</td>
+          <td class="px-6 py-4 text-right tabular-nums font-semibold">{{ "%.1f"|format(r.yds) if r.yds is not none else "" }}</td>
+          <td class="px-6 py-4 tabular-nums">{{ r.ngay_nhap or "" }}</td>
+          <td class="px-6 py-4 text-right tabular-nums font-semibold">{{ r.days_in_stock if r.days_in_stock is not none else "" }}</td>
+        </tr>
+      {% else %}
+        <tr><td class="px-6 py-8 text-on-surface-variant" colspan="6">Không có cây đang lưu ở pallet này.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

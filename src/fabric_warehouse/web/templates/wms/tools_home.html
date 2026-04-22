@@ -1,56 +1,87 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
-    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-      <div>
-        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tính năng khác</div>
-        <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Tools</h2>
-        <p class="mt-2 text-sm text-on-surface-variant leading-relaxed">
-          Trace / điều chuyển / tra cứu định mức.
+<div class="space-y-12 pb-16">
+  <!-- Hero Section -->
+  <section class="relative bg-gradient-to-br from-primary to-primary-container rounded-[2rem] overflow-hidden p-10 md:p-16 text-white min-h-[300px] flex flex-col justify-end" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+    <!-- Abstract Shapes for depth -->
+    <div class="absolute -top-32 -right-32 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-[-100px] left-[-50px] w-80 h-80 bg-black/10 rounded-full blur-3xl pointer-events-none"></div>
+    
+    <div class="relative z-10 w-full flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div class="max-w-xl">
+        <div class="text-[12px] font-bold uppercase tracking-widest text-white/70 mb-4">Hệ Thống Phụ Trợ</div>
+        <h1 class="text-[40px] md:text-[56px] font-headline font-extrabold leading-tight tracking-[-0.02em]">
+          Công Cụ <br/>Mở Rộng
+        </h1>
+        <p class="mt-6 text-lg text-white/90 leading-[1.6]">
+          Quản lý lịch sử di chuyển, điều chuyển nhu cầu và tối ưu hóa tọa độ pallet cho kho vải.
         </p>
       </div>
-      <a href="/wms" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">WMS</a>
-    </div>
-  </section>
-
-  <section class="mt-10">
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <a class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-8 hover:opacity-95 transition-opacity" href="/wms/tools/trace">
-        <div class="flex items-center justify-between">
-          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Trace</div>
-          <span class="material-symbols-outlined text-primary">timeline</span>
-        </div>
-        <div class="mt-3 text-lg font-extrabold font-headline">Truy xuất cây vải</div>
-        <div class="mt-2 text-sm text-on-surface-variant leading-relaxed">Timeline: nhập / kiểm kho / vị trí / xuất / tái nhập / điều chuyển…</div>
-      </a>
-
-      <a class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-8 hover:opacity-95 transition-opacity" href="/wms/tools/demand-transfer">
-        <div class="flex items-center justify-between">
-          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Điều chuyển</div>
-          <span class="material-symbols-outlined text-primary">swap_horiz</span>
-        </div>
-        <div class="mt-3 text-lg font-extrabold font-headline">Điều chuyển nhu cầu</div>
-        <div class="mt-2 text-sm text-on-surface-variant leading-relaxed">Chuyển cây từ NC‑TAM sang nhu cầu thực tế (có log).</div>
-      </a>
-
-      <a class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-8 hover:opacity-95 transition-opacity" href="/wms/tools/location-transfer">
-        <div class="flex items-center justify-between">
-          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Điều chuyển</div>
-          <span class="material-symbols-outlined text-primary">grid_view</span>
-        </div>
-        <div class="mt-3 text-lg font-extrabold font-headline">Điều chuyển vị trí</div>
-        <div class="mt-2 text-sm text-on-surface-variant leading-relaxed">Đổi pallet A.01.01 → A.01.02 (có log).</div>
-      </a>
-
-      <a class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-8 hover:opacity-95 transition-opacity" href="/wms/tools/norms">
-        <div class="flex items-center justify-between">
-          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tra cứu</div>
-          <span class="material-symbols-outlined text-primary">search</span>
-        </div>
-        <div class="mt-3 text-lg font-extrabold font-headline">Tra cứu định mức</div>
-        <div class="mt-2 text-sm text-on-surface-variant leading-relaxed">YDS tối đa / Pallet theo Mã Model.</div>
+      <a href="/wms" class="bg-white/20 hover:bg-white/30 backdrop-blur-md transition-all rounded-xl px-8 py-4 border border-white/10 font-bold tracking-wide uppercase text-xs flex items-center gap-2 self-start md:self-auto shadow-[0_8px_32px_rgba(31,38,135,0.1)]">
+        <span class="material-symbols-outlined text-sm">arrow_back</span>
+        WMS Home
       </a>
     </div>
   </section>
+
+  <!-- Tools Grid -->
+  <section class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <a class="group relative bg-surface-container-lowest rounded-[2rem] p-10 transition-all hover:translate-y-[-4px]" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.03);" href="/wms/tools/trace">
+      <div class="flex items-center justify-between mb-8">
+        <div class="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+          <span class="material-symbols-outlined">timeline</span>
+        </div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant group-hover:text-primary transition-colors">Trace ID</div>
+      </div>
+      <h3 class="text-[24px] font-extrabold font-headline text-on-surface mb-3 uppercase tracking-tight">Truy xuất cây vải</h3>
+      <p class="text-on-surface-variant leading-relaxed text-sm">Kiểm tra dòng đời: nhập, kiểm kho, vị trí, xuất, tái nhập và các lịch sử biến động tọa độ.</p>
+      <div class="mt-8 flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+        Khám phá ngay <span class="material-symbols-outlined text-sm">east</span>
+      </div>
+    </a>
+
+    <a class="group relative bg-surface-container-lowest rounded-[2rem] p-10 transition-all hover:translate-y-[-4px]" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.03);" href="/wms/tools/demand-transfer">
+      <div class="flex items-center justify-between mb-8">
+        <div class="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+          <span class="material-symbols-outlined">swap_horiz</span>
+        </div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant group-hover:text-primary transition-colors">Shift</div>
+      </div>
+      <h3 class="text-[24px] font-extrabold font-headline text-on-surface mb-3 uppercase tracking-tight">Điều chuyển nhu cầu</h3>
+      <p class="text-on-surface-variant leading-relaxed text-sm">Dịch chuyển trạng thái lưu trữ cây vải từ nguồn NC‑TAM sang các nhu cầu sử dụng thực tế của tổ sản xuất.</p>
+      <div class="mt-8 flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+        Thực hiện <span class="material-symbols-outlined text-sm">east</span>
+      </div>
+    </a>
+
+    <a class="group relative bg-surface-container-lowest rounded-[2rem] p-10 transition-all hover:translate-y-[-4px]" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.03);" href="/wms/tools/location-transfer">
+      <div class="flex items-center justify-between mb-8">
+        <div class="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+          <span class="material-symbols-outlined">grid_view</span>
+        </div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant group-hover:text-primary transition-colors">Relocate</div>
+      </div>
+      <h3 class="text-[24px] font-extrabold font-headline text-on-surface mb-3 uppercase tracking-tight">Điều chuyển vị trí</h3>
+      <p class="text-on-surface-variant leading-relaxed text-sm">Tối ưu không gian kho bằng cách di chuyển vật lý hoặc ảo các Pallet giữa các tọa độ trong hệ thống.</p>
+      <div class="mt-8 flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+        Thiết lập <span class="material-symbols-outlined text-sm">east</span>
+      </div>
+    </a>
+
+    <a class="group relative bg-surface-container-lowest rounded-[2rem] p-10 transition-all hover:translate-y-[-4px]" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.03);" href="/wms/tools/norms">
+      <div class="flex items-center justify-between mb-8">
+        <div class="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+          <span class="material-symbols-outlined">search</span>
+        </div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant group-hover:text-primary transition-colors">Standards</div>
+      </div>
+      <h3 class="text-[24px] font-extrabold font-headline text-on-surface mb-3 uppercase tracking-tight">Tra cứu định mức</h3>
+      <p class="text-on-surface-variant leading-relaxed text-sm">Bảng tra quy chuẩn YDS tối đa cho phép trên mỗi mã Pallet dựa theo phân loại Mã Model hàng hóa.</p>
+      <div class="mt-8 flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+        Xem định mức <span class="material-symbols-outlined text-sm">east</span>
+      </div>
+    </a>
+  </div>
+</div>
 {% endblock %}

@@ -31,7 +31,12 @@
     </tr>
     <tr>
       <th>LOT:</th>
-      <td colspan="2" class="hang-lot hang-bold hang-center">{{ t.lot or "" }}</td>
+      {% set lot_text = t.lot or "" %}
+      {% if lot_text|length > 28 %}{% set lot_cls = "hang-lot-xxs" %}
+      {% elif lot_text|length > 18 %}{% set lot_cls = "hang-lot-xs" %}
+      {% elif lot_text|length > 10 %}{% set lot_cls = "hang-lot-sm" %}
+      {% else %}{% set lot_cls = "hang-lot" %}{% endif %}
+      <td colspan="2" class="{{ lot_cls }} hang-bold hang-center">{{ lot_text }}</td>
     </tr>
     <tr>
       <th>KẾT QUẢ KIỂM TRA<br />(Result of check)</th>

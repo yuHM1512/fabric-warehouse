@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from fabric_warehouse.db.models.location_assignment import LocationAssignment
+from fabric_warehouse.db.models.location_transfer_log import LocationTransferLog
 from fabric_warehouse.db.models.receipt import ReceiptLine
 from fabric_warehouse.db.models.stock_check import StockCheck
 
@@ -48,6 +49,7 @@ def list_nhu_cau_options_for_location(db: Session) -> list[str]:
 def list_anh_mau_options(db: Session, *, nhu_cau: str) -> list[str]:
     rows = (
         db.query(ReceiptLine.anh_mau)
+        .join(StockCheck, (StockCheck.ma_cay == ReceiptLine.ma_cay) & StockCheck.actual_yards.isnot(None))
         .filter(ReceiptLine.nhu_cau == nhu_cau)
         .filter(ReceiptLine.anh_mau.isnot(None))
         .distinct()
@@ -177,11 +179,34 @@ def assign_location(
     vi_tri: str,
 ) -> int:
     now = datetime.now(timezone.utc)
-    values = []
+
+    cleaned: list[str] = []
     for ma in ma_cays:
         ma = (ma or "").strip()
-        if not ma:
-            continue
+        if ma:
+            cleaned.append(ma)
+    cleaned = list(dict.fromkeys(cleaned))
+    if not cleaned:
+        return 0
+
+    existing_rows = (
+        db.query(LocationAssignment.ma_cay, LocationAssignment.vi_tri, LocationAssignment.nhu_cau, LocationAssignment.lot)
+        .filter(LocationAssignment.ma_cay.in_(cleaned))
+        .all()
+    )
+    existing_map: dict[str, tuple[str | None, str | None, str | None]] = {
+        str(ma): (
+            (str(v) if v is not None else None),
+            (str(nc) if nc is not None else None),
+            (str(l) if l is not None else None),
+        )
+        for ma, v, nc, l in existing_rows
+        if ma
+    }
+
+    values = []
+    logs: list[LocationTransferLog] = []
+    for ma in cleaned:
         values.append(
             {
                 "ma_cay": ma,
@@ -190,11 +215,30 @@ def assign_location(
                 "anh_mau": anh_mau,
                 "vi_tri": vi_tri,
                 "trang_thai": "Đang lưu",
+                "assigned_at": now,
                 "updated_at": now,
             }
         )
+        from_vi_tri, prev_nc, prev_lot = existing_map.get(ma, (None, None, None))
+        if from_vi_tri == vi_tri:
+            continue
+        logs.append(
+            LocationTransferLog(
+                ma_cay=ma,
+                nhu_cau=(prev_nc or nhu_cau),
+                lot=(prev_lot or lot),
+                from_vi_tri=from_vi_tri,
+                to_vi_tri=vi_tri,
+                note="assign_location",
+                created_at=now,
+            )
+        )
     if not values:
         return 0
+
+    if logs:
+        db.add_all(logs)
+
     stmt = pg_insert(LocationAssignment.__table__).values(values)
     stmt = stmt.on_conflict_do_update(
         index_elements=["ma_cay"],
@@ -204,9 +248,9 @@ def assign_location(
             "anh_mau": stmt.excluded.anh_mau,
             "vi_tri": stmt.excluded.vi_tri,
             "trang_thai": stmt.excluded.trang_thai,
+            "assigned_at": func.coalesce(LocationAssignment.assigned_at, stmt.excluded.assigned_at),
             "updated_at": stmt.excluded.updated_at,
         },
     )
     res = db.execute(stmt)
     return int(res.rowcount or 0)
-

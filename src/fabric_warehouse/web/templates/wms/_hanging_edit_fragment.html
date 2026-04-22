@@ -1,0 +1,75 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-start justify-between gap-6">
+    <div>
+      <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Bảng treo</div>
+      <h3 class="mt-2 text-lg font-extrabold font-headline text-on-surface">Chỉnh sửa #{{ tag.id }}</h3>
+      <div class="mt-2 text-xs text-on-surface-variant">
+        <span class="font-bold text-on-surface">Nhu cầu:</span> {{ tag.nhu_cau or "" }}
+        <span class="mx-2 text-on-surface-variant/30">|</span>
+        <span class="font-bold text-on-surface">Lot:</span> {{ tag.lot or "" }}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors"
+      onclick="closeEditModal()"
+    >
+      Đóng
+    </button>
+  </div>
+
+  <div data-edit-error class="hidden rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container"></div>
+
+  <form
+    data-edit-fragment-form
+    method="post"
+    action="/wms/hanging/{{ tag.id }}/edit/fragment{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}"
+  >
+    <div class="grid grid-cols-1 gap-6">
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="customer">Customer</label>
+        <input
+          id="customer"
+          name="customer"
+          value="{{ tag.customer or '' }}"
+          class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+          placeholder="VD: HIEPTHANH / DELICACY / ..."
+        />
+        <div class="mt-2 text-xs text-on-surface-variant leading-relaxed">
+          Nếu bỏ trống, phần in sẽ dùng <code class="font-mono">Nhà cung cấp</code> hiện có (nếu có).
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="ngay_xuat">Ngày xuất</label>
+        <input
+          id="ngay_xuat"
+          name="ngay_xuat"
+          type="date"
+          value="{{ tag.ngay_xuat or '' }}"
+          class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+        />
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 pt-2">
+        <button
+          type="submit"
+          class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
+        >
+          <span class="material-symbols-outlined text-base">save</span>
+          Lưu
+        </button>
+
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors"
+          onclick="closeEditModal()"
+        >
+          Huỷ
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+

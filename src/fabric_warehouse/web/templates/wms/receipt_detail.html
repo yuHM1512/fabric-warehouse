@@ -33,7 +33,7 @@
       </div>
       <div class="bg-surface-container-low rounded-2xl p-6">
         <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tạo lúc</div>
-        <div class="mt-2 text-lg font-extrabold font-headline">{{ receipt.created_at or "—" }}</div>
+        <div class="mt-2 text-lg font-extrabold font-headline">{{ receipt.created_at | gmt7 if receipt.created_at else "—" }}</div>
       </div>
     </div>
 

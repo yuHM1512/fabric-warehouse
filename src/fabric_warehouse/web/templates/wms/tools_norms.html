@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+  <div id="tools-norms-ajax">
   <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
     <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
       <div>
@@ -17,10 +18,17 @@
     </div>
 
     <div class="mt-10 bg-surface-container-low rounded-[2rem] p-8">
-      <form method="get" action="/wms/tools/norms" class="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-end">
+      <form
+        method="get"
+        action="/wms/tools/norms"
+        class="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-end"
+        data-ajax-filter
+        data-ajax-target="#tools-norms-ajax"
+        data-ajax-debounce="150"
+      >
         <div class="flex-1">
           <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="ma_model">Lọc theo Mã Art</label>
-          <select id="ma_model" name="ma_model" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0" onchange="this.form.submit()">
+          <select id="ma_model" name="ma_model" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
             <option value="" {% if not ma_model %}selected{% endif %}>Tất cả</option>
             {% for m in ma_models %}
               <option value="{{ m }}" {% if ma_model == m %}selected{% endif %}>{{ m }}</option>
@@ -84,4 +92,5 @@
       </table>
     </div>
   </section>
+  </div>
 {% endblock %}

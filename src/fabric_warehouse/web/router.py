@@ -1,17 +1,18 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from io import BytesIO
 
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session
 
 from fabric_warehouse.db.session import get_db
-from fabric_warehouse.wms.hanging_pdf import render_hanging_tag_pdf
+from fabric_warehouse.wms.hanging_pdf import render_hanging_tag_pdf, render_merged_hanging_tag_pdf
 from fabric_warehouse.wms.hanging_service import backfill_hanging_tags, fill_missing_hanging_fields
 from fabric_warehouse.wms.pdf import render_receipt_pdf
 from fabric_warehouse.wms.receipts_service import (
@@ -52,6 +53,7 @@ from fabric_warehouse.wms.return_service import (
 )
 from fabric_warehouse.db.models.issue import IssueLine
 from fabric_warehouse.wms.fabric_norms import list_ma_models, list_norm_rows, search_norms_db
+from fabric_warehouse.wms.pallet_metrics import list_pallet_roll_rows
 from fabric_warehouse.wms.tools_service import (
     build_trace_timeline,
     list_trace_lots,
@@ -59,10 +61,75 @@ from fabric_warehouse.wms.tools_service import (
     transfer_demand,
     transfer_location,
 )
+from fabric_warehouse.web.jinja_filters import fmt_gmt7
+from fabric_warehouse.config import settings
+from fabric_warehouse.db.models.user import User
 
-templates = Jinja2Templates(directory="src/fabric_warehouse/web/templates")
+templates = Jinja2Templates(
+    env=Environment(
+        loader=FileSystemLoader("src/fabric_warehouse/web/templates", encoding="utf-8"),
+        autoescape=select_autoescape(["html", "xml"]),
+    )
+)
+templates.env.filters["gmt7"] = fmt_gmt7
 
 router = APIRouter()
+
+
+def _safe_next_url(raw: str | None) -> str:
+    raw = (raw or "").strip()
+    if not raw:
+        return "/"
+    if not raw.startswith("/"):
+        return "/"
+    if raw.startswith("//"):
+        return "/"
+    return raw
+
+
+@router.get("/rcp/login", response_class=HTMLResponse)
+def rcp_login(request: Request):
+    next_url = _safe_next_url(request.query_params.get("next"))
+    error = (request.query_params.get("error") or "").strip()
+    return templates.TemplateResponse(
+        request,
+        "wms/login.html",
+        {
+            "title": "Đăng nhập",
+            "app_name": settings.app_name,
+            "next_url": next_url,
+            "error": error,
+        },
+    )
+
+
+@router.post("/rcp/login")
+async def rcp_login_post(
+    request: Request,
+    ma_nv: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    next_url = _safe_next_url(request.query_params.get("next"))
+    code = (ma_nv or "").strip().upper()
+    if not code:
+        return HTMLResponse("Missing ma_nv", status_code=400)
+
+    user = db.query(User).filter(User.ma_nv == code).first()
+    if not user:
+        return HTMLResponse("Invalid ma_nv", status_code=401)
+
+    request.session["ma_nv"] = user.ma_nv
+    request.session["ho_ten"] = user.ho_ten or ""
+    return RedirectResponse(url=next_url, status_code=303)
+
+
+@router.get("/rcp/logout")
+def rcp_logout(request: Request):
+    try:
+        request.session.clear()
+    except Exception:
+        pass
+    return RedirectResponse(url="/", status_code=303)
 
 
 @router.get("/wms/receipts", response_class=HTMLResponse)
@@ -83,7 +150,7 @@ async def receipts_import(
 ):
     content = await file.read()
     if not content:
-        raise HTTPException(status_code=400, detail="File rỗng.")
+        raise HTTPException(status_code=400, detail="File rá»—ng.")
 
     try:
         receipt, warnings = import_receipt_from_excel(
@@ -111,7 +178,7 @@ async def receipts_import(
 def receipt_detail(request: Request, receipt_id: int, db: Session = Depends(get_db)):
     receipt = get_receipt(db, receipt_id=receipt_id)
     if not receipt:
-        raise HTTPException(status_code=404, detail="Không tìm thấy phiếu.")
+        raise HTTPException(status_code=404, detail="KhÃ´ng tÃ¬m tháº¥y phiáº¿u.")
     lines = get_receipt_lines(db, receipt_id=receipt_id)
     return templates.TemplateResponse(
         request,
@@ -129,7 +196,7 @@ def receipt_detail(request: Request, receipt_id: int, db: Session = Depends(get_
 def receipt_pdf(receipt_id: int, db: Session = Depends(get_db)):
     receipt = get_receipt(db, receipt_id=receipt_id)
     if not receipt:
-        raise HTTPException(status_code=404, detail="Không tìm thấy phiếu.")
+        raise HTTPException(status_code=404, detail="KhÃ´ng tÃ¬m tháº¥y phiáº¿u.")
     lines = get_receipt_lines(db, receipt_id=receipt_id)
     pdf_bytes = render_receipt_pdf(receipt, lines)
     filename = f"receipt_{receipt.id}.pdf"
@@ -204,6 +271,49 @@ def hanging_pdf(tag_id: int, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/wms/hanging/merge-print", response_class=HTMLResponse)
+def hanging_merge_print(
+    request: Request,
+    db: Session = Depends(get_db),
+    ids: list[int] | None = Query(default=None),
+):
+    if not ids:
+        raise HTTPException(status_code=400, detail="Chưa chọn bảng treo nào.")
+    tags = db.query(HangingTag).filter(HangingTag.id.in_(ids)).order_by(HangingTag.id.asc()).all()
+    if not tags:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bảng treo.")
+
+    import types
+
+    def _uniq_join(vals, sep: str = " / ") -> str:
+        seen: list[str] = []
+        for v in vals:
+            s = (v or "").strip()
+            if s and s not in seen:
+                seen.append(s)
+        return sep.join(seen)
+
+    merged = types.SimpleNamespace(
+        khach_hang=(tags[0].khach_hang or "DECATHLON").strip() or "DECATHLON",
+        nha_cung_cap=_uniq_join(t.nha_cung_cap for t in tags),
+        customer=_uniq_join(t.customer for t in tags),
+        ngay_nhap_hang=min((t.ngay_nhap_hang for t in tags if t.ngay_nhap_hang), default=None),
+        ma_hang=_uniq_join(t.ma_hang for t in tags),
+        nhu_cau=_uniq_join(t.nhu_cau for t in tags),
+        loai_vai=_uniq_join(t.loai_vai for t in tags),
+        ma_art=_uniq_join(t.ma_art for t in tags),
+        mau_vai=_uniq_join(t.mau_vai for t in tags),
+        ma_mau=_uniq_join(t.ma_mau for t in tags),
+        lot=_uniq_join(t.lot for t in tags),
+        ket_qua_kiem_tra=tags[0].ket_qua_kiem_tra if tags else "OK",
+    )
+    return templates.TemplateResponse(
+        request,
+        "wms/hanging_print.html",
+        {"title": "Gộp bảng treo", "tags": [merged]},
+    )
+
+
 @router.get("/wms/hanging/print", response_class=HTMLResponse)
 def hanging_print(
     request: Request,
@@ -239,7 +349,56 @@ def hanging_edit(request: Request, tag_id: int, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         request,
         "wms/hanging_edit.html",
-        {"title": f"Edit bảng treo #{tag.id}", "tag": tag, "nhu_cau": nhu_cau},
+        {"title": f"Sửa bảng treo #{tag.id}", "tag": tag, "nhu_cau": nhu_cau},
+    )
+
+
+@router.get("/wms/hanging/{tag_id}/edit/fragment", response_class=HTMLResponse)
+def hanging_edit_fragment(request: Request, tag_id: int, db: Session = Depends(get_db)):
+    tag = db.query(HangingTag).filter(HangingTag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bảng treo.")
+    nhu_cau = request.query_params.get("nhu_cau")
+    return templates.TemplateResponse(
+        request,
+        "wms/_hanging_edit_fragment.html",
+        {"tag": tag, "nhu_cau": nhu_cau},
+    )
+
+
+@router.post("/wms/hanging/{tag_id}/edit/fragment")
+def hanging_edit_fragment_save(
+    request: Request,
+    tag_id: int,
+    db: Session = Depends(get_db),
+    customer: str | None = Form(default=None),
+    ngay_xuat: date | None = Form(default=None),
+):
+    tag = db.query(HangingTag).filter(HangingTag.id == tag_id).first()
+    if not tag:
+        return JSONResponse({"ok": False, "error": "Không tìm thấy bảng treo."}, status_code=404)
+
+    try:
+        tag.customer = (customer or "").strip() or None
+        tag.ngay_xuat = ngay_xuat
+
+        # Also keep supplier in sync for printing convenience when customer is provided.
+        if tag.customer:
+            tag.nha_cung_cap = tag.customer
+
+        db.add(tag)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+
+    return JSONResponse(
+        {
+            "ok": True,
+            "tag_id": tag.id,
+            "customer": tag.customer,
+            "ngay_xuat": tag.ngay_xuat.isoformat() if tag.ngay_xuat else "",
+        }
     )
 
 
@@ -305,7 +464,7 @@ async def stock_check_save(request: Request, db: Session = Depends(get_db)):
     nhu_cau = (form.get("nhu_cau") or "").strip()
     lot = (form.get("lot") or "").strip()
     if not nhu_cau or not lot:
-        raise HTTPException(status_code=400, detail="Thiếu Nhu cầu hoặc Lot.")
+        raise HTTPException(status_code=400, detail="Thiáº¿u Nhu cáº§u hoáº·c Lot.")
 
     try:
         row_count = int(form.get("row_count") or 0)
@@ -395,7 +554,7 @@ async def location_save(request: Request, db: Session = Depends(get_db)):
     line = (form.get("line") or "").strip()
     pallet = (form.get("pallet") or "").strip()
     if not nhu_cau or not lot or not tang or not line or not pallet:
-        raise HTTPException(status_code=400, detail="Thiếu thông tin lọc hoặc vị trí.")
+        raise HTTPException(status_code=400, detail="Thiáº¿u thÃ´ng tin lá»c hoáº·c vá»‹ trÃ­.")
     vi_tri = f"{tang}.{line}.{pallet}"
 
     try:
@@ -411,7 +570,7 @@ async def location_save(request: Request, db: Session = Depends(get_db)):
                 ma_cays.append(ma)
 
     if not ma_cays:
-        raise HTTPException(status_code=400, detail="Chưa chọn cây vải nào.")
+        raise HTTPException(status_code=400, detail="ChÆ°a chá»n cÃ¢y váº£i nÃ o.")
 
     assign_location(db, nhu_cau=nhu_cau, lot=lot, anh_mau=anh_mau, ma_cays=ma_cays, vi_tri=vi_tri)
     db.commit()
@@ -473,14 +632,14 @@ async def issue_save(request: Request, db: Session = Depends(get_db)):
     nhu_cau = (form.get("nhu_cau") or "").strip()
     lot = (form.get("lot") or "").strip()
     ngay_xuat_s = (form.get("ngay_xuat") or "").strip()
-    status = (form.get("status") or "").strip() or "Cấp phát sản xuất"
+    status = (form.get("status") or "").strip() or "Cáº¥p phÃ¡t sáº£n xuáº¥t"
     note = (form.get("note") or "").strip() or None
     if not nhu_cau or not lot or not ngay_xuat_s:
-        raise HTTPException(status_code=400, detail="Thiếu Nhu cầu/Lot/Ngày xuất.")
+        raise HTTPException(status_code=400, detail="Thiáº¿u Nhu cáº§u/Lot/NgÃ y xuáº¥t.")
     try:
         ngay_xuat = date.fromisoformat(ngay_xuat_s)
     except Exception as e:
-        raise HTTPException(status_code=400, detail="Ngày xuất không hợp lệ.") from e
+        raise HTTPException(status_code=400, detail="NgÃ y xuáº¥t khÃ´ng há»£p lá»‡.") from e
 
     try:
         row_count = int(form.get("row_count") or 0)
@@ -493,7 +652,7 @@ async def issue_save(request: Request, db: Session = Depends(get_db)):
             if ma:
                 ma_cays.append(ma)
     if not ma_cays:
-        raise HTTPException(status_code=400, detail="Chưa chọn Mã cây.")
+        raise HTTPException(status_code=400, detail="ChÆ°a chá»n MÃ£ cÃ¢y.")
 
     issue_id = create_issue(db, nhu_cau=nhu_cau, lot=lot, ngay_xuat=ngay_xuat, status=status, note=note, ma_cays=ma_cays)
     db.commit()
@@ -542,7 +701,7 @@ async def returns_save(request: Request, db: Session = Depends(get_db)):
     issue_line_id = int(form.get("issue_line_id") or 0)
     ma_cay = (form.get("ma_cay") or "").strip()
     ngay_s = (form.get("ngay_tai_nhap") or "").strip()
-    status = (form.get("status") or "").strip() or "Tái nhập kho"
+    status = (form.get("status") or "").strip() or "TÃ¡i nháº­p kho"
     note = (form.get("note") or "").strip() or None
     nhu_cau_moi = (form.get("nhu_cau_moi") or "").strip() or None
     lot_moi = (form.get("lot_moi") or "").strip() or None
@@ -561,19 +720,19 @@ async def returns_save(request: Request, db: Session = Depends(get_db)):
     yds_du = to_float(form.get("yds_du"))
 
     if not issue_line_id or not ma_cay or not ngay_s:
-        raise HTTPException(status_code=400, detail="Thiếu dữ liệu.")
+        raise HTTPException(status_code=400, detail="Thiáº¿u dá»¯ liá»‡u.")
     try:
         ngay_tai_nhap = date.fromisoformat(ngay_s)
     except Exception as e:
-        raise HTTPException(status_code=400, detail="Ngày tái nhập không hợp lệ.") from e
+        raise HTTPException(status_code=400, detail="NgÃ y tÃ¡i nháº­p khÃ´ng há»£p lá»‡.") from e
 
     vi_tri_moi = None
-    if status == "Tái nhập kho":
+    if status == "TÃ¡i nháº­p kho":
         tang = (form.get("tang") or "").strip()
         line = (form.get("line") or "").strip()
         pallet = (form.get("pallet") or "").strip()
         if not tang or not line or not pallet:
-            raise HTTPException(status_code=400, detail="Thiếu vị trí mới.")
+            raise HTTPException(status_code=400, detail="Thiáº¿u vá»‹ trÃ­ má»›i.")
         vi_tri_moi = f"{tang}.{line}.{pallet}"
 
     create_return(
@@ -676,7 +835,7 @@ async def tools_demand_transfer_save(request: Request, db: Session = Depends(get
             if ma:
                 ma_cays.append(ma)
     if not ma_cays:
-        raise HTTPException(status_code=400, detail="Chưa chọn cây.")
+        raise HTTPException(status_code=400, detail="ChÆ°a chá»n cÃ¢y.")
 
     transfer_demand(db, ma_cays=ma_cays, to_nhu_cau=to_nhu_cau, to_lot=to_lot, note=note)
     db.commit()
@@ -695,7 +854,7 @@ def tools_location_transfer(request: Request, db: Session = Depends(get_db)):
     rows = (
         db.query(LocationAssignment)
         .filter(LocationAssignment.vi_tri == vi_tri)
-        .filter(LocationAssignment.trang_thai == "Đang lưu")
+        .filter(LocationAssignment.trang_thai == "Äang lÆ°u")
         .order_by(LocationAssignment.ma_cay.asc())
         .all()
     )
@@ -736,7 +895,7 @@ async def tools_location_transfer_save(request: Request, db: Session = Depends(g
             if ma:
                 ma_cays.append(ma)
     if not ma_cays:
-        raise HTTPException(status_code=400, detail="Chưa chọn cây.")
+        raise HTTPException(status_code=400, detail="ChÆ°a chá»n cÃ¢y.")
 
     transfer_location(db, ma_cays=ma_cays, to_vi_tri=to_vi_tri, note=note)
     db.commit()
@@ -781,3 +940,14 @@ def tools_norms(request: Request, db: Session = Depends(get_db)):
             "error": error,
         },
     )
+
+
+@router.get("/wms/pallets/{vi_tri}/fragment", response_class=HTMLResponse)
+def pallet_rolls_fragment(request: Request, vi_tri: str, db: Session = Depends(get_db)):
+    rows = list_pallet_roll_rows(db, vi_tri=vi_tri)
+    return templates.TemplateResponse(
+        request,
+        "wms/_pallet_rolls_fragment.html",
+        {"vi_tri": vi_tri, "rows": rows},
+    )
+

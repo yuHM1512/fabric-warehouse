@@ -22,64 +22,250 @@
       </div>
     </div>
 
-    <div class="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
-      <div class="bg-white rounded-[2rem] cloud-shadow p-8">
-        <div class="flex items-start justify-between gap-6">
-          <div>
-            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tổng số cây vải</div>
-            <div class="mt-4 text-4xl font-extrabold font-headline tabular-nums">{{ total_rolls_stored or 0 }}</div>
-            <div class="mt-2 text-xs text-on-surface-variant">Đếm theo mã cây đang lưu kho</div>
+    <div class="mt-8 flex flex-wrap gap-3 text-sm">
+      <a
+        class="rounded-full px-6 py-3 font-bold transition-colors {% if tab != 'layout' %}text-white soul-gradient cloud-shadow{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+        href="/?tab=overview"
+      >
+        Tổng quan
+      </a>
+      <a
+        class="rounded-full px-6 py-3 font-bold transition-colors {% if tab == 'layout' %}text-white soul-gradient cloud-shadow{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+        href="/?tab=layout"
+      >
+        Layout Pallet
+      </a>
+    </div>
+  </section>
+
+  {% if tab == 'layout' %}
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10" id="pallet-layout-root">
+      <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Layout</div>
+          <h3 class="mt-2 text-[44px] leading-none md:text-[56px] font-extrabold font-headline tracking-[-0.03em] text-primary">
+            Storage Map
+          </h3>
+          <p class="mt-3 text-on-surface-variant font-body text-lg max-w-3xl leading-relaxed">
+            Trực quan kho theo vị trí <span class="font-semibold text-on-surface">Tầng - Line - Pallet</span>.
+            Màu sắc theo sức chứa: <span class="font-semibold text-on-surface">Đỏ &gt; 90%</span>,
+            <span class="font-semibold text-on-surface">Vàng 70–90%</span>,
+            <span class="font-semibold text-on-surface">Xanh &lt; 70%</span>.
+          </p>
+        </div>
+
+        <div class="flex gap-4 items-center bg-surface-container-lowest p-6 rounded-xl cloud-shadow border border-black/5">
+          <div class="flex flex-col items-center gap-1 border-r border-black/5 pr-6">
+            <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em]">Global Utility</span>
+            <span class="text-2xl font-headline font-extrabold">
+              {{ "%.1f"|format((100.0 - pallet_kpis.available_percent) if pallet_kpis else 0.0) }}%
+            </span>
           </div>
-          <div class="h-10 w-10 rounded-xl soul-gradient cloud-shadow flex items-center justify-center text-white">
+          <div class="flex flex-col gap-3 pl-6">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+              <span class="text-xs font-bold text-on-surface-variant">Xanh &lt; 70%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+              <span class="text-xs font-bold text-on-surface-variant">Vàng 70–90%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+              <span class="text-xs font-bold text-on-surface-variant">Đỏ &gt; 90%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% if not pallet_layout %}
+        <div class="mt-10 rounded-2xl bg-surface-container-low px-6 py-4 text-sm text-on-surface-variant">
+          Chưa có dữ liệu layout pallet.
+        </div>
+      {% else %}
+        {% for line in pallet_layout.lines %}
+          <section class="mt-14">
+            <div class="flex items-center gap-4 mb-8">
+              <span class="font-headline text-2xl font-extrabold text-primary">Line {{ line.line }}</span>
+              <div class="h-[1px] flex-1 bg-surface-container-high"></div>
+              <span class="text-xs font-bold text-on-surface-variant uppercase tracking-[0.2em]">Main Distribution Aisle</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {% for p in line.pallets %}
+                <div class="bg-surface-container-lowest p-6 rounded-xl cloud-shadow border border-black/5">
+                  <div class="flex justify-between items-start mb-6">
+                    <div class="min-w-0">
+                      <div class="inline-flex items-center rounded-xl soul-gradient cloud-shadow px-4 py-3 text-white font-extrabold font-headline tracking-[-0.01em]">
+                        Line {{ line.line }}.{{ p }}
+                      </div>
+                    </div>
+                    <span class="material-symbols-outlined text-on-surface-variant/40 text-sm">info</span>
+                  </div>
+
+                  <div class="space-y-6">
+                    {% for tang in pallet_layout.tangs %}
+                      {% set vi_tri = tang ~ '.' ~ line.line ~ '.' ~ p %}
+                      {% set cell = pallet_layout.cells.get(vi_tri) %}
+                      {% set used = cell.used_percent if cell else 0 %}
+                      {% set count = cell.roll_count if cell else 0 %}
+                      {% set used_m3 = (used * 1.5 / 100.0) %}
+                      {% set bar = 'bg-emerald-500' %}
+                      {% if used > 90 %}
+                        {% set bar = 'bg-rose-500' %}
+                      {% elif used >= 70 %}
+                        {% set bar = 'bg-amber-500' %}
+                      {% endif %}
+
+                      <div class="space-y-2">
+                        <div class="flex justify-between items-center text-[11px] font-bold text-on-surface-variant uppercase">
+                          <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center justify-center h-6 w-6 rounded-lg bg-surface-container-low text-primary font-extrabold">{{ tang }}</span>
+                            <span>Tầng {{ tang }}</span>
+                            <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/80">({{ count }} cây)</span>
+                          </div>
+                          <div class="flex items-center gap-3">
+                            <span class="tabular-nums">{{ "%.2f"|format(used_m3) }} / 1.50 m³</span>
+                            <button
+                              type="button"
+                              class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-surface-container-lowest hover:bg-white transition-colors border border-black/5"
+                              data-pallet-view="{{ vi_tri }}"
+                              title="View"
+                              aria-label="View"
+                            >
+                              <span class="material-symbols-outlined text-[18px]">visibility</span>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+                          <div class="h-full {{ bar }} rounded-full" style="width: {{ used }}%;"></div>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </section>
+        {% endfor %}
+      {% endif %}
+    </section>
+
+    <div id="palletModal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-black/30" onclick="(function(){ const m=document.getElementById('palletModal'); if(m) m.classList.add('hidden'); const c=document.getElementById('palletModalContent'); if(c) c.innerHTML=''; })()"></div>
+      <div class="relative mx-auto max-w-6xl px-6 py-10">
+        <div class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-8">
+          <div id="palletModalContent" class="min-h-[120px]"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const root = document.getElementById("pallet-layout-root");
+        if (!root) return;
+
+        const modal = document.getElementById("palletModal");
+        const content = document.getElementById("palletModalContent");
+
+        function closeModal() {
+          if (modal) modal.classList.add("hidden");
+          if (content) content.innerHTML = "";
+        }
+
+        root.addEventListener("click", async (e) => {
+          const btn = e.target.closest("[data-pallet-view]");
+          if (!btn) return;
+          const viTri = btn.getAttribute("data-pallet-view") || "";
+          if (!viTri) return;
+
+          if (modal) modal.classList.remove("hidden");
+          if (content) {
+            content.innerHTML = `
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Pallet</div>
+              <div class="mt-2 text-sm font-extrabold font-headline">Đang tải...</div>
+            `;
+          }
+
+          try {
+            const url = "/wms/pallets/" + encodeURIComponent(viTri) + "/fragment";
+            const res = await fetch(url, { headers: { "X-Requested-With": "fetch" } });
+            if (!res.ok) throw new Error(await res.text());
+            if (content) content.innerHTML = await res.text();
+          } catch (err) {
+            if (content) {
+              content.innerHTML = `
+                <div class="mt-1 rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container">
+                  <div class="font-extrabold font-headline">Không tải được dữ liệu</div>
+                  <div class="mt-1 text-xs">${String(err || "")}</div>
+                </div>
+                <div class="mt-4">
+                  <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" id="palletCloseBtn">
+                    Đóng
+                  </button>
+                </div>
+              `;
+              const closeBtn = document.getElementById("palletCloseBtn");
+              if (closeBtn) closeBtn.addEventListener("click", closeModal);
+            }
+          }
+        });
+      })();
+    </script>
+
+  {% else %}
+    <section>
+    <div class="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div class="kpi-card bg-surface-container-lowest cloud-shadow p-8 rounded-xl flex flex-col justify-between h-48">
+        <div class="flex items-start justify-between">
+          <div class="kpi-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">Tổng số cây vải</div>
+          <div class="kpi-icon-box gradient-icon h-10 w-10 rounded-xl soul-gradient cloud-shadow flex items-center justify-center text-white">
             <span class="material-symbols-outlined">barcode</span>
           </div>
         </div>
+        <div>
+          <p class="kpi-value text-4xl font-extrabold font-headline tabular-nums leading-none">{{ total_rolls_stored or 0 }}</p>
+          <p class="kpi-sub text-xs text-on-surface-variant mt-3">Đếm theo mã cây đang lưu kho</p>
+        </div>
       </div>
 
-      <div class="bg-white rounded-[2rem] cloud-shadow p-8">
-        <div class="flex items-start justify-between gap-6">
-          <div>
-            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Số pallet chứa vải</div>
-            <div class="mt-4 text-4xl font-extrabold font-headline tabular-nums">
-              {{ pallet_kpis.pallets_has_fabric if pallet_kpis else 0 }}<span class="text-on-surface-variant"> / </span>{{ pallet_kpis.total_pallets if pallet_kpis else 0 }}
-            </div>
-            <div class="mt-2 text-xs text-on-surface-variant">Chỉ tính vị trí trạng thái “Đang lưu”</div>
-          </div>
-          <div class="h-10 w-10 rounded-xl bg-secondary-container flex items-center justify-center text-primary">
+      <div class="kpi-card bg-surface-container-lowest cloud-shadow p-8 rounded-xl flex flex-col justify-between h-48">
+        <div class="flex items-start justify-between">
+          <div class="kpi-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">Số pallet chứa vải</div>
+          <div class="kpi-icon-box h-10 w-10 rounded-xl bg-secondary-container flex items-center justify-center text-primary">
             <span class="material-symbols-outlined">inventory_2</span>
           </div>
         </div>
+        <div>
+          <p class="kpi-value text-4xl font-extrabold font-headline tabular-nums leading-none">
+            {{ pallet_kpis.pallets_has_fabric if pallet_kpis else 0 }}<span class="text-on-surface-variant"> / </span>{{ pallet_kpis.total_pallets if pallet_kpis else 0 }}
+          </p>
+          <p class="kpi-sub text-xs text-on-surface-variant mt-3">Chỉ tính vị trí trạng thái “Đang lưu”</p>
+        </div>
       </div>
 
-      <div class="bg-white rounded-[2rem] cloud-shadow p-8">
-        <div class="flex items-start justify-between gap-6">
-          <div class="min-w-0">
-            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Sức chứa khả dụng</div>
-            <div class="mt-2 flex items-baseline gap-3">
-              <div class="text-4xl font-extrabold font-headline tabular-nums">
-                {{ "%.1f"|format(pallet_kpis.available_percent) if pallet_kpis else "0.0" }}%
-              </div>
-              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Capacity</div>
-            </div>
-            <div class="mt-3 h-2 w-full rounded-full bg-surface-container-low overflow-hidden">
-              <div
-                class="h-full rounded-full soul-gradient"
-                data-capacity-width="{{ pallet_kpis.available_percent if pallet_kpis else 0 }}"
-                style="width: 0%"
-              ></div>
-            </div>
-            <div class="mt-3 text-xs text-on-surface-variant truncate">
-              {{ "%.2f"|format(pallet_kpis.available_m3) if pallet_kpis else "0.00" }} m³ khả dụng
-            </div>
-          </div>
-
-          <div class="flex flex-col items-end gap-2">
-            <div class="h-10 w-10 rounded-xl bg-surface-container-low flex items-center justify-center text-primary">
-              <span class="material-symbols-outlined">insights</span>
-            </div>
+      <div class="kpi-card bg-surface-container-lowest cloud-shadow p-8 rounded-xl flex flex-col justify-between h-48">
+        <div class="flex items-start justify-between">
+          <div class="kpi-label text-xs font-bold uppercase tracking-widest text-on-surface-variant">Sức chứa khả dụng</div>
+          <div class="kpi-icon-box h-10 w-10 rounded-xl bg-surface-container-low flex items-center justify-center text-primary">
+            <span class="material-symbols-outlined">insights</span>
           </div>
         </div>
-        <div class="mt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">&nbsp;</div>
+        <div>
+          <div class="kpi-value text-4xl font-extrabold font-headline tabular-nums leading-none">
+            {{ "%.1f"|format(pallet_kpis.available_percent) if pallet_kpis else "0.0" }}%
+          </div>
+          <div class="kpi-bar-track mt-4 h-2 w-full rounded-full bg-surface-container-high overflow-hidden">
+            <div
+              class="kpi-bar-fill bg-primary h-full"
+              data-capacity-width="{{ pallet_kpis.available_percent if pallet_kpis else 0 }}"
+              style="width: 0%"
+            ></div>
+          </div>
+          <p class="kpi-sub text-xs text-on-surface-variant mt-3 truncate">
+            {{ "%.2f"|format(pallet_kpis.available_m3) if pallet_kpis else "0.00" }} m³ khả dụng
+          </p>
+        </div>
       </div>
     </div>
   </section>
@@ -87,8 +273,20 @@
   <section class="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-3">
     <div class="lg:col-span-2 bg-white rounded-[2rem] cloud-shadow p-10 min-h-[520px] flex flex-col">
       <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div class="inline-flex items-center rounded-2xl bg-primary-container px-5 py-3 text-white font-extrabold font-headline">
-          Biểu đồ NHẬP - XUẤT theo ngày
+        <div class="flex flex-col gap-3">
+          <div class="inline-flex items-center rounded-2xl bg-primary-container px-5 py-3 text-white font-extrabold font-headline">
+            Biểu đồ NHẬP - XUẤT theo ngày
+          </div>
+          <div class="flex flex-wrap items-center gap-4 text-xs font-bold text-on-surface-variant">
+            <div class="inline-flex items-center gap-2">
+              <span class="inline-block h-2.5 w-2.5 rounded-full bg-[#0040a1]"></span>
+              <span>IN (m³)</span>
+            </div>
+            <div class="inline-flex items-center gap-2">
+              <span class="inline-block h-2.5 w-2.5 rounded-full bg-[#98b3ff]"></span>
+              <span>OUT (m³)</span>
+            </div>
+          </div>
         </div>
 
         <form method="get" action="/" class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:items-end">
@@ -236,19 +434,14 @@
             maintainAspectRatio: false,
             interaction: { mode: "index", intersect: false },
             plugins: {
-              legend: {
-                position: "top",
-                align: "end",
-                labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle" },
-              },
+              legend: { display: false },
               tooltip: {
                 enabled: true,
                 callbacks: {
                   label: (c) => {
                     const idx = c.dataIndex;
                     const m3 = Number(c.parsed.y || 0);
-                    const yds = c.datasetIndex === 0 ? Number(inYds?.[idx] || 0) : Number(outYds?.[idx] || 0);
-                    return `${c.dataset.label}: ${m3.toFixed(3)} m³ (${yds.toFixed(1)} yds)`;
+                    return `${c.dataset.label}: ${m3.toFixed(3)} m³`;
                   },
                 },
               },
@@ -259,11 +452,16 @@
                 offset: 2,
                 clamp: true,
                 font: { size: 10, weight: "700" },
-                formatter: (v, ctx) => {
-                  const idx = ctx.dataIndex;
-                  const yds = ctx.datasetIndex === 0 ? Number(inYds?.[idx] || 0) : Number(outYds?.[idx] || 0);
-                  if (!yds || yds <= 0) return "";
-                  return `${Math.round(yds)}`;
+                formatter: (v) => {
+                  const m3 = Number(v || 0);
+                  if (!m3 || m3 <= 0) return "";
+                  const s =
+                    m3 >= 10
+                      ? String(Math.round(m3))
+                      : m3 >= 1
+                        ? m3.toFixed(2)
+                        : m3.toFixed(3);
+                  return s.replace(/\.?0+$/, "");
                 },
               },
             },
@@ -342,4 +540,5 @@
       }
     })();
   </script>
+  {% endif %}
 {% endblock %}

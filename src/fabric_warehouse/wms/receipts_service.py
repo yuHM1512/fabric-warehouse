@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import date
 from typing import Any
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert

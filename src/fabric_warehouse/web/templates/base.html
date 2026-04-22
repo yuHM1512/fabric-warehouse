@@ -113,95 +113,134 @@
         background-color: rgba(255, 255, 255, 0.8);
         backdrop-filter: blur(24px);
       }
+
+      /* ── Sidebar nav link styles (reference UI) ── */
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        border-right: 4px solid transparent;
+        font-weight: 500;
+        color: #64748b;            /* slate-500 */
+        transition: all 0.2s ease;
+      }
+      .nav-link:hover {
+        color: #2563eb;            /* blue-600 */
+        background-color: #f1f5f9; /* slate-100 */
+        border-right-color: #bfdbfe; /* blue-200 soft hint */
+        transform: translateX(2px);
+      }
+      .nav-link.active {
+        color: #1d4ed8;            /* blue-700 */
+        font-weight: 800;
+        border-right-color: #1d4ed8;
+        background-color: #f1f5f9;
+      }
+      .nav-link .material-symbols-outlined {
+        font-size: 24px;
+      }
+      .nav-link span:last-child {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      /* ── KPI card hover (reference UI) ── */
+      .kpi-card {
+        transition: all 0.3s ease;
+      }
+      .kpi-card:hover {
+        background-color: #002b73; /* primary */
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(0, 43, 115, 0.25);
+      }
+      .kpi-card:hover .kpi-label,
+      .kpi-card:hover .kpi-sub {
+        color: #dae2ff; /* primary-fixed */
+      }
+      .kpi-card:hover .kpi-value {
+        color: #ffffff;
+      }
+      .kpi-card:hover .kpi-icon-box {
+        background: rgba(255,255,255,0.15);
+        color: #ffffff;
+      }
+      .kpi-card:hover .kpi-icon-box.gradient-icon {
+        background: rgba(255,255,255,0.2);
+      }
+      .kpi-card:hover .kpi-bar-track {
+        background-color: rgba(255,255,255,0.15);
+      }
+      .kpi-card:hover .kpi-bar-fill {
+        background: #ffffff;
+      }
+      .kpi-card:hover .kpi-trend-up {
+        color: #86efac; /* green-300 */
+      }
     </style>
   </head>
 
   <body class="bg-surface text-on-surface antialiased flex min-h-screen">
     {% set path = request.url.path %}
 
-    <aside class="h-screen w-72 flex-shrink-0 sticky top-0 bg-surface-container-lowest flex flex-col py-8 px-6">
-      <div class="mb-8">
-        <div class="flex flex-col">
-          <span class="text-xl font-extrabold leading-none font-headline">{{ app_name or "Fabric Warehouse" }}</span>
-          <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em] mt-2">WMS Portal</span>
-        </div>
+    <aside class="h-screen w-72 flex-shrink-0 sticky top-0 bg-slate-50 flex flex-col py-5 px-6 space-y-6 shadow-sm">
+      <div class="mb-6 flex items-center justify-center">
+        <a href="/" class="block w-[80%]">
+          <img src="/static/Marex.jpg" alt="Marex Project" class="w-full h-auto object-contain mix-blend-multiply" />
+        </a>
       </div>
 
-      <nav class="flex-1 space-y-1 text-sm">
-        <a
-          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path == '/' %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
-          href="/"
-        >
-          <span class="material-symbols-outlined">home</span>
-          <span class="text-[11px] font-bold uppercase tracking-widest">Tổng quan</span>
-        </a>
-
-        <a
-          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path == '/wms' %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
-          href="/wms"
-        >
+      <nav class="flex-1 space-y-2">
+        <a class="nav-link {% if path == '/' %}active{% endif %}" href="/">
           <span class="material-symbols-outlined">dashboard</span>
-          <span class="text-[11px] font-bold uppercase tracking-widest">WMS</span>
+          <span>Dashboard</span>
         </a>
 
-        <div class="pt-4">
+        <a class="nav-link {% if path == '/guide' %}active{% endif %}" href="/guide">
+          <span class="material-symbols-outlined">menu_book</span>
+          <span>Hướng dẫn</span>
+        </a>
+
+        <div class="pt-4 pb-1">
           <div class="px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Modules</div>
         </div>
 
-        <a
-          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/receipts') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
-          href="/wms/receipts"
-        >
+        <a class="nav-link {% if path.startswith('/wms/receipts') %}active{% endif %}" href="/wms/receipts">
           <span class="material-symbols-outlined">upload_file</span>
-          <span class="text-[11px] font-bold uppercase tracking-widest">Phiếu nhập</span>
+          <span>Phiếu nhập</span>
         </a>
 
-        <a
-          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/hanging') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
-          href="/wms/hanging"
-        >
+        <a class="nav-link {% if path.startswith('/wms/hanging') %}active{% endif %}" href="/wms/hanging">
           <span class="material-symbols-outlined">qr_code_2</span>
-          <span class="text-[11px] font-bold uppercase tracking-widest">Bảng treo</span>
+          <span>Bảng treo</span>
         </a>
 
-        <a
-          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path == '/wms/stock' %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
-          href="/wms/stock"
-        >
+        <a class="nav-link {% if path == '/wms/stock' %}active{% endif %}" href="/wms/stock">
           <span class="material-symbols-outlined">fact_check</span>
-          <span class="text-[11px] font-bold uppercase tracking-widest">Nhập kho</span>
+          <span>Nhập kho</span>
         </a>
 
-        <a
-          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/stock/locations') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
-          href="/wms/stock/locations"
-        >
+        <a class="nav-link {% if path.startswith('/wms/stock/locations') %}active{% endif %}" href="/wms/stock/locations">
           <span class="material-symbols-outlined">grid_view</span>
-          <span class="text-[11px] font-bold uppercase tracking-widest">Vị trí</span>
+          <span>Vị trí</span>
         </a>
 
-        <a
-          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/issue') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
-          href="/wms/issue"
-        >
+        <a class="nav-link {% if path.startswith('/wms/issue') %}active{% endif %}" href="/wms/issue">
           <span class="material-symbols-outlined">move_item</span>
-          <span class="text-[11px] font-bold uppercase tracking-widest">Xuất kho</span>
+          <span>Xuất kho</span>
         </a>
 
-        <a
-          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/stock/returns') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
-          href="/wms/stock/returns"
-        >
+        <a class="nav-link {% if path.startswith('/wms/stock/returns') %}active{% endif %}" href="/wms/stock/returns">
           <span class="material-symbols-outlined">assignment_return</span>
-          <span class="text-[11px] font-bold uppercase tracking-widest">Tái nhập</span>
+          <span>Tái nhập</span>
         </a>
 
-        <a
-          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors {% if path.startswith('/wms/tools') %}bg-surface-container-low text-primary font-bold{% else %}text-on-surface-variant hover:bg-surface-container-low{% endif %}"
-          href="/wms/tools"
-        >
+        <a class="nav-link {% if path.startswith('/wms/tools') %}active{% endif %}" href="/wms/tools">
           <span class="material-symbols-outlined">build</span>
-          <span class="text-[11px] font-bold uppercase tracking-widest">Tính năng khác</span>
+          <span>Tính năng khác</span>
         </a>
       </nav>
 
@@ -216,7 +255,7 @@
 
     <main class="flex-1 min-w-0">
       <header class="sticky top-0 z-30 glass-effect">
-        <div class="mx-auto max-w-7xl px-10 py-6 flex items-center justify-between">
+        <div class="mx-auto max-w-7xl px-10 py-4 flex items-center justify-between">
           <div>
             <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Trang</div>
             <h1 class="text-2xl font-extrabold font-headline">{{ title or "Fabric Warehouse" }}</h1>
@@ -227,9 +266,133 @@
         </div>
       </header>
 
-      <div class="mx-auto max-w-7xl px-10 py-10">
+      <div class="mx-auto max-w-7xl px-10 py-6">
         {% block content %}{% endblock %}
       </div>
     </main>
+
+    <script>
+      (function () {
+        function activateInlineScripts(root) {
+          if (!root) return;
+          root.querySelectorAll("script").forEach((oldScript) => {
+            if (oldScript.src) return;
+            const newScript = document.createElement("script");
+            for (const attr of oldScript.attributes) newScript.setAttribute(attr.name, attr.value);
+            newScript.text = oldScript.textContent || "";
+            oldScript.replaceWith(newScript);
+          });
+        }
+
+        function initAjaxFilters(root) {
+          root.querySelectorAll("form[data-ajax-filter]").forEach((form) => {
+            if (form.dataset.ajaxBound === "1") return;
+            form.dataset.ajaxBound = "1";
+
+            let abortController = null;
+            let debounceId = null;
+
+            async function run({ push }) {
+              const targetSelector = form.dataset.ajaxTarget;
+              if (!targetSelector) return;
+
+              const target = document.querySelector(targetSelector);
+              if (!target) return;
+
+              const method = (form.getAttribute("method") || "get").toLowerCase();
+              if (method !== "get") return;
+
+              const url = new URL(form.action, window.location.origin);
+              const data = new FormData(form);
+              for (const [key, value] of data.entries()) {
+                const stringValue = String(value);
+                if (stringValue === "") continue;
+                url.searchParams.set(key, stringValue);
+              }
+
+              if (abortController) abortController.abort();
+              abortController = new AbortController();
+
+              target.dataset.ajaxLoading = "1";
+              target.style.pointerEvents = "none";
+              target.style.opacity = "0.6";
+              document.body.style.cursor = "progress";
+
+              try {
+                const res = await fetch(url.toString(), {
+                  method: "GET",
+                  headers: { "X-Requested-With": "ajax-filter" },
+                  credentials: "same-origin",
+                  signal: abortController.signal,
+                });
+                if (!res.ok) throw new Error(`Bad status: ${res.status}`);
+
+                const html = await res.text();
+                const doc = new DOMParser().parseFromString(html, "text/html");
+                const fresh = doc.querySelector(targetSelector);
+                if (!fresh) throw new Error("Missing ajax target in response");
+
+                target.replaceWith(fresh);
+                const inserted = document.querySelector(targetSelector);
+                activateInlineScripts(inserted);
+
+                const nextUrl = url.pathname + url.search;
+                if (push) history.pushState(null, "", nextUrl);
+                else history.replaceState(null, "", nextUrl);
+
+                initAjaxFilters(document);
+              } catch (err) {
+                if (err && err.name === "AbortError") return;
+                window.location.href = url.pathname + url.search;
+              } finally {
+                const currentTarget = document.querySelector(targetSelector);
+                if (currentTarget) {
+                  delete currentTarget.dataset.ajaxLoading;
+                  currentTarget.style.pointerEvents = "";
+                  currentTarget.style.opacity = "";
+                }
+                document.body.style.cursor = "";
+              }
+            }
+
+            form.addEventListener("change", (e) => {
+              const el = e.target;
+              if (!(el instanceof HTMLElement)) return;
+              const tag = el.tagName.toLowerCase();
+
+              const isSelect = tag === "select";
+              const isWatchedInput = tag === "input" && el.hasAttribute("data-ajax-change");
+              if (!isSelect && !isWatchedInput) return;
+
+              window.clearTimeout(debounceId);
+              const delayMs = Number(form.dataset.ajaxDebounce || "150");
+              debounceId = window.setTimeout(() => {
+                form.dataset.ajaxSubmitMode = "replace";
+                if (typeof form.requestSubmit === "function") form.requestSubmit();
+                else run({ push: false });
+              }, delayMs);
+            });
+
+            form.addEventListener("submit", (e) => {
+              e.preventDefault();
+              window.clearTimeout(debounceId);
+              const mode = form.dataset.ajaxSubmitMode || "push";
+              delete form.dataset.ajaxSubmitMode;
+              run({ push: mode === "push" });
+            });
+          });
+        }
+
+        window.addEventListener("popstate", () => {
+          window.location.reload();
+        });
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", () => initAjaxFilters(document));
+        } else {
+          initAjaxFilters(document);
+        }
+      })();
+    </script>
   </body>
 </html>

@@ -5,6 +5,7 @@ from datetime import date, datetime, time, timezone
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
+from zoneinfo import ZoneInfo
 
 from fabric_warehouse.db.models.demand_transfer_log import DemandTransferLog
 from fabric_warehouse.db.models.issue import Issue, IssueLine
@@ -13,6 +14,8 @@ from fabric_warehouse.db.models.location_transfer_log import LocationTransferLog
 from fabric_warehouse.db.models.receipt import Receipt, ReceiptLine
 from fabric_warehouse.db.models.return_event import ReturnEvent
 from fabric_warehouse.db.models.stock_check import StockCheck
+
+VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
 @dataclass(frozen=True)
@@ -28,6 +31,12 @@ def _dt_from_date(d: date | None) -> datetime | None:
     return datetime.combine(d, time(0, 0), tzinfo=timezone.utc)
 
 
+def _dt_from_date_local(d: date | None) -> datetime | None:
+    if not d:
+        return None
+    return datetime.combine(d, time(0, 0), tzinfo=VN_TZ)
+
+
 def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEvent]:
     lot = (lot or "").strip()
     ma_cay = (ma_cay or "").strip()
@@ -36,7 +45,7 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
 
     events: list[TraceEvent] = []
 
-    # Import / receipt line
+    # Phiếu nhập (receipt line)
     rl = (
         db.query(ReceiptLine, Receipt)
         .join(Receipt, Receipt.id == ReceiptLine.receipt_id)
@@ -52,8 +61,36 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
             events.append(
                 TraceEvent(
                     at=at,
-                    kind="Import",
-                    summary=f"Import phiếu (receipt #{receipt.id}) — Nhu cầu: {line.nhu_cau or ''}, Lot: {line.lot or ''}, YDS: {line.yards or ''}",
+                    kind="Phiếu nhập",
+                    summary=f"Receipt #{receipt.id} — Nhu cầu: {line.nhu_cau or ''}, Lot: {line.lot or ''}, YDS: {line.yards or ''}",
+                )
+            )
+
+    # Nhập kho = timestamp đầu tiên gán vị trí (xác nhận lưu kho)
+    first_loc = (
+        db.query(LocationTransferLog)
+        .filter(LocationTransferLog.ma_cay == ma_cay)
+        .filter(LocationTransferLog.from_vi_tri.is_(None))
+        .order_by(LocationTransferLog.created_at.asc())
+        .first()
+    )
+    if first_loc and first_loc.created_at:
+        events.append(
+            TraceEvent(
+                at=first_loc.created_at,
+                kind="Nhập kho",
+                summary=f"Xác nhận lưu kho tại {first_loc.to_vi_tri}",
+            )
+        )
+    else:
+        la = db.query(LocationAssignment).filter(LocationAssignment.ma_cay == ma_cay).first()
+        fallback_at = la.assigned_at if (la and getattr(la, "assigned_at", None)) else (la.updated_at if (la and la.updated_at) else None)
+        if fallback_at:
+            events.append(
+                TraceEvent(
+                    at=fallback_at,
+                    kind="Nhập kho",
+                    summary=f"Xác nhận lưu kho (thiếu log) — {la.vi_tri}",
                 )
             )
 
@@ -74,16 +111,7 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
             )
         )
 
-    # Location assignment
-    la = db.query(LocationAssignment).filter(LocationAssignment.ma_cay == ma_cay).first()
-    if la and la.updated_at:
-        events.append(
-            TraceEvent(
-                at=la.updated_at,
-                kind="Vị trí",
-                summary=f"Vị trí: {la.vi_tri} — Trạng thái: {la.trang_thai}",
-            )
-        )
+    # Current position is derived from transfer logs; no separate "state" event.
 
     # Issue (export)
     il = (
@@ -91,33 +119,39 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
         .join(Issue, Issue.id == IssueLine.issue_id)
         .filter(IssueLine.ma_cay == ma_cay)
         .filter(Issue.lot == lot)
-        .order_by(Issue.ngay_xuat.desc(), Issue.id.desc())
-        .first()
+        .order_by(Issue.created_at.asc(), Issue.id.asc())
+        .all()
     )
-    if il:
-        line, issue = il
-        at = _dt_from_date(issue.ngay_xuat) or issue.created_at
-        if at:
-            events.append(
-                TraceEvent(
-                    at=at,
-                    kind="Xuất kho",
-                    summary=f"{issue.status} — YDS xuất: {line.so_luong_xuat or ''} — Vị trí: {line.vi_tri or ''}",
-                )
+    for line, issue in il:
+        at = issue.created_at
+        if not at:
+            continue
+        events.append(
+            TraceEvent(
+                at=at,
+                kind="Xuất kho",
+                summary=f"{issue.status or 'Cấp phát'} — YDS xuất: {line.so_luong_xuat or ''} — Vị trí: {line.vi_tri or ''} (issue #{issue.id})".strip(),
             )
+        )
 
-    # Return event
-    re = db.query(ReturnEvent).filter(ReturnEvent.ma_cay == ma_cay).order_by(ReturnEvent.ngay_tai_nhap.desc()).first()
-    if re:
-        at = _dt_from_date(re.ngay_tai_nhap) or re.created_at
-        if at:
-            events.append(
-                TraceEvent(
-                    at=at,
-                    kind="Tái nhập",
-                    summary=f"{re.status} — YDS dư: {re.yds_du or ''} — NC/Lot mới: {(re.nhu_cau_moi or '')}/{(re.lot_moi or '')} — VT mới: {re.vi_tri_moi or ''}",
-                )
+    # Return events (re-import)
+    rets = (
+        db.query(ReturnEvent)
+        .filter(ReturnEvent.ma_cay == ma_cay)
+        .order_by(ReturnEvent.ngay_tai_nhap.asc(), ReturnEvent.id.asc())
+        .all()
+    )
+    for re in rets:
+        at = _dt_from_date_local(re.ngay_tai_nhap) or re.created_at
+        if not at:
+            continue
+        events.append(
+            TraceEvent(
+                at=at,
+                kind="Tái nhập kho",
+                summary=f"{re.status or ''} — YDS dư: {re.yds_du or ''} — NC/Lot mới: {(re.nhu_cau_moi or '')}/{(re.lot_moi or '')} — VT mới: {re.vi_tri_moi or ''}".strip(),
             )
+        )
 
     # Demand transfer logs
     dtl = (
@@ -143,6 +177,8 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
         .all()
     )
     for it in ltl:
+        if not it.from_vi_tri:
+            continue
         events.append(
             TraceEvent(
                 at=it.created_at,

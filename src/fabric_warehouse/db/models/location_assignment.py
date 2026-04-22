@@ -21,6 +21,12 @@ class LocationAssignment(Base):
     vi_tri: Mapped[str] = mapped_column(String(16), index=True)  # e.g. A.01.01
     trang_thai: Mapped[str] = mapped_column(String(32), default="Đang lưu", index=True)
 
+    assigned_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        index=True,
+    )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -31,4 +37,3 @@ class LocationAssignment(Base):
         Index("ix_location_assignments_nhu_cau_lot", "nhu_cau", "lot"),
         Index("ix_location_assignments_vi_tri_trang_thai", "vi_tri", "trang_thai"),
     )
-

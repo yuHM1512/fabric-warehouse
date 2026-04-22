@@ -1,112 +1,173 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
-    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-      <div>
-        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Trace</div>
-        <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Truy xuất cây vải</h2>
-        <p class="mt-2 text-sm text-on-surface-variant leading-relaxed">
-          Lọc theo <span class="font-semibold text-on-surface">Lot</span> + <span class="font-semibold text-on-surface">Mã cây</span> để xem timeline.
-        </p>
-      </div>
-      <div class="flex items-center gap-3">
-        <a href="/wms/tools" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Tools</a>
-        <a href="/wms" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">WMS</a>
-      </div>
-    </div>
+  <div id="tools-trace-ajax">
+    <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+      <nav class="flex items-center gap-2 text-xs font-bold text-on-surface-variant uppercase tracking-[0.2em]">
+        <span>Warehouse</span>
+        <span class="material-symbols-outlined text-[14px] opacity-60">chevron_right</span>
+        <span class="text-primary">Trace</span>
+      </nav>
 
-    <div class="mt-10 bg-surface-container-low rounded-[2rem] p-8">
-      <form method="get" action="/wms/tools/trace" class="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-end">
+      <div class="mt-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="lot">Lot</label>
-          <input
-            id="lot"
-            name="lot"
-            value="{{ lot }}"
-            list="lot_list"
-            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
-            placeholder="Gõ để lọc..."
-            onchange="this.form.submit()"
-          />
-          <datalist id="lot_list">
-            {% for l in lot_options %}
-              <option value="{{ l }}"></option>
-            {% endfor %}
-          </datalist>
+          <h1 class="text-[44px] md:text-[56px] font-extrabold leading-[1.1] tracking-tight text-on-surface font-headline">
+            Traceability Intelligence
+          </h1>
+          <p class="mt-3 text-lg text-on-surface-variant max-w-3xl leading-[1.6]">
+            Chọn <span class="font-semibold text-on-surface">Lot</span> và <span class="font-semibold text-on-surface">Mã cây</span> để xem lịch sử sự kiện và flow timeline.
+          </p>
         </div>
 
-        <div>
-          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="ma_cay">Mã cây</label>
-          <input
-            id="ma_cay"
-            name="ma_cay"
-            value="{{ ma_cay }}"
-            list="ma_cay_list"
-            class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0 disabled:opacity-50"
-            placeholder="{% if not lot %}Chọn Lot trước{% else %}Gõ để lọc...{% endif %}"
-            {% if not lot %}disabled{% endif %}
-          />
-          <datalist id="ma_cay_list">
-            {% for m in ma_cay_options %}
-              <option value="{{ m }}"></option>
-            {% endfor %}
-          </datalist>
-        </div>
-
-        <div class="flex flex-wrap gap-3">
-          <button
-            type="submit"
-            class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity"
-          >
-            <span class="material-symbols-outlined text-base">search</span>
-            Xem timeline
-          </button>
-          <a
-            href="/wms/tools/trace"
-            class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors"
-          >
-            Reset
-          </a>
-        </div>
-      </form>
-    </div>
-  </section>
-
-  <section class="mt-10">
-    {% if lot and ma_cay %}
-      <div class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
-        <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Timeline</div>
-            <div class="mt-2 text-lg font-extrabold font-headline">{{ lot }} — {{ ma_cay }}</div>
+        <form
+          method="get"
+          action="/wms/tools/trace"
+          class="flex flex-col md:flex-row gap-4 w-full md:w-auto"
+          data-ajax-filter
+          data-ajax-target="#tools-trace-ajax"
+          data-ajax-debounce="150"
+        >
+          <div class="flex-1 md:w-72">
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-2 ml-1" for="lot">Select Lot</label>
+            <div class="relative">
+              <select
+                id="lot"
+                name="lot"
+                class="w-full appearance-none bg-surface-container-low border-none rounded-xl py-4 px-5 pr-12 text-sm font-semibold text-on-surface focus:ring-0 focus:bg-surface-container-lowest transition-all"
+              >
+                <option value="" {% if not lot %}selected{% endif %}>Chọn...</option>
+                {% for l in lot_options %}
+                  <option value="{{ l }}" {% if lot == l %}selected{% endif %}>{{ l }}</option>
+                {% endfor %}
+              </select>
+              <span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+            </div>
           </div>
-          <div class="text-xs text-on-surface-variant">{{ events|length }} events</div>
-        </div>
 
-        <div class="mt-8 space-y-4">
-          {% for e in events %}
-            <div class="bg-surface-container-low rounded-[2rem] p-6">
+          <div class="flex-1 md:w-72">
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-2 ml-1" for="ma_cay">Select Roll ID</label>
+            <div class="relative">
+              <select
+                id="ma_cay"
+                name="ma_cay"
+                class="w-full appearance-none bg-surface-container-low border-none rounded-xl py-4 px-5 pr-12 text-sm font-semibold text-on-surface focus:ring-0 focus:bg-surface-container-lowest transition-all disabled:opacity-50"
+                {% if not lot %}disabled{% endif %}
+              >
+                <option value="" {% if not ma_cay %}selected{% endif %}>{% if not lot %}Chọn Lot trước{% else %}Chọn...{% endif %}</option>
+                {% for m in ma_cay_options %}
+                  <option value="{{ m }}" {% if ma_cay == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+              </select>
+              <span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+            </div>
+          </div>
+
+          <div class="flex items-end gap-3">
+            <a
+              href="/wms/tools/trace"
+              class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors border border-black/5"
+            >
+              Reset
+            </a>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="mt-10">
+      {% if lot and ma_cay %}
+        <div class="grid grid-cols-12 gap-8 items-start">
+          <!-- Left: Event table -->
+          <div class="col-span-12 lg:col-span-8 bg-surface-container-lowest rounded-[1.5rem] cloud-shadow overflow-hidden border border-black/5">
+            <div class="p-8 pb-0 flex justify-between items-center">
+              <div>
+                <h2 class="text-2xl font-extrabold tracking-tight text-on-surface font-headline">Event Logs</h2>
+                <div class="mt-1 text-xs text-on-surface-variant">{{ lot }} — {{ ma_cay }}</div>
+              </div>
+              <div class="text-xs font-bold text-on-surface-variant">{{ events|length }} events</div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full mt-6">
+                <thead>
+                  <tr class="text-left bg-surface-container-low">
+                    <th class="py-4 px-8 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">Event</th>
+                    <th class="py-4 px-4 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">Time</th>
+                    <th class="py-4 px-8 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">Detail</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for e in events %}
+                    <tr class="{% if loop.index0 % 2 == 0 %}bg-surface{% else %}bg-surface-container-low{% endif %} hover:bg-surface-container-high transition-colors h-[72px]">
+                      <td class="px-8 font-semibold text-on-surface">
+                        <div class="flex items-center gap-3">
+                          <span class="material-symbols-outlined text-[18px] text-primary">
+                            {% if e.kind == 'Phiếu nhập' %}receipt_long{% elif e.kind == 'Nhập kho' %}inbox{% elif e.kind == 'Xuất kho' %}move_item{% elif e.kind == 'Tái nhập kho' %}assignment_return{% elif e.kind == 'Điều chuyển vị trí' %}swap_horiz{% elif e.kind == 'Điều chuyển nhu cầu' %}shuffle{% elif e.kind == 'Kiểm kho' %}fact_check{% else %}info{% endif %}
+                          </span>
+                          <span>{{ e.kind }}</span>
+                        </div>
+                      </td>
+                      <td class="px-4 text-sm text-on-surface-variant font-semibold tabular-nums whitespace-nowrap">{{ e.at | gmt7 }}</td>
+                      <td class="px-8 text-sm text-on-surface-variant leading-relaxed">{{ e.summary }}</td>
+                    </tr>
+                  {% else %}
+                    <tr><td class="px-8 py-10 text-on-surface-variant text-sm" colspan="3">Chưa có sự kiện cho lựa chọn này.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Right: Flow timeline -->
+          <div class="col-span-12 lg:col-span-4">
+            <div class="bg-surface-container-lowest rounded-[1.5rem] cloud-shadow border border-black/5 p-8">
               <div class="flex items-start justify-between gap-6">
                 <div>
-                  <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">{{ e.kind }}</div>
-                  <div class="mt-2 text-sm text-on-surface leading-relaxed">{{ e.summary }}</div>
+                  <h3 class="text-xl font-extrabold font-headline">Flow Timeline</h3>
+                  <div class="mt-1 text-xs text-on-surface-variant">Theo thứ tự thời gian</div>
                 </div>
-                <div class="text-right">
-                  <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">At</div>
-                  <div class="mt-2 text-xs font-semibold tabular-nums">{{ e.at }}</div>
-                </div>
+                <span class="material-symbols-outlined text-on-surface-variant/50">timeline</span>
+              </div>
+
+              <div class="mt-8 space-y-6">
+                {% for e in events %}
+                  <div class="relative pl-10">
+                    {% if not loop.first %}
+                      <div class="absolute left-[18px] -top-6 h-6 w-px bg-surface-container-high"></div>
+                    {% endif %}
+                    <div class="absolute left-0 top-0 h-9 w-9 rounded-xl flex items-center justify-center border border-black/5
+                      {% if e.kind == 'Phiếu nhập' %}bg-blue-50 text-blue-800{% elif e.kind == 'Xuất kho' %}bg-rose-50 text-rose-700{% elif e.kind == 'Tái nhập kho' %}bg-amber-50 text-amber-800{% elif e.kind == 'Điều chuyển vị trí' %}bg-surface-container-low text-primary{% elif e.kind == 'Nhập kho' %}bg-emerald-50 text-emerald-700{% elif e.kind == 'Kiểm kho' %}bg-primary-fixed text-primary{% else %}bg-surface-container-low text-primary{% endif %}
+                    ">
+                      <span class="material-symbols-outlined text-[18px]">
+                        {% if e.kind == 'Phiếu nhập' %}receipt_long{% elif e.kind == 'Nhập kho' %}inbox{% elif e.kind == 'Xuất kho' %}move_item{% elif e.kind == 'Tái nhập kho' %}assignment_return{% elif e.kind == 'Điều chuyển vị trí' %}swap_horiz{% elif e.kind == 'Điều chuyển nhu cầu' %}shuffle{% elif e.kind == 'Kiểm kho' %}fact_check{% else %}info{% endif %}
+                      </span>
+                    </div>
+
+                    <div class="rounded-2xl bg-surface-container-low p-5">
+                      <div class="flex items-start justify-between gap-4">
+                        <div>
+                          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">{{ e.kind }}</div>
+                          <div class="mt-2 text-sm font-semibold text-on-surface leading-relaxed">{{ e.summary }}</div>
+                        </div>
+                        <div class="text-right">
+                          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">At</div>
+                          <div class="mt-2 text-xs font-extrabold tabular-nums text-primary whitespace-nowrap">{{ e.at | gmt7 }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% else %}
+                  <div class="text-sm text-on-surface-variant">Chưa có timeline.</div>
+                {% endfor %}
               </div>
             </div>
-          {% else %}
-            <div class="text-sm text-on-surface-variant">Chưa có event cho Lot/Mã cây này.</div>
-          {% endfor %}
+          </div>
         </div>
-      </div>
-    {% else %}
-      <div class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10 text-sm text-on-surface-variant">
-        Chọn Lot và Mã cây để xem timeline.
-      </div>
-    {% endif %}
-  </section>
+      {% else %}
+        <div class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10 text-sm text-on-surface-variant">
+          Chọn Lot và Mã cây để xem dữ liệu truy xuất.
+        </div>
+      {% endif %}
+    </section>
+  </div>
 {% endblock %}
