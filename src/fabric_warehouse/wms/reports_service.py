@@ -3,14 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from fabric_warehouse.db.models.hanging_tag import HangingTag
 from fabric_warehouse.db.models.location_assignment import LocationAssignment
+from fabric_warehouse.db.models.receipt import ReceiptLine
 from fabric_warehouse.db.models.stock_check import StockCheck
 
 _DANG_LUU = "Đang lưu"
+_DANG_LUU_VARIANTS = ("Đang lưu", "Dang luu", "Đang luu", "Dang lưu")
 
 
 @dataclass
@@ -294,3 +296,159 @@ def ton_kho_by_age_split(
         ),
         out,
     )
+
+
+@dataclass(frozen=True)
+class InboundLotRow:
+    nhu_cau: str
+    lot: str
+    so_cay: int
+    da_nhap_cay: int
+    tong_yds: float
+    da_nhap_yds: float
+
+
+@dataclass(frozen=True)
+class InboundDemandGroup:
+    nhu_cau: str
+    lots: list[InboundLotRow]
+
+    @property
+    def rowspan(self) -> int:
+        return len(self.lots)
+
+
+def inbound_status_by_nhu_cau(
+    db: Session,
+    *,
+    nhu_cau: str | None = None,
+    limit_lots: int = 5000,
+) -> list[InboundDemandGroup]:
+    """
+    Import/stock-check status grouped by Nhu cầu → Lot.
+
+    - Total rolls/YDS are sourced from receipt_lines (dedup by (nhu_cau, lot, ma_cay)).
+    - "Đã nhập" is sourced from stock_checks (presence of row = checked).
+    """
+    rr = (
+        db.query(
+            ReceiptLine.nhu_cau.label("nhu_cau"),
+            ReceiptLine.lot.label("lot"),
+            ReceiptLine.ma_cay.label("ma_cay"),
+            func.max(ReceiptLine.id).label("rid"),
+        )
+        .filter(ReceiptLine.nhu_cau.isnot(None))
+        .filter(ReceiptLine.lot.isnot(None))
+        .group_by(ReceiptLine.nhu_cau, ReceiptLine.lot, ReceiptLine.ma_cay)
+        .subquery()
+    )
+    rl = db.query(ReceiptLine).subquery()
+
+    q = (
+        db.query(
+            rr.c.nhu_cau,
+            rr.c.lot,
+            func.count(rr.c.ma_cay).label("so_cay"),
+            func.count(func.distinct(StockCheck.ma_cay)).label("da_nhap_cay"),
+            func.coalesce(func.sum(func.coalesce(rl.c.yards, 0)), 0).label("tong_yds"),
+            func.coalesce(
+                func.sum(func.coalesce(StockCheck.actual_yards, StockCheck.expected_yards, 0)),
+                0,
+            ).label("da_nhap_yds"),
+        )
+        .join(rl, rl.c.id == rr.c.rid)
+        .outerjoin(
+            StockCheck,
+            and_(
+                StockCheck.ma_cay == rr.c.ma_cay,
+                StockCheck.nhu_cau == rr.c.nhu_cau,
+                StockCheck.lot == rr.c.lot,
+            ),
+        )
+    )
+    if nhu_cau:
+        q = q.filter(rr.c.nhu_cau == nhu_cau)
+
+    rows = (
+        q.group_by(rr.c.nhu_cau, rr.c.lot)
+        .order_by(rr.c.nhu_cau, rr.c.lot)
+        .limit(int(limit_lots))
+        .all()
+    )
+
+    grouped: dict[str, list[InboundLotRow]] = {}
+    for nc, lt, so_cay, da_nhap_cay, tong_yds, da_nhap_yds in rows:
+        nc_s = str(nc or "").strip() or "(Không xác định)"
+        lt_s = str(lt or "").strip() or "(Không xác định)"
+        grouped.setdefault(nc_s, []).append(
+            InboundLotRow(
+                nhu_cau=nc_s,
+                lot=lt_s,
+                so_cay=int(so_cay or 0),
+                da_nhap_cay=int(da_nhap_cay or 0),
+                tong_yds=float(tong_yds or 0),
+                da_nhap_yds=float(da_nhap_yds or 0),
+            )
+        )
+
+    return [InboundDemandGroup(nhu_cau=nc, lots=lots) for nc, lots in grouped.items()]
+
+
+def list_active_inbound_nhu_cau_options(db: Session, *, limit: int = 5000) -> list[str]:
+    """
+    Active demands = have receipt_lines and (still pending stock check OR already stored).
+    """
+    rr = (
+        db.query(
+            ReceiptLine.nhu_cau.label("nhu_cau"),
+            ReceiptLine.ma_cay.label("ma_cay"),
+            func.max(ReceiptLine.id).label("rid"),
+        )
+        .filter(ReceiptLine.nhu_cau.isnot(None))
+        .group_by(ReceiptLine.nhu_cau, ReceiptLine.ma_cay)
+        .subquery()
+    )
+
+    totals = (
+        db.query(
+            rr.c.nhu_cau.label("nhu_cau"),
+            func.count(rr.c.ma_cay).label("total_rolls"),
+        )
+        .group_by(rr.c.nhu_cau)
+        .subquery()
+    )
+
+    checked = (
+        db.query(
+            StockCheck.nhu_cau.label("nhu_cau"),
+            func.count(func.distinct(StockCheck.ma_cay)).label("checked_rolls"),
+        )
+        .group_by(StockCheck.nhu_cau)
+        .subquery()
+    )
+
+    stored = (
+        db.query(
+            LocationAssignment.nhu_cau.label("nhu_cau"),
+            func.count(func.distinct(LocationAssignment.ma_cay)).label("stored_rolls"),
+        )
+        .filter(LocationAssignment.trang_thai.in_(_DANG_LUU_VARIANTS))
+        .group_by(LocationAssignment.nhu_cau)
+        .subquery()
+    )
+
+    rows = (
+        db.query(totals.c.nhu_cau)
+        .outerjoin(checked, checked.c.nhu_cau == totals.c.nhu_cau)
+        .outerjoin(stored, stored.c.nhu_cau == totals.c.nhu_cau)
+        .filter(
+            or_(
+                func.coalesce(checked.c.checked_rolls, 0) < func.coalesce(totals.c.total_rolls, 0),
+                func.coalesce(stored.c.stored_rolls, 0) > 0,
+            )
+        )
+        .order_by(totals.c.nhu_cau)
+        .limit(int(limit))
+        .all()
+    )
+    return [str(r[0]) for r in rows if r and r[0]]

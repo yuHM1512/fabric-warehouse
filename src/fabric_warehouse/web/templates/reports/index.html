@@ -15,9 +15,16 @@
   <!-- Main tab bar -->
   <div class="flex gap-2">
     <a
+      href="/reports?view=inbound"
+      class="px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-colors
+             {% if view == 'inbound' %}bg-primary text-white shadow-sm{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+    >
+      Nhập kho
+    </a>
+    <a
       href="/reports"
       class="px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-colors
-             {% if view != 'age' %}bg-primary text-white shadow-sm{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+             {% if view != 'age' and view != 'inbound' %}bg-primary text-white shadow-sm{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
     >
       Tồn kho
     </a>
@@ -30,7 +37,147 @@
     </a>
   </div>
 
-  {% if view == "age" %}
+  {% if view == "inbound" %}
+    <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
+      <div class="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tình trạng nhập kho</div>
+          <h2 class="mt-2 text-3xl md:text-4xl font-extrabold font-headline text-on-surface">Nhập kho theo Nhu cầu</h2>
+          <p class="mt-3 text-sm text-on-surface-variant leading-relaxed max-w-2xl">
+            Thống kê theo từng <span class="font-semibold text-on-surface">Nhu cầu</span> và <span class="font-semibold text-on-surface">Lot</span>:
+            số cây / YDS tổng và phần đã kiểm kho (đã nhập).
+          </p>
+        </div>
+        <div class="flex items-end gap-3">
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="inboundNhuCau">Nhu cầu</label>
+            <select id="inboundNhuCau" class="mt-2 rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0 min-w-[320px]">
+              <option value="">Tất cả</option>
+              {% for nc in nhu_cau_options %}
+                <option value="{{ nc }}" {% if selected_nhu_cau == nc %}selected{% endif %}>{{ nc }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto rounded-2xl border border-black/5">
+        <table class="min-w-full text-sm" id="inboundAccordion">
+          <thead class="bg-surface-container-low text-on-surface-variant">
+            <tr class="text-left">
+              <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-[0.2em]">Nhu cầu</th>
+              <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Số lot</th>
+              <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Tổng YDS</th>
+              <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Đã nhập (YDS)</th>
+              <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Chi tiết</th>
+            </tr>
+          </thead>
+          <tbody class="bg-surface-container-lowest">
+            {% for g in inbound_groups %}
+              {% set total_yds = g.lots | sum(attribute='tong_yds') %}
+              {% set done_yds = g.lots | sum(attribute='da_nhap_yds') %}
+              {% set lot_count = g.lots | length %}
+              {% set acc_id = "inbound_" ~ loop.index %}
+
+              <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5">
+                <td class="px-6 py-4 font-extrabold text-on-surface">{{ g.nhu_cau }}</td>
+                <td class="px-6 py-4 text-right font-bold text-on-surface tabular-nums">{{ lot_count }}</td>
+                <td class="px-6 py-4 text-right text-on-surface-variant tabular-nums">{{ "%.2f"|format(total_yds) }}</td>
+                <td class="px-6 py-4 text-right text-on-surface-variant tabular-nums">{{ "%.2f"|format(done_yds) }}</td>
+                <td class="px-6 py-4 text-right">
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-2 rounded-full bg-surface-container-low px-4 py-2 text-xs font-extrabold uppercase tracking-widest text-primary hover:bg-surface-container-lowest transition-colors"
+                    data-acc-btn="{{ acc_id }}"
+                    aria-expanded="false"
+                    aria-controls="{{ acc_id }}"
+                  >
+                    <span>Chi tiết</span>
+                    <span class="material-symbols-outlined text-base transition-transform" data-acc-icon="{{ acc_id }}">keyboard_arrow_down</span>
+                  </button>
+                </td>
+              </tr>
+
+              <tr id="{{ acc_id }}" class="hidden border-b border-primary/25 bg-surface-container-low/30">
+                <td colspan="5" class="px-6 py-5">
+                  <div class="rounded-2xl bg-surface-container-lowest border border-primary/15 overflow-hidden">
+                    <div class="px-6 py-4 bg-primary/5 border-b border-primary/10 flex items-center justify-between">
+                      <div class="text-xs font-extrabold uppercase tracking-[0.2em] text-primary">Chi tiết theo Lot</div>
+                      <div class="text-xs text-on-surface-variant">
+                        <span class="font-bold text-on-surface">{{ lot_count }}</span> lot ·
+                        <span class="font-bold text-on-surface">{{ "%.2f"|format(total_yds) }}</span> yds
+                      </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                      <table class="min-w-full text-sm">
+                        <thead class="bg-surface-container-low text-on-surface-variant">
+                          <tr class="text-left">
+                            <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-[0.2em]">Lot vải</th>
+                            <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Số cây</th>
+                            <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Đã nhập (Cây)</th>
+                            <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Tổng YDS</th>
+                            <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Đã nhập (YDS)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for it in g.lots %}
+                            <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0">
+                              <td class="px-6 py-4 font-semibold text-on-surface">{{ it.lot }}</td>
+                              <td class="px-6 py-4 text-right font-bold text-on-surface tabular-nums">{{ it.so_cay }}</td>
+                              <td class="px-6 py-4 text-right font-bold text-on-surface tabular-nums">{{ it.da_nhap_cay }}</td>
+                              <td class="px-6 py-4 text-right text-on-surface-variant tabular-nums">{{ "%.2f"|format(it.tong_yds) }}</td>
+                              <td class="px-6 py-4 text-right text-on-surface-variant tabular-nums">{{ "%.2f"|format(it.da_nhap_yds) }}</td>
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td class="px-6 py-16 text-center text-on-surface-variant" colspan="5">Chưa có dữ liệu nhập kho.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <script>
+      (function () {
+        function toggleRow(id) {
+          const row = document.getElementById(id);
+          const btn = document.querySelector(`[data-acc-btn=\"${id}\"]`);
+          const icon = document.querySelector(`[data-acc-icon=\"${id}\"]`);
+          if (!row || !btn) return;
+          const isHidden = row.classList.contains("hidden");
+          row.classList.toggle("hidden", !isHidden);
+          btn.setAttribute("aria-expanded", isHidden ? "true" : "false");
+          if (icon) icon.style.transform = isHidden ? "rotate(180deg)" : "rotate(0deg)";
+        }
+
+        document.querySelectorAll("[data-acc-btn]").forEach((btn) => {
+          btn.addEventListener("click", () => toggleRow(btn.dataset.accBtn));
+        });
+      })();
+
+      (function () {
+        const sel = document.getElementById("inboundNhuCau");
+        if (!sel) return;
+        sel.addEventListener("change", () => {
+          const v = sel.value || "";
+          const url = new URL(window.location.href);
+          url.searchParams.set("view", "inbound");
+          if (v) url.searchParams.set("nhu_cau", v);
+          else url.searchParams.delete("nhu_cau");
+          window.location.href = url.toString();
+        });
+      })();
+    </script>
+
+  {% elif view == "age" %}
     <!-- ── KPI + Chart ── -->
     <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
       <div class="mb-10">

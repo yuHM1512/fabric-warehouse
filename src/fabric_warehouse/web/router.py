@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 from fabric_warehouse.db.session import get_db
 from fabric_warehouse.wms.hanging_pdf import render_hanging_tag_pdf, render_merged_hanging_tag_pdf
 from fabric_warehouse.wms.reports_service import (
+    inbound_status_by_nhu_cau,
+    list_active_inbound_nhu_cau_options,
     ton_kho_by_age_split,
     ton_kho_by_loai_vai,
     ton_kho_by_lot,
@@ -983,6 +985,25 @@ def tools_norms(request: Request, db: Session = Depends(get_db)):
 def reports_home(request: Request, db: Session = Depends(get_db)):
     view = (request.query_params.get("view") or "ton_kho").strip()
     tab = (request.query_params.get("tab") or "nhu_cau").strip()
+
+    if view == "inbound":
+        selected_nhu_cau = (request.query_params.get("nhu_cau") or "").strip()
+        nhu_cau_val = selected_nhu_cau or None
+        groups = inbound_status_by_nhu_cau(db, nhu_cau=nhu_cau_val, limit_lots=8000)
+        nhu_cau_options = list_active_inbound_nhu_cau_options(db, limit=5000)
+
+        return templates.TemplateResponse(
+            request,
+            "reports/index.html",
+            {
+                "title": "Báo cáo",
+                "view": "inbound",
+                "tab": tab,
+                "inbound_groups": groups,
+                "selected_nhu_cau": selected_nhu_cau,
+                "nhu_cau_options": nhu_cau_options,
+            },
+        )
 
     if view == "age":
         bucket = (request.query_params.get("bucket") or "").strip()
