@@ -13,7 +13,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from fabric_warehouse.db.models.hanging_tag import HangingTag
 
 _COL_W = [45 * mm, 55 * mm, 38 * mm]
-_ROW_H = [16 * mm, 14 * mm, 12 * mm, 14 * mm, 26 * mm, 22 * mm, 18 * mm, 18 * mm]
+_ROW_H = [16 * mm, 14 * mm, 12 * mm, 14 * mm, 26 * mm, 22 * mm, 34 * mm]
 _PAD_LR = 12.0
 _PAD_TB = 8.0
 
@@ -121,7 +121,7 @@ def _render_tag_pdf(fields: dict, doc_title: str = "Bang treo") -> bytes:
         "bt_title",
         parent=base_styles["Title"],
         fontName=font_bold,
-        fontSize=18,
+        fontSize=16,
         alignment=1,
         spaceAfter=0,
         spaceBefore=0,
@@ -130,16 +130,16 @@ def _render_tag_pdf(fields: dict, doc_title: str = "Bang treo") -> bytes:
         "bt_label",
         parent=base_styles["Normal"],
         fontName=font_bold,
-        fontSize=9,
-        leading=11,
+        fontSize=10,
+        leading=12,
         alignment=1,
     )
     value_style = ParagraphStyle(
         "bt_value",
         parent=base_styles["Normal"],
         fontName=font_normal,
-        fontSize=14,
-        leading=16,
+        fontSize=16,
+        leading=18,
         alignment=0,
     )
     value_bold_style = ParagraphStyle("bt_value_bold", parent=value_style, fontName=font_bold)
@@ -148,8 +148,8 @@ def _render_tag_pdf(fields: dict, doc_title: str = "Bang treo") -> bytes:
     lot_style = ParagraphStyle(
         "bt_lot",
         parent=value_center_bold_style,
-        fontSize=22,
-        leading=24,
+        fontSize=28,
+        leading=30,
     )
 
     def L(text: str) -> Paragraph:
@@ -168,9 +168,9 @@ def _render_tag_pdf(fields: dict, doc_title: str = "Bang treo") -> bytes:
         return _shrink_to_fit(text or "", lot_style, _avail_w(1, 2), _avail_h(6))
 
     story: list[object] = []
-    story.append(Spacer(1, 6 * mm))
-    story.append(Paragraph(fields["khach_hang"], title_style))
     story.append(Spacer(1, 4 * mm))
+    story.append(Paragraph(fields["khach_hang"], title_style))
+    story.append(Spacer(1, 2 * mm))
 
     rows = [
         [L("NHÀ CUNG CẤP<br/>(Supplier)"), _v(fields["nha_cung_cap"], 0, 1, 2, bold=True), ""],
@@ -179,20 +179,15 @@ def _render_tag_pdf(fields: dict, doc_title: str = "Bang treo") -> bytes:
         [L("NHU CẦU NGUYÊN LIỆU"), _v(fields["nhu_cau"], 3, 1, 2, bold=True, center=True), ""],
         [
             L("LOẠI VẢI - MÃ VẢI<br/>(Description - Model)"),
-            _v(fields["loai_vai"], 4, 1),
+            _v(fields["loai_vai"], 4, 1, bold=True),
             _v(fields["ma_art"], 4, 2, bold=True, center=True),
         ],
         [
             L("MÀU - MÃ MÀU<br/>(Color - Item)"),
-            _v(fields["mau_vai"], 5, 1),
+            _v(fields["mau_vai"], 5, 1, bold=True),
             _v(fields["ma_mau"], 5, 2, bold=True, center=True),
         ],
         [L("LOT:"), _lot(fields["lot"]), ""],
-        [
-            L("KẾT QUẢ KIỂM TRA<br/>(Result of check)"),
-            _v("ĐẠT<br/>(Pass)", 7, 1, bold=True, center=True),
-            _v(fields["ket_qua_kiem_tra"] or "OK", 7, 2, bold=True, center=True),
-        ],
     ]
 
     tbl = Table(rows, colWidths=_COL_W, rowHeights=_ROW_H)
@@ -208,7 +203,6 @@ def _render_tag_pdf(fields: dict, doc_title: str = "Bang treo") -> bytes:
                 ("SPAN", (1, 3), (2, 3)),
                 ("SPAN", (1, 6), (2, 6)),
                 ("ALIGN", (1, 6), (2, 6), "CENTER"),
-                ("ALIGN", (1, 7), (2, 7), "CENTER"),
                 ("TOPPADDING", (0, 0), (-1, -1), 4),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
                 ("LEFTPADDING", (0, 0), (-1, -1), 6),

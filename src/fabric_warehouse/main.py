@@ -19,7 +19,7 @@ from fabric_warehouse.db.session import get_db
 from fabric_warehouse.wms.dashboard_service import compute_age_split_for_stored, list_in_out_by_day
 from fabric_warehouse.wms.pallet_metrics import build_pallet_layout, compute_pallet_kpis
 from fabric_warehouse.web.router import router as web_router
-from fabric_warehouse.web.jinja_filters import clean_note, fmt_gmt7
+from fabric_warehouse.web.jinja_filters import clean_note, fmt_date_dmy, fmt_gmt7
 
 app = FastAPI(title=settings.app_name)
 app.include_router(api_router, prefix="/api")
@@ -29,6 +29,7 @@ app.mount("/static", StaticFiles(directory="src/fabric_warehouse/web/static"), n
 templates = Jinja2Templates(directory="src/fabric_warehouse/web/templates")
 templates.env.filters["gmt7"] = fmt_gmt7
 templates.env.filters["clean_note"] = clean_note
+templates.env.filters["dmy"] = fmt_date_dmy
 
 
 @app.middleware("http")

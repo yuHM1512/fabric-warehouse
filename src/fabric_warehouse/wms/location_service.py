@@ -36,11 +36,37 @@ def pallet_options() -> list[str]:
 
 
 def list_nhu_cau_options_for_location(db: Session) -> list[str]:
-    rows = (
-        db.query(StockCheck.nhu_cau)
+    """
+    UX: only show demands that still have checked rolls WITHOUT a pallet/location assignment.
+
+    We consider "ready for location" rolls = stock_checks with actual_yards filled.
+    A demand should appear if assigned_count < checked_count.
+    """
+    checked_sq = (
+        db.query(
+            StockCheck.nhu_cau.label("nhu_cau"),
+            func.count(func.distinct(StockCheck.ma_cay)).label("checked"),
+        )
         .filter(StockCheck.actual_yards.isnot(None))
-        .distinct()
-        .order_by(StockCheck.nhu_cau.asc())
+        .group_by(StockCheck.nhu_cau)
+        .subquery()
+    )
+
+    assigned_sq = (
+        db.query(
+            LocationAssignment.nhu_cau.label("nhu_cau"),
+            func.count(func.distinct(LocationAssignment.ma_cay)).label("assigned"),
+        )
+        .filter(LocationAssignment.trang_thai == "Đang lưu")
+        .group_by(LocationAssignment.nhu_cau)
+        .subquery()
+    )
+
+    rows = (
+        db.query(checked_sq.c.nhu_cau)
+        .outerjoin(assigned_sq, assigned_sq.c.nhu_cau == checked_sq.c.nhu_cau)
+        .filter((assigned_sq.c.assigned.is_(None)) | (assigned_sq.c.assigned < checked_sq.c.checked))
+        .order_by(checked_sq.c.nhu_cau.asc())
         .all()
     )
     return [r[0] for r in rows if r[0]]

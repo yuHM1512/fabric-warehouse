@@ -4,10 +4,11 @@ from dataclasses import dataclass
 from datetime import date
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from fabric_warehouse.db.models.issue import Issue, IssueLine
 from fabric_warehouse.db.models.location_assignment import LocationAssignment
+from fabric_warehouse.db.models.receipt import ReceiptLine
 from fabric_warehouse.db.models.return_event import ReturnEvent
 
 
@@ -20,14 +21,33 @@ class ReturnCandidateRow:
     ngay_xuat: date
     vi_tri: str | None
     issue_status: str
+    ten_art: str | None
 
 
-def list_return_candidates(db: Session, *, limit: int = 300) -> list[ReturnCandidateRow]:
+def list_return_candidates(
+    db: Session,
+    *,
+    nhu_cau: str | None = None,
+    lot: str | None = None,
+    ten_art: str | None = None,
+    limit: int = 300,
+) -> list[ReturnCandidateRow]:
     """
     Rolls that have been issued but not yet returned (1 return per issue_line).
     """
     sub = db.query(ReturnEvent.issue_line_id).subquery()
-    rows = (
+    rl_latest = (
+        db.query(
+            ReceiptLine.ma_cay.label("ma_cay"),
+            func.max(ReceiptLine.id).label("rid"),
+        )
+        .group_by(ReceiptLine.ma_cay)
+        .subquery()
+    )
+    rl = aliased(ReceiptLine)
+    ten_art_expr = rl.raw_data.op("->>")("Tên Art")
+
+    q = (
         db.query(
             IssueLine.id,
             IssueLine.ma_cay,
@@ -36,10 +56,23 @@ def list_return_candidates(db: Session, *, limit: int = 300) -> list[ReturnCandi
             Issue.ngay_xuat,
             IssueLine.vi_tri,
             Issue.status,
+            ten_art_expr.label("ten_art"),
         )
         .join(Issue, Issue.id == IssueLine.issue_id)
+        .outerjoin(rl_latest, rl_latest.c.ma_cay == IssueLine.ma_cay)
+        .outerjoin(rl, rl.id == rl_latest.c.rid)
         .filter(~IssueLine.id.in_(sub))
-        .order_by(Issue.ngay_xuat.desc(), IssueLine.id.desc())
+    )
+
+    if nhu_cau:
+        q = q.filter(Issue.nhu_cau.ilike(f"%{nhu_cau}%"))
+    if lot:
+        q = q.filter(Issue.lot.ilike(f"%{lot}%"))
+    if ten_art:
+        q = q.filter(func.coalesce(ten_art_expr, "").ilike(f"%{ten_art}%"))
+
+    rows = (
+        q.order_by(Issue.ngay_xuat.desc(), IssueLine.id.desc())
         .limit(limit)
         .all()
     )
@@ -52,9 +85,38 @@ def list_return_candidates(db: Session, *, limit: int = 300) -> list[ReturnCandi
             ngay_xuat=nx,
             vi_tri=vt,
             issue_status=st,
+            ten_art=ta,
         )
-        for iid, ma, nc, lt, nx, vt, st in rows
+        for iid, ma, nc, lt, nx, vt, st, ta in rows
     ]
+
+
+def list_pending_return_nhu_cau_options(db: Session, *, limit: int = 2000) -> list[str]:
+    sub = db.query(ReturnEvent.issue_line_id).subquery()
+    rows = (
+        db.query(Issue.nhu_cau)
+        .join(IssueLine, IssueLine.issue_id == Issue.id)
+        .filter(~IssueLine.id.in_(sub))
+        .distinct()
+        .order_by(Issue.nhu_cau)
+        .limit(limit)
+        .all()
+    )
+    return [str(r[0]) for r in rows if r and r[0]]
+
+
+def list_pending_return_lot_options(db: Session, *, limit: int = 2000) -> list[str]:
+    sub = db.query(ReturnEvent.issue_line_id).subquery()
+    rows = (
+        db.query(Issue.lot)
+        .join(IssueLine, IssueLine.issue_id == Issue.id)
+        .filter(~IssueLine.id.in_(sub))
+        .distinct()
+        .order_by(Issue.lot)
+        .limit(limit)
+        .all()
+    )
+    return [str(r[0]) for r in rows if r and r[0]]
 
 
 def create_return(
@@ -115,4 +177,3 @@ def list_return_history(
     if date_to:
         q = q.filter(ReturnEvent.ngay_tai_nhap <= date_to)
     return q.limit(limit).all()
-

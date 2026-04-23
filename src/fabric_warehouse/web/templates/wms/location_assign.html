@@ -36,6 +36,23 @@
     </div>
   {% endif %}
 
+  {% if (not nhu_cau) and (nhu_cau_options|length == 0) %}
+    <div id="allAssignedToast" class="fixed top-6 right-6 z-50 max-w-md rounded-2xl bg-surface-container-lowest cloud-shadow border border-black/5 px-6 py-4">
+      <div class="flex items-start gap-3">
+        <div class="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+          <span class="material-symbols-outlined text-emerald-700">check_circle</span>
+        </div>
+        <div class="min-w-0">
+          <div class="text-sm font-extrabold font-headline text-on-surface">Tất cả cây vải đã được gán vị trí</div>
+          <div class="mt-1 text-xs text-on-surface-variant">Không còn Nhu cầu nào cần định danh pallet.</div>
+        </div>
+        <button type="button" class="ml-auto text-on-surface-variant hover:text-on-surface" onclick="document.getElementById('allAssignedToast').remove()">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+    </div>
+  {% endif %}
+
   <div id="locations-ajax">
   <!-- Filter Panel -->
   <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10 relative overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">

@@ -11,9 +11,12 @@ from sqlalchemy.orm import Session
 
 from fabric_warehouse.db.models.fabric_data import FabricData
 from fabric_warehouse.db.models.fabric_roll import FabricRoll
+from fabric_warehouse.db.models.hanging_tag import HangingTag
 from fabric_warehouse.db.models.location_assignment import LocationAssignment
+from fabric_warehouse.db.models.receipt import Receipt, ReceiptLine
 from fabric_warehouse.db.models.stock_check import StockCheck
 from fabric_warehouse.db.session import SessionLocal
+from fabric_warehouse.wms.receipts_service import _extract_ma_hang, _format_code
 
 
 @dataclass(frozen=True)
@@ -41,6 +44,36 @@ def _dt_from_iso(s: str | None) -> datetime | None:
         # Old SQLite timestamps were saved as local naive; treat as UTC for storage.
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
+
+
+def _date_from_any(s: str | None) -> datetime | None:
+    """
+    Parse legacy date strings found in SQLite (excel_data).
+
+    Common formats:
+    - yyyy-mm-dd
+    - dd/mm/yyyy
+    - hh:mm dd/mm/yyyy
+    """
+    s = (s or "").strip()
+    if not s:
+        return None
+    try:
+        # ISO-like or full datetime
+        return _dt_from_iso(s)
+    except Exception:
+        pass
+
+    import re
+
+    m = re.search(r"(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})", s)
+    if m:
+        dd, mm, yy = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        try:
+            return datetime(yy, mm, dd, tzinfo=timezone.utc)
+        except Exception:
+            return None
+    return None
 
 
 def _as_float(v: object) -> float | None:
@@ -188,6 +221,22 @@ def load_fabric_norms_from_sqlite(*, fabric_db_path: str) -> list[dict[str, obje
         con.close()
 
 
+def load_excel_rows_from_wms_sqlite(*, wms_db_path: str) -> list[dict[str, object]]:
+    """
+    Load raw rows from legacy excel_data table.
+
+    These rows contain the fields needed for reports (loai_vai/mau_vai) and for
+    building HangingTag metadata.
+    """
+    con = _open_sqlite(wms_db_path)
+    try:
+        cur = con.cursor()
+        rows = cur.execute('SELECT * FROM excel_data').fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        con.close()
+
+
 def upsert_stored_rolls(db: Session, rows: list[StoredRollRow]) -> dict[str, int]:
     created_rolls = 0
     upsert_assign = 0
@@ -279,6 +328,176 @@ def upsert_fabric_norms(db: Session, norms: list[dict[str, object]]) -> dict[str
     return {"fabric_data_upserted": upserted}
 
 
+def _parse_ngay_xuat(s: str | None) -> object | None:
+    """
+    Legacy "Ngày xuất" often looks like '10:07 12/12/2025'.
+    Store only the date part.
+    """
+    dt = _date_from_any(s)
+    return dt.date() if isinstance(dt, datetime) else None
+
+
+def upsert_excel_metadata(
+    db: Session,
+    *,
+    wms_db_path: str,
+    only_ma_cays: set[str] | None = None,
+) -> dict[str, int]:
+    """
+    Import excel_data into Postgres so reports by loai_vai/mau_vai work.
+
+    Creates synthetic Receipts + ReceiptLines and HangingTags.
+    """
+    excel_rows = load_excel_rows_from_wms_sqlite(wms_db_path=wms_db_path)
+    if not excel_rows:
+        return {"receipts_created": 0, "receipt_lines_upserted": 0, "hanging_tags_upserted": 0}
+
+    # Filter to only rolls we actually have stored (optional, speeds up big DBs).
+    if only_ma_cays is not None:
+        filtered: list[dict[str, object]] = []
+        for r in excel_rows:
+            ma = str(r.get("Mã cây") or "").strip()
+            if ma and ma in only_ma_cays:
+                filtered.append(r)
+        excel_rows = filtered
+
+    # Group rows by "Ngày nhập hàng" (fallback "Ngày nhập"). Each group becomes 1 synthetic receipt.
+    groups: dict[str, list[dict[str, object]]] = {}
+    for r in excel_rows:
+        ma_cay = str(r.get("Mã cây") or "").strip()
+        if not ma_cay:
+            continue
+        d0 = _date_from_any(str(r.get("Ngày nhập hàng") or "")) or _date_from_any(str(r.get("Ngày nhập") or ""))
+        day_key = d0.date().isoformat() if isinstance(d0, datetime) else "unknown"
+        groups.setdefault(day_key, []).append(r)
+
+    now = datetime.now(timezone.utc)
+    receipts_created = 0
+    lines_upserted = 0
+    tags_upserted = 0
+
+    for day_key, rows in groups.items():
+        receipt_date = None
+        if day_key != "unknown":
+            try:
+                receipt_date = datetime.fromisoformat(day_key).date()
+            except Exception:
+                receipt_date = None
+
+        source_filename = f"sqlite_excel_data::{day_key}"
+        receipt = (
+            db.query(Receipt)
+            .filter(Receipt.source_filename == source_filename)
+            .first()
+        )
+        if not receipt:
+            receipt = Receipt(source_filename=source_filename, receipt_date=receipt_date)
+            db.add(receipt)
+            db.flush()
+            receipts_created += 1
+
+        # Ensure FabricRoll exists for roll_id FK.
+        ma_cays = []
+        for r in rows:
+            ma = str(r.get("Mã cây") or "").strip()
+            if ma:
+                ma_cays.append(ma)
+        ma_cays = list(dict.fromkeys(ma_cays))
+
+        existing_rolls = db.query(FabricRoll).filter(FabricRoll.ma_cay.in_(ma_cays)).all() if ma_cays else []
+        roll_id_by_ma = {x.ma_cay: x.id for x in existing_rolls}
+        for ma in ma_cays:
+            if ma in roll_id_by_ma:
+                continue
+            fr = FabricRoll(ma_cay=ma, created_at=now)
+            db.add(fr)
+            db.flush()
+            roll_id_by_ma[ma] = fr.id
+
+        # Upsert receipt_lines by unique (receipt_id, ma_cay).
+        existing_lines = (
+            db.query(ReceiptLine.ma_cay)
+            .filter(ReceiptLine.receipt_id == receipt.id)
+            .filter(ReceiptLine.ma_cay.in_(ma_cays))
+            .all()
+        )
+        existing_ma = {str(x[0]) for x in existing_lines if x and x[0]}
+
+        for r in rows:
+            ma_cay = str(r.get("Mã cây") or "").strip()
+            if not ma_cay or ma_cay in existing_ma:
+                continue
+
+            nhu_cau = str(r.get("Nhu cầu") or "").strip() or None
+            lot = str(r.get("Lot") or "").strip() or None
+            anh_mau = str(r.get("Ành màu") or "").strip() or None
+            if anh_mau:
+                anh_mau = _format_code(anh_mau) or anh_mau
+
+            yards = _as_float(r.get("Số lượng"))
+            art = _format_code(r.get("Mã Art"))
+
+            line = ReceiptLine(
+                receipt_id=receipt.id,
+                roll_id=roll_id_by_ma.get(ma_cay),
+                ma_cay=ma_cay,
+                nhu_cau=nhu_cau,
+                lot=lot,
+                anh_mau=anh_mau or "CHUNG",
+                model=None,
+                art=art,
+                yards=yards,
+                raw_data=dict(r),
+            )
+            db.add(line)
+            lines_upserted += 1
+            existing_ma.add(ma_cay)
+
+        # Upsert hanging_tag per (nhu_cau, lot) for this receipt.
+        # Pick the first row encountered for each (nhu_cau, lot).
+        by_key: dict[tuple[str | None, str | None], dict[str, object]] = {}
+        for r in rows:
+            nhu_cau = str(r.get("Nhu cầu") or "").strip() or None
+            lot = str(r.get("Lot") or "").strip() or None
+            if not lot:
+                continue
+            key = (nhu_cau, lot)
+            if key in by_key:
+                continue
+            by_key[key] = r
+
+        for (nhu_cau, lot), r in by_key.items():
+            id_bang_treo = f"{(nhu_cau or '')}-{(lot or '')}-{receipt_date.isoformat() if receipt_date else ''}"
+            tag = db.query(HangingTag).filter(HangingTag.id_bang_treo == id_bang_treo).first()
+            if not tag:
+                tag = HangingTag(receipt_id=receipt.id, id_bang_treo=id_bang_treo)
+
+            customer = _format_code(r.get("Customer"))
+            tag.ngay_nhap_hang = receipt_date  # type: ignore[assignment]
+            tag.nhu_cau = nhu_cau  # type: ignore[assignment]
+            tag.lot = lot  # type: ignore[assignment]
+            tag.ma_hang = _extract_ma_hang(nhu_cau)  # type: ignore[assignment]
+            tag.customer = customer  # type: ignore[assignment]
+            tag.nha_cung_cap = customer  # type: ignore[assignment]
+            tag.khach_hang = "DECATHLON"  # type: ignore[assignment]
+            tag.ngay_xuat = _parse_ngay_xuat(str(r.get("Ngày xuất") or ""))  # type: ignore[assignment]
+
+            tag.loai_vai = _format_code(r.get("Tên Art"))  # type: ignore[assignment]
+            tag.ma_art = _format_code(r.get("Mã Art"))  # type: ignore[assignment]
+            tag.mau_vai = _format_code(r.get("Tên Màu"))  # type: ignore[assignment]
+            tag.ma_mau = _format_code(r.get("Mã Màu"))  # type: ignore[assignment]
+            tag.ket_qua_kiem_tra = "OK"  # type: ignore[assignment]
+
+            db.add(tag)
+            tags_upserted += 1
+
+    return {
+        "receipts_created": receipts_created,
+        "receipt_lines_upserted": lines_upserted,
+        "hanging_tags_upserted": tags_upserted,
+    }
+
+
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(
         prog="migrate_sqlite_snapshot",
@@ -318,6 +537,13 @@ def main(argv: list[str]) -> int:
     try:
         stats: dict[str, int] = {}
         stats.update(upsert_stored_rolls(db, rows))
+
+        # Import excel_data metadata so reports by loai_vai/mau_vai work for migrated rolls.
+        try:
+            only_ma = {r.ma_cay for r in rows if r.ma_cay}
+        except Exception:
+            only_ma = None
+        stats.update(upsert_excel_metadata(db, wms_db_path=args.wms_db, only_ma_cays=only_ma))
         if norms:
             stats.update(upsert_fabric_norms(db, norms))
         db.commit()

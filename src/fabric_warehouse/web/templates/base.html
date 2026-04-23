@@ -253,12 +253,14 @@
         </a>
       </nav>
 
-      <div class="mt-4 rounded-2xl bg-surface-container-low p-4">
-        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Environment</div>
-        <div class="mt-2 text-sm font-semibold text-on-surface">{{ env_label or "Local" }}</div>
-        {% if settings_env %}
-          <div class="mt-1 text-xs text-on-surface-variant truncate">{{ settings_env }}</div>
-        {% endif %}
+      <div class="mt-4">
+        <a
+          href="/rcp/logout"
+          class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-surface-container-low px-5 py-4 text-sm font-extrabold uppercase tracking-widest text-primary hover:bg-surface-container-lowest transition-colors"
+        >
+          <span class="material-symbols-outlined">logout</span>
+          Đăng xuất
+        </a>
       </div>
     </aside>
 

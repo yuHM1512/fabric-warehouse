@@ -21,11 +21,37 @@ class StockCheckRow:
 
 
 def list_nhu_cau_options(db: Session) -> list[str]:
-    rows = (
-        db.query(ReceiptLine.nhu_cau)
+    """
+    UX: only show demands that are not fully stock-checked yet.
+
+    A demand is considered completed when every distinct `ma_cay` in receipts has a
+    stock_check row with `actual_yards` filled.
+    """
+    total_sq = (
+        db.query(
+            ReceiptLine.nhu_cau.label("nhu_cau"),
+            func.count(func.distinct(ReceiptLine.ma_cay)).label("total"),
+        )
         .filter(ReceiptLine.nhu_cau.isnot(None))
-        .distinct()
-        .order_by(ReceiptLine.nhu_cau.asc())
+        .group_by(ReceiptLine.nhu_cau)
+        .subquery()
+    )
+
+    checked_sq = (
+        db.query(
+            StockCheck.nhu_cau.label("nhu_cau"),
+            func.count(func.distinct(StockCheck.ma_cay)).label("checked"),
+        )
+        .filter(StockCheck.actual_yards.isnot(None))
+        .group_by(StockCheck.nhu_cau)
+        .subquery()
+    )
+
+    rows = (
+        db.query(total_sq.c.nhu_cau)
+        .outerjoin(checked_sq, checked_sq.c.nhu_cau == total_sq.c.nhu_cau)
+        .filter((checked_sq.c.checked.is_(None)) | (checked_sq.c.checked < total_sq.c.total))
+        .order_by(total_sq.c.nhu_cau.asc())
         .all()
     )
     return [r[0] for r in rows if r[0]]
@@ -68,6 +94,59 @@ def list_lot_options(db: Session, *, nhu_cau: str) -> list[str]:
         .all()
     )
     return [r[0] for r in rows if r[0]]
+
+
+@dataclass(frozen=True)
+class LotSummaryRow:
+    lot: str
+    so_cay: int
+    tong_yds: float
+
+
+def list_incomplete_lot_summaries(db: Session, *, nhu_cau: str) -> list[LotSummaryRow]:
+    """
+    Summary table for the selected demand:
+    Lot | Số cây | Số YDS
+
+    Only includes lots that are not fully checked yet (same rule as list_lot_options).
+    """
+    total_sq = (
+        db.query(
+            ReceiptLine.lot.label("lot"),
+            func.count(func.distinct(ReceiptLine.ma_cay)).label("total"),
+            func.coalesce(func.sum(ReceiptLine.yards), 0).label("sum_yds"),
+        )
+        .filter(ReceiptLine.nhu_cau == nhu_cau)
+        .filter(ReceiptLine.lot.isnot(None))
+        .group_by(ReceiptLine.lot)
+        .subquery()
+    )
+
+    checked_sq = (
+        db.query(
+            StockCheck.lot.label("lot"),
+            func.count(func.distinct(StockCheck.ma_cay)).label("checked"),
+        )
+        .filter(StockCheck.nhu_cau == nhu_cau)
+        .filter(StockCheck.actual_yards.isnot(None))
+        .group_by(StockCheck.lot)
+        .subquery()
+    )
+
+    rows = (
+        db.query(total_sq.c.lot, total_sq.c.total, total_sq.c.sum_yds)
+        .outerjoin(checked_sq, checked_sq.c.lot == total_sq.c.lot)
+        .filter((checked_sq.c.checked.is_(None)) | (checked_sq.c.checked < total_sq.c.total))
+        .order_by(total_sq.c.lot.asc())
+        .all()
+    )
+
+    out: list[LotSummaryRow] = []
+    for lot, total, sum_yds in rows:
+        if not lot:
+            continue
+        out.append(LotSummaryRow(lot=str(lot), so_cay=int(total or 0), tong_yds=float(sum_yds or 0)))
+    return out
 
 
 def get_roll_rows(db: Session, *, nhu_cau: str, lot: str) -> list[StockCheckRow]:

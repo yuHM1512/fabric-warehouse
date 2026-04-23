@@ -31,6 +31,7 @@ from fabric_warehouse.wms.receipts_service import (
 from fabric_warehouse.db.models.hanging_tag import HangingTag
 from fabric_warehouse.wms.stock_check_service import (
     get_roll_rows,
+    list_incomplete_lot_summaries,
     list_lot_options,
     list_nhu_cau_options,
     upsert_stock_checks,
@@ -57,6 +58,8 @@ from fabric_warehouse.wms.return_service import (
     create_return,
     list_return_candidates,
     list_return_history,
+    list_pending_return_lot_options,
+    list_pending_return_nhu_cau_options,
 )
 from fabric_warehouse.db.models.issue import IssueLine
 from fabric_warehouse.wms.fabric_norms import list_ma_models, list_norm_rows, search_norms_db
@@ -68,7 +71,7 @@ from fabric_warehouse.wms.tools_service import (
     transfer_demand,
     transfer_location,
 )
-from fabric_warehouse.web.jinja_filters import clean_note, fmt_gmt7
+from fabric_warehouse.web.jinja_filters import clean_note, fmt_date_dmy, fmt_gmt7
 from fabric_warehouse.config import settings
 from fabric_warehouse.db.models.user import User
 
@@ -80,6 +83,7 @@ templates = Jinja2Templates(
 )
 templates.env.filters["gmt7"] = fmt_gmt7
 templates.env.filters["clean_note"] = clean_note
+templates.env.filters["dmy"] = fmt_date_dmy
 
 router = APIRouter()
 
@@ -445,12 +449,17 @@ def stock_check_home(request: Request, db: Session = Depends(get_db)):
     lot = request.query_params.get("lot")
 
     nhu_cau_options = list_nhu_cau_options(db)
+    # Keep selected demand visible even if it has just become completed.
+    if nhu_cau and nhu_cau not in nhu_cau_options:
+        nhu_cau_options = [nhu_cau, *nhu_cau_options]
+
     lot_options = list_lot_options(db, nhu_cau=nhu_cau) if nhu_cau else []
     # If user is viewing a completed lot via query params (e.g., after save redirect),
     # keep it in the dropdown so the selection stays visible.
     if lot and lot not in lot_options:
         lot_options = [lot, *lot_options]
 
+    lot_summaries = list_incomplete_lot_summaries(db, nhu_cau=nhu_cau) if nhu_cau else []
     rows = get_roll_rows(db, nhu_cau=nhu_cau, lot=lot) if (nhu_cau and lot) else []
     return templates.TemplateResponse(
         request,
@@ -461,6 +470,7 @@ def stock_check_home(request: Request, db: Session = Depends(get_db)):
             "lot": lot,
             "nhu_cau_options": nhu_cau_options,
             "lot_options": lot_options,
+            "lot_summaries": lot_summaries,
             "rows": rows,
         },
     )
@@ -527,6 +537,8 @@ def location_home(request: Request, db: Session = Depends(get_db)):
     lot = request.query_params.get("lot")
 
     nhu_cau_options = list_nhu_cau_options_for_location(db)
+    if nhu_cau and nhu_cau not in nhu_cau_options:
+        nhu_cau_options = [nhu_cau, *nhu_cau_options]
     anh_mau_options = list_anh_mau_options(db, nhu_cau=nhu_cau) if nhu_cau else []
     lot_options = list_lot_options_for_location(db, nhu_cau=nhu_cau, anh_mau=anh_mau) if nhu_cau else []
     if lot and lot not in lot_options:
@@ -670,6 +682,9 @@ async def issue_save(request: Request, db: Session = Depends(get_db)):
 @router.get("/wms/stock/returns", response_class=HTMLResponse)
 def returns_home(request: Request, db: Session = Depends(get_db)):
     tab = request.query_params.get("tab") or "todo"
+    nhu_cau = (request.query_params.get("nhu_cau") or "").strip()
+    lot = (request.query_params.get("lot") or "").strip()
+    loai_vai = (request.query_params.get("loai_vai") or "").strip()
 
     # history filter
     date_from = request.query_params.get("from")
@@ -685,7 +700,16 @@ def returns_home(request: Request, db: Session = Depends(get_db)):
     df = parse_date(date_from)
     dt = parse_date(date_to)
 
-    candidates = list_return_candidates(db) if tab == "todo" else []
+    candidates = (
+        list_return_candidates(
+            db,
+            nhu_cau=nhu_cau or None,
+            lot=lot or None,
+            ten_art=loai_vai or None,
+        )
+        if tab == "todo"
+        else []
+    )
     history = list_return_history(db, date_from=df, date_to=dt) if tab == "history" else []
 
     return templates.TemplateResponse(
@@ -696,6 +720,11 @@ def returns_home(request: Request, db: Session = Depends(get_db)):
             "tab": tab,
             "candidates": candidates,
             "history": history,
+            "filter_nhu_cau": nhu_cau,
+            "filter_lot": lot,
+            "filter_loai_vai": loai_vai,
+            "nhu_cau_options": list_pending_return_nhu_cau_options(db, limit=2000) if tab == "todo" else [],
+            "lot_options": list_pending_return_lot_options(db, limit=2000) if tab == "todo" else [],
             "tang_options": tang_options(),
             "line_options": line_options(),
             "pallet_options": pallet_options(),
@@ -862,7 +891,7 @@ def tools_location_transfer(request: Request, db: Session = Depends(get_db)):
     rows = (
         db.query(LocationAssignment)
         .filter(LocationAssignment.vi_tri == vi_tri)
-        .filter(LocationAssignment.trang_thai == "Äang lÆ°u")
+        .filter(LocationAssignment.trang_thai.in_(("Đang lưu", "Dang luu", "Đang luu", "Dang lưu")))
         .order_by(LocationAssignment.ma_cay.asc())
         .all()
     )
