@@ -113,6 +113,7 @@
                         <thead class="bg-surface-container-low text-on-surface-variant">
                           <tr class="text-left">
                             <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-[0.2em]">Lot vải</th>
+                            <th class="px-6 py-4 text-[11px] font-bold uppercase tracking-[0.2em]">Vị trí</th>
                             <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Số cây</th>
                             <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Đã nhập (Cây)</th>
                             <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Tổng YDS</th>
@@ -123,6 +124,22 @@
                           {% for it in g.lots %}
                             <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0">
                               <td class="px-6 py-4 font-semibold text-on-surface">{{ it.lot }}</td>
+                              <td class="px-6 py-4">
+                                {% if it.vi_tri_list %}
+                                  <div class="flex flex-wrap gap-2">
+                                    {% for vt in it.vi_tri_list.split(',') %}
+                                      {% set vtt = vt.strip() %}
+                                      {% if vtt %}
+                                        <span class="inline-flex items-center rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold text-white">
+                                          {{ vtt }}
+                                        </span>
+                                      {% endif %}
+                                    {% endfor %}
+                                  </div>
+                                {% else %}
+                                  <span class="text-xs text-on-surface-variant">—</span>
+                                {% endif %}
+                              </td>
                               <td class="px-6 py-4 text-right font-bold text-on-surface tabular-nums">{{ it.so_cay }}</td>
                               <td class="px-6 py-4 text-right font-bold text-on-surface tabular-nums">{{ it.da_nhap_cay }}</td>
                               <td class="px-6 py-4 text-right text-on-surface-variant tabular-nums">{{ "%.2f"|format(it.tong_yds) }}</td>

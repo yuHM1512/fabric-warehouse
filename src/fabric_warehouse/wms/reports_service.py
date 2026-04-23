@@ -306,6 +306,7 @@ class InboundLotRow:
     da_nhap_cay: int
     tong_yds: float
     da_nhap_yds: float
+    vi_tri_list: str | None
 
 
 @dataclass(frozen=True)
@@ -344,6 +345,13 @@ def inbound_status_by_nhu_cau(
     )
     rl = db.query(ReceiptLine).subquery()
 
+    vi_tri_agg = func.string_agg(func.distinct(LocationAssignment.vi_tri), ", ").filter(
+        and_(
+            LocationAssignment.vi_tri.isnot(None),
+            LocationAssignment.trang_thai.in_(_DANG_LUU_VARIANTS),
+        )
+    )
+
     q = (
         db.query(
             rr.c.nhu_cau,
@@ -355,6 +363,7 @@ def inbound_status_by_nhu_cau(
                 func.sum(func.coalesce(StockCheck.actual_yards, StockCheck.expected_yards, 0)),
                 0,
             ).label("da_nhap_yds"),
+            vi_tri_agg.label("vi_tri_list"),
         )
         .join(rl, rl.c.id == rr.c.rid)
         .outerjoin(
@@ -363,6 +372,14 @@ def inbound_status_by_nhu_cau(
                 StockCheck.ma_cay == rr.c.ma_cay,
                 StockCheck.nhu_cau == rr.c.nhu_cau,
                 StockCheck.lot == rr.c.lot,
+            ),
+        )
+        .outerjoin(
+            LocationAssignment,
+            and_(
+                LocationAssignment.ma_cay == rr.c.ma_cay,
+                LocationAssignment.nhu_cau == rr.c.nhu_cau,
+                LocationAssignment.lot == rr.c.lot,
             ),
         )
     )
@@ -377,7 +394,7 @@ def inbound_status_by_nhu_cau(
     )
 
     grouped: dict[str, list[InboundLotRow]] = {}
-    for nc, lt, so_cay, da_nhap_cay, tong_yds, da_nhap_yds in rows:
+    for nc, lt, so_cay, da_nhap_cay, tong_yds, da_nhap_yds, vi_tri_list in rows:
         nc_s = str(nc or "").strip() or "(Không xác định)"
         lt_s = str(lt or "").strip() or "(Không xác định)"
         grouped.setdefault(nc_s, []).append(
@@ -388,6 +405,7 @@ def inbound_status_by_nhu_cau(
                 da_nhap_cay=int(da_nhap_cay or 0),
                 tong_yds=float(tong_yds or 0),
                 da_nhap_yds=float(da_nhap_yds or 0),
+                vi_tri_list=(str(vi_tri_list).strip() if vi_tri_list else None),
             )
         )
 
