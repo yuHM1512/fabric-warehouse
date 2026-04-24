@@ -61,9 +61,11 @@ def import_receipt_from_excel(
 ) -> tuple[Receipt, list[str]]:
     parsed: ParsedReceipt = parse_receipt_excel(content, source_filename=source_filename)
 
-    # Pre-check hanging tag uniqueness before writing anything so we can return a clear error
-    # (instead of a psycopg UniqueViolation) and avoid creating a duplicate receipt by accident.
+    # Pre-check hanging tag uniqueness before writing anything so we can either:
+    # - treat it as a re-import (return old receipt), or
+    # - import only new tags and skip duplicates with a warning.
     preview_ids: list[str] = []
+    duplicate_tag_ids: set[str] = set()
     seen_keys: set[tuple[str | None, str | None]] = set()
     for row in parsed.rows:
         nhu_cau = row.get("nhu_cau")
@@ -85,37 +87,52 @@ def import_receipt_from_excel(
             .all()
         )
         if existing:
+            file_ma_cays = {r["ma_cay"] for r in parsed.rows if r.get("ma_cay")}
             existing_by_id = {t[0]: t[1] for t in existing}
             receipt_ids = sorted({rid for rid in existing_by_id.values()})
 
             # If everything already exists and belongs to a single receipt, treat this as a re-import.
             if len(receipt_ids) == 1 and len(existing_by_id) == len(preview_ids):
-                existing_receipt = db.query(Receipt).filter(Receipt.id == receipt_ids[0]).first()
-                if existing_receipt:
+                existing_receipt_id = receipt_ids[0]
+                existing_ma_cays = {
+                    r[0]
+                    for r in db.query(ReceiptLine.ma_cay).filter(ReceiptLine.receipt_id == existing_receipt_id).all()
+                }
+                # Only auto-short-circuit if the file doesn't introduce any new "Mã cây".
+                if file_ma_cays.issubset(existing_ma_cays):
+                    existing_receipt = db.query(Receipt).filter(Receipt.id == existing_receipt_id).first()
+                    if existing_receipt:
+                        parsed.warnings.append(
+                            f"File này đã được import trước đó (phiếu #{existing_receipt.id}). Hiển thị lại phiếu cũ."
+                        )
+                        return existing_receipt, parsed.warnings
+                else:
                     parsed.warnings.append(
-                        f"File này đã được import trước đó (phiếu #{existing_receipt.id}). Hiển thị lại phiếu cũ."
+                        f"File có thêm Mã cây mới so với phiếu #{existing_receipt_id}; sẽ import phiếu mới và bỏ qua bảng treo trùng."
                     )
-                    return existing_receipt, parsed.warnings
 
-            # Otherwise, block to avoid creating a new receipt that can't own these tags.
-            max_show = 15
-            shown: list[str] = []
-            for tid in preview_ids:
-                rid = existing_by_id.get(tid)
-                if rid is None:
-                    continue
-                shown.append(f"{tid} (phiếu #{rid})")
-                if len(shown) >= max_show:
-                    break
-            more = len(existing_by_id) - len(shown)
-            more_text = f" ... và {more} bảng treo khác" if more > 0 else ""
-            raise ValueError(
-                "Trùng mã bảng treo (id_bang_treo) nên không thể import phiếu mới. "
-                "Các mã đã tồn tại: "
-                + "; ".join(shown)
-                + more_text
-                + ". Nếu bạn đang import lại file cũ, hãy mở phiếu đã import trước đó."
-            )
+            # Import only new tags, skip duplicates (id_bang_treo is globally unique).
+            duplicate_tag_ids = {tid for tid in preview_ids if tid in existing_by_id}
+            if duplicate_tag_ids:
+                max_show = 10
+                shown: list[str] = []
+                for tid in preview_ids:
+                    rid = existing_by_id.get(tid)
+                    if rid is None:
+                        continue
+                    shown.append(f"{tid} (phiếu #{rid})")
+                    if len(shown) >= max_show:
+                        break
+                more = len(duplicate_tag_ids) - len(shown)
+                more_text = f" ... và {more} bảng treo khác" if more > 0 else ""
+                parsed.warnings.append(
+                    "Bỏ qua "
+                    + str(len(duplicate_tag_ids))
+                    + " bảng treo đã tồn tại: "
+                    + "; ".join(shown)
+                    + more_text
+                    + "."
+                )
 
     receipt = Receipt(source_filename=parsed.source_filename, receipt_date=parsed.receipt_date)
     db.add(receipt)
@@ -185,6 +202,8 @@ def import_receipt_from_excel(
     for (nhu_cau, lot), info in by_key.items():
         ngay_nhap = receipt.receipt_date
         id_bang_treo = f"{nhu_cau or ''}-{lot}-{ngay_nhap.isoformat() if ngay_nhap else ''}"
+        if id_bang_treo in duplicate_tag_ids:
+            continue
         tags.append(
             HangingTag(
                 receipt_id=receipt.id,
