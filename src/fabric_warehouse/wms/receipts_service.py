@@ -61,6 +61,62 @@ def import_receipt_from_excel(
 ) -> tuple[Receipt, list[str]]:
     parsed: ParsedReceipt = parse_receipt_excel(content, source_filename=source_filename)
 
+    # Pre-check hanging tag uniqueness before writing anything so we can return a clear error
+    # (instead of a psycopg UniqueViolation) and avoid creating a duplicate receipt by accident.
+    preview_ids: list[str] = []
+    seen_keys: set[tuple[str | None, str | None]] = set()
+    for row in parsed.rows:
+        nhu_cau = row.get("nhu_cau")
+        lot = row.get("lot")
+        if not lot:
+            continue
+        key = (nhu_cau, lot)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        preview_ids.append(
+            f"{nhu_cau or ''}-{lot}-{parsed.receipt_date.isoformat() if parsed.receipt_date else ''}"
+        )
+
+    if preview_ids:
+        existing = (
+            db.query(HangingTag.id_bang_treo, HangingTag.receipt_id)
+            .filter(HangingTag.id_bang_treo.in_(preview_ids))
+            .all()
+        )
+        if existing:
+            existing_by_id = {t[0]: t[1] for t in existing}
+            receipt_ids = sorted({rid for rid in existing_by_id.values()})
+
+            # If everything already exists and belongs to a single receipt, treat this as a re-import.
+            if len(receipt_ids) == 1 and len(existing_by_id) == len(preview_ids):
+                existing_receipt = db.query(Receipt).filter(Receipt.id == receipt_ids[0]).first()
+                if existing_receipt:
+                    parsed.warnings.append(
+                        f"File này đã được import trước đó (phiếu #{existing_receipt.id}). Hiển thị lại phiếu cũ."
+                    )
+                    return existing_receipt, parsed.warnings
+
+            # Otherwise, block to avoid creating a new receipt that can't own these tags.
+            max_show = 15
+            shown: list[str] = []
+            for tid in preview_ids:
+                rid = existing_by_id.get(tid)
+                if rid is None:
+                    continue
+                shown.append(f"{tid} (phiếu #{rid})")
+                if len(shown) >= max_show:
+                    break
+            more = len(existing_by_id) - len(shown)
+            more_text = f" ... và {more} bảng treo khác" if more > 0 else ""
+            raise ValueError(
+                "Trùng mã bảng treo (id_bang_treo) nên không thể import phiếu mới. "
+                "Các mã đã tồn tại: "
+                + "; ".join(shown)
+                + more_text
+                + ". Nếu bạn đang import lại file cũ, hãy mở phiếu đã import trước đó."
+            )
+
     receipt = Receipt(source_filename=parsed.source_filename, receipt_date=parsed.receipt_date)
     db.add(receipt)
     db.flush()  # assign receipt.id
@@ -129,12 +185,6 @@ def import_receipt_from_excel(
     for (nhu_cau, lot), info in by_key.items():
         ngay_nhap = receipt.receipt_date
         id_bang_treo = f"{nhu_cau or ''}-{lot}-{ngay_nhap.isoformat() if ngay_nhap else ''}"
-        # Parse "Ngày xuất" from raw row if present.
-        raw0 = {}
-        try:
-            raw0 = (info.get("raw_data") if isinstance(info.get("raw_data"), dict) else {})  # type: ignore[assignment]
-        except Exception:
-            raw0 = {}
         tags.append(
             HangingTag(
                 receipt_id=receipt.id,
@@ -156,15 +206,31 @@ def import_receipt_from_excel(
         )
 
     if tags:
-        # avoid duplicate tags when re-importing same file
-        existing = {
-            t[0]
-            for t in db.query(HangingTag.id_bang_treo)
-            .filter(HangingTag.receipt_id == receipt.id)
-            .all()
-        }
-        tags = [t for t in tags if t.id_bang_treo not in existing]
-        db.add_all(tags)
+        # Insert in bulk and skip duplicates at DB level (id_bang_treo is globally unique).
+        values = [
+            {
+                "receipt_id": t.receipt_id,
+                "id_bang_treo": t.id_bang_treo,
+                "ngay_nhap_hang": t.ngay_nhap_hang,
+                "nhu_cau": t.nhu_cau,
+                "lot": t.lot,
+                "ma_hang": t.ma_hang,
+                "nha_cung_cap": t.nha_cung_cap,
+                "khach_hang": t.khach_hang,
+                "loai_vai": t.loai_vai,
+                "ma_art": t.ma_art,
+                "mau_vai": t.mau_vai,
+                "ma_mau": t.ma_mau,
+                "customer": t.customer,
+                "ngay_xuat": t.ngay_xuat,
+                "ket_qua_kiem_tra": t.ket_qua_kiem_tra,
+            }
+            for t in tags
+        ]
+        stmt = pg_insert(HangingTag.__table__).values(values).on_conflict_do_nothing(
+            index_elements=["id_bang_treo"]
+        )
+        db.execute(stmt)
         db.flush()
 
     return receipt, parsed.warnings
