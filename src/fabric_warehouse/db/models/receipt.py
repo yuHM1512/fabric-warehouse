@@ -39,7 +39,7 @@ class ReceiptLine(Base):
         nullable=True,
     )
 
-    ma_cay: Mapped[str] = mapped_column(String(64), index=True)
+    ma_cay: Mapped[str] = mapped_column(String(64))
     nhu_cau: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     lot: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     anh_mau: Mapped[str] = mapped_column(String(64), default="CHUNG", index=True)
@@ -55,6 +55,7 @@ class ReceiptLine(Base):
     receipt: Mapped["Receipt"] = relationship(back_populates="lines")
 
     __table_args__ = (
+        Index("ix_receipt_lines_ma_cay", "ma_cay", unique=True),
         Index("ix_receipt_lines_receipt_ma_cay", "receipt_id", "ma_cay", unique=True),
         Index("ix_receipt_lines_receipt_nhu_cau_lot", "receipt_id", "nhu_cau", "lot"),
         Index("ix_receipt_lines_roll_id_receipt_id", "roll_id", "receipt_id"),

@@ -60,6 +60,42 @@ def import_receipt_from_excel(
     source_filename: str,
 ) -> tuple[Receipt, list[str]]:
     parsed: ParsedReceipt = parse_receipt_excel(content, source_filename=source_filename)
+    rows_to_import = list(parsed.rows)
+
+    file_ma_cays = [r["ma_cay"] for r in rows_to_import if r.get("ma_cay")]
+    duplicate_ma_cays: set[str] = set()
+    if file_ma_cays:
+        existing_line_rows = (
+            db.query(ReceiptLine.ma_cay, ReceiptLine.receipt_id)
+            .filter(ReceiptLine.ma_cay.in_(file_ma_cays))
+            .all()
+        )
+        existing_receipt_by_ma_cay = {r[0]: r[1] for r in existing_line_rows}
+        duplicate_ma_cays = set(existing_receipt_by_ma_cay)
+        if duplicate_ma_cays:
+            max_show = 10
+            shown: list[str] = []
+            for ma_cay in file_ma_cays:
+                receipt_id = existing_receipt_by_ma_cay.get(ma_cay)
+                if receipt_id is None:
+                    continue
+                shown.append(f"{ma_cay} (phiếu #{receipt_id})")
+                if len(shown) >= max_show:
+                    break
+            more = len(duplicate_ma_cays) - len(shown)
+            more_text = f" ... và {more} Mã cây khác" if more > 0 else ""
+            parsed.warnings.append(
+                "Bỏ qua "
+                + str(len(duplicate_ma_cays))
+                + " Mã cây đã tồn tại: "
+                + "; ".join(shown)
+                + more_text
+                + "."
+            )
+            rows_to_import = [r for r in rows_to_import if r.get("ma_cay") not in duplicate_ma_cays]
+
+    if parsed.rows and not rows_to_import:
+        raise ValueError("Không có Mã cây mới để import; tất cả Mã cây trong file đã tồn tại.")
 
     # Pre-check hanging tag uniqueness before writing anything so we can either:
     # - treat it as a re-import (return old receipt), or
@@ -67,7 +103,7 @@ def import_receipt_from_excel(
     preview_ids: list[str] = []
     duplicate_tag_ids: set[str] = set()
     seen_keys: set[tuple[str | None, str | None]] = set()
-    for row in parsed.rows:
+    for row in rows_to_import:
         nhu_cau = row.get("nhu_cau")
         lot = row.get("lot")
         if not lot:
@@ -138,7 +174,7 @@ def import_receipt_from_excel(
     db.add(receipt)
     db.flush()  # assign receipt.id
 
-    ma_cays: list[str] = [r["ma_cay"] for r in parsed.rows]
+    ma_cays: list[str] = [r["ma_cay"] for r in rows_to_import]
     if ma_cays:
         stmt = (
             pg_insert(FabricRoll.__table__)
@@ -155,30 +191,35 @@ def import_receipt_from_excel(
     )
     roll_id_by_ma_cay = {r.ma_cay: r.id for r in rolls}
 
-    lines: list[ReceiptLine] = []
-    for row in parsed.rows:
+    line_values: list[dict[str, object]] = []
+    for row in rows_to_import:
         raw_data: dict[str, Any] = row.get("raw_data") or {}
         ma_cay = row["ma_cay"]
-        line = ReceiptLine(
-            receipt_id=receipt.id,
-            roll_id=roll_id_by_ma_cay.get(ma_cay),
-            ma_cay=ma_cay,
-            nhu_cau=row.get("nhu_cau"),
-            lot=row.get("lot"),
-            anh_mau=(row.get("anh_mau") or "CHUNG"),
-            model=row.get("model"),
-            art=row.get("art"),
-            yards=row.get("yards"),
-            raw_data=raw_data,
+        line_values.append(
+            {
+                "receipt_id": receipt.id,
+                "roll_id": roll_id_by_ma_cay.get(ma_cay),
+                "ma_cay": ma_cay,
+                "nhu_cau": row.get("nhu_cau"),
+                "lot": row.get("lot"),
+                "anh_mau": row.get("anh_mau") or "CHUNG",
+                "model": row.get("model"),
+                "art": row.get("art"),
+                "yards": row.get("yards"),
+                "raw_data": raw_data,
+            }
         )
-        lines.append(line)
 
-    db.add_all(lines)
-    db.flush()
+    if line_values:
+        stmt = pg_insert(ReceiptLine.__table__).values(line_values).on_conflict_do_nothing(
+            index_elements=["ma_cay"]
+        )
+        db.execute(stmt)
+        db.flush()
 
     # Build "bảng treo" (hanging tag) per (nhu_cau, lot, receipt_date) similar to legacy table_data.
     by_key: dict[tuple[str | None, str | None], dict[str, object]] = {}
-    for row in parsed.rows:
+    for row in rows_to_import:
         nhu_cau = row.get("nhu_cau")
         lot = row.get("lot")
         if not lot:
