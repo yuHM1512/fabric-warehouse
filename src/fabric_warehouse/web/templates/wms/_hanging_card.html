@@ -1,5 +1,10 @@
 <div class="hang-card">
   <table class="hang-table">
+    <colgroup>
+      <col style="width: 34%;" />
+      <col style="width: 38%;" />
+      <col style="width: 28%;" />
+    </colgroup>
     <tr>
       <th colspan="3" class="hang-title">{{ (t.khach_hang or "DECATHLON") }}</th>
     </tr>
@@ -19,18 +24,34 @@
       <th>NHU CẦU NGUYÊN LIỆU</th>
       <td colspan="2" class="hang-bold hang-center hang-value">{{ t.nhu_cau or "" }}</td>
     </tr>
-    <tr>
+    <tr class="hang-fixed-row">
       <th>LOẠI VẢI - MÃ VẢI<br />(Description - Model)</th>
-      <td class="hang-small">{{ t.loai_vai or "" }}</td>
-      <td class="hang-code hang-bold hang-center">{{ t.ma_art or "" }}</td>
+      <td class="hang-small">
+        <div class="hang-fit-box">
+          <div class="hang-fit-text hang-fit-text-left" data-fit-text data-fit-min="12" data-fit-max="28">{{ t.loai_vai or "" }}</div>
+        </div>
+      </td>
+      <td class="hang-code hang-bold hang-center">
+        <div class="hang-fit-box">
+          <div class="hang-fit-text" data-fit-text data-fit-min="14" data-fit-max="30">{{ t.ma_art or "" }}</div>
+        </div>
+      </td>
     </tr>
-    <tr>
+    <tr class="hang-fixed-row">
       <th>MÀU - MÃ MÀU<br />(Color - Item)</th>
-      <td class="hang-small">{{ t.mau_vai or "" }}</td>
-      <td class="hang-code hang-bold hang-center">{{ t.ma_mau or "" }}</td>
+      <td class="hang-small">
+        <div class="hang-fit-box">
+          <div class="hang-fit-text hang-fit-text-left" data-fit-text data-fit-min="12" data-fit-max="28">{{ t.mau_vai or "" }}</div>
+        </div>
+      </td>
+      <td class="hang-code hang-bold hang-center">
+        <div class="hang-fit-box">
+          <div class="hang-fit-text" data-fit-text data-fit-min="14" data-fit-max="30">{{ t.ma_mau or "" }}</div>
+        </div>
+      </td>
     </tr>
-    <tr>
-      <th>LOT:</th>
+    <tr class="hang-lot-row">
+      <th class="hang-lot-label">LOT:</th>
       {% set lot_text = t.lot or "" %}
       {% if lot_text|length > 28 %}{% set lot_cls = "hang-lot-xxs" %}
       {% elif lot_text|length > 18 %}{% set lot_cls = "hang-lot-xs" %}

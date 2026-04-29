@@ -27,23 +27,37 @@ def list_nhu_cau_options(db: Session) -> list[str]:
     A demand is considered completed when every distinct `ma_cay` in receipts has a
     stock_check row with `actual_yards` filled.
     """
-    total_sq = (
+    receipt_sq = (
         db.query(
             ReceiptLine.nhu_cau.label("nhu_cau"),
-            func.count(func.distinct(ReceiptLine.ma_cay)).label("total"),
+            ReceiptLine.ma_cay.label("ma_cay"),
         )
         .filter(ReceiptLine.nhu_cau.isnot(None))
-        .group_by(ReceiptLine.nhu_cau)
+        .filter(ReceiptLine.ma_cay.isnot(None))
+        .distinct()
+        .subquery()
+    )
+
+    total_sq = (
+        db.query(
+            receipt_sq.c.nhu_cau.label("nhu_cau"),
+            func.count(receipt_sq.c.ma_cay).label("total"),
+        )
+        .group_by(receipt_sq.c.nhu_cau)
         .subquery()
     )
 
     checked_sq = (
         db.query(
-            StockCheck.nhu_cau.label("nhu_cau"),
+            receipt_sq.c.nhu_cau.label("nhu_cau"),
             func.count(func.distinct(StockCheck.ma_cay)).label("checked"),
         )
+        .join(
+            StockCheck,
+            (StockCheck.nhu_cau == receipt_sq.c.nhu_cau) & (StockCheck.ma_cay == receipt_sq.c.ma_cay),
+        )
         .filter(StockCheck.actual_yards.isnot(None))
-        .group_by(StockCheck.nhu_cau)
+        .group_by(receipt_sq.c.nhu_cau)
         .subquery()
     )
 
@@ -64,25 +78,40 @@ def list_lot_options(db: Session, *, nhu_cau: str) -> list[str]:
     A lot is considered completed when every distinct `ma_cay` in receipts has a
     stock_check row with `actual_yards` filled.
     """
-    total_sq = (
+    receipt_sq = (
         db.query(
             ReceiptLine.lot.label("lot"),
-            func.count(func.distinct(ReceiptLine.ma_cay)).label("total"),
+            ReceiptLine.ma_cay.label("ma_cay"),
         )
         .filter(ReceiptLine.nhu_cau == nhu_cau)
         .filter(ReceiptLine.lot.isnot(None))
-        .group_by(ReceiptLine.lot)
+        .filter(ReceiptLine.ma_cay.isnot(None))
+        .distinct()
+        .subquery()
+    )
+
+    total_sq = (
+        db.query(
+            receipt_sq.c.lot.label("lot"),
+            func.count(receipt_sq.c.ma_cay).label("total"),
+        )
+        .group_by(receipt_sq.c.lot)
         .subquery()
     )
 
     checked_sq = (
         db.query(
-            StockCheck.lot.label("lot"),
+            receipt_sq.c.lot.label("lot"),
             func.count(func.distinct(StockCheck.ma_cay)).label("checked"),
         )
-        .filter(StockCheck.nhu_cau == nhu_cau)
+        .join(
+            StockCheck,
+            (StockCheck.nhu_cau == nhu_cau)
+            & (StockCheck.lot == receipt_sq.c.lot)
+            & (StockCheck.ma_cay == receipt_sq.c.ma_cay),
+        )
         .filter(StockCheck.actual_yards.isnot(None))
-        .group_by(StockCheck.lot)
+        .group_by(receipt_sq.c.lot)
         .subquery()
     )
 
@@ -110,6 +139,18 @@ def list_incomplete_lot_summaries(db: Session, *, nhu_cau: str) -> list[LotSumma
 
     Only includes lots that are not fully checked yet (same rule as list_lot_options).
     """
+    receipt_sq = (
+        db.query(
+            ReceiptLine.lot.label("lot"),
+            ReceiptLine.ma_cay.label("ma_cay"),
+        )
+        .filter(ReceiptLine.nhu_cau == nhu_cau)
+        .filter(ReceiptLine.lot.isnot(None))
+        .filter(ReceiptLine.ma_cay.isnot(None))
+        .distinct()
+        .subquery()
+    )
+
     total_sq = (
         db.query(
             ReceiptLine.lot.label("lot"),
@@ -124,12 +165,17 @@ def list_incomplete_lot_summaries(db: Session, *, nhu_cau: str) -> list[LotSumma
 
     checked_sq = (
         db.query(
-            StockCheck.lot.label("lot"),
+            receipt_sq.c.lot.label("lot"),
             func.count(func.distinct(StockCheck.ma_cay)).label("checked"),
         )
-        .filter(StockCheck.nhu_cau == nhu_cau)
+        .join(
+            StockCheck,
+            (StockCheck.nhu_cau == nhu_cau)
+            & (StockCheck.lot == receipt_sq.c.lot)
+            & (StockCheck.ma_cay == receipt_sq.c.ma_cay),
+        )
         .filter(StockCheck.actual_yards.isnot(None))
-        .group_by(StockCheck.lot)
+        .group_by(receipt_sq.c.lot)
         .subquery()
     )
 

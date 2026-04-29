@@ -438,10 +438,17 @@ def list_active_inbound_nhu_cau_options(db: Session, *, limit: int = 5000) -> li
 
     checked = (
         db.query(
-            StockCheck.nhu_cau.label("nhu_cau"),
+            rr.c.nhu_cau.label("nhu_cau"),
             func.count(func.distinct(StockCheck.ma_cay)).label("checked_rolls"),
         )
-        .group_by(StockCheck.nhu_cau)
+        .join(
+            StockCheck,
+            and_(
+                StockCheck.nhu_cau == rr.c.nhu_cau,
+                StockCheck.ma_cay == rr.c.ma_cay,
+            ),
+        )
+        .group_by(rr.c.nhu_cau)
         .subquery()
     )
 

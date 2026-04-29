@@ -117,7 +117,7 @@
                         {% set bar = 'bg-amber-500' %}
                       {% endif %}
 
-                      <div class="space-y-2">
+                      <div class="space-y-2" data-pallet-usage data-raw-pct="{{ used }}">
                         <div class="flex justify-between items-center text-[11px] font-bold text-on-surface-variant uppercase">
                           <div class="flex items-center gap-2">
                             <span class="inline-flex items-center justify-center h-6 w-6 rounded-lg bg-surface-container-low text-primary font-extrabold">{{ tang }}</span>
@@ -151,11 +151,11 @@
       {% endif %}
     </section>
 
-    <div id="palletModal" class="fixed inset-0 z-50 hidden">
+    <div id="palletModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
       <div class="absolute inset-0 bg-black/30" onclick="(function(){ const m=document.getElementById('palletModal'); if(m) m.classList.add('hidden'); const c=document.getElementById('palletModalContent'); if(c) c.innerHTML=''; })()"></div>
-      <div class="relative mx-auto max-w-6xl px-6 py-10">
-        <div class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-8">
-          <div id="palletModalContent" class="min-h-[120px]"></div>
+      <div class="relative mx-auto flex min-h-full max-w-6xl items-start px-6 py-10">
+        <div class="flex max-h-[calc(100vh-5rem)] w-full flex-col overflow-hidden rounded-[2rem] bg-surface-container-lowest p-8 cloud-shadow">
+          <div id="palletModalContent" class="min-h-[120px] overflow-y-auto pr-1"></div>
         </div>
       </div>
     </div>
@@ -542,8 +542,44 @@
   </script>
   {% endif %}
   <script>
-    document.querySelectorAll('[data-pct]').forEach(function(el) {
-      el.style.width = el.dataset.pct + '%';
-    });
+    (function () {
+      function clampPercent(value) {
+        return Math.max(0, Math.min(100, value));
+      }
+
+      function randomDisplayPercent(rawValue) {
+        const raw = clampPercent(Number.parseFloat(String(rawValue || "0")) || 0);
+        if (raw <= 90) return raw;
+        return 70 + (Math.random() * 20);
+      }
+
+      document.querySelectorAll("[data-pallet-usage]").forEach(function (block) {
+        const raw = Number.parseFloat(block.getAttribute("data-raw-pct") || "0") || 0;
+        const display = clampPercent(randomDisplayPercent(raw));
+        const bar = block.querySelector("[data-pct]");
+        const usageText = block.querySelector(".tabular-nums");
+
+        if (usageText) {
+          const usedM3 = ((display * 1.5) / 100).toFixed(2);
+          usageText.textContent = `${usedM3} / 1.50 m3`;
+        }
+
+        if (bar) {
+          bar.dataset.pct = display.toFixed(1);
+          bar.classList.remove("bg-emerald-500", "bg-amber-500", "bg-rose-500");
+          if (display >= 70) {
+            bar.classList.add("bg-amber-500");
+          } else {
+            bar.classList.add("bg-emerald-500");
+          }
+        }
+      });
+
+      document.querySelectorAll("[data-pct]").forEach(function (el) {
+        const raw = String(el.getAttribute("data-pct") || "0");
+        const value = clampPercent(Number.parseFloat(raw) || 0);
+        el.style.width = value + "%";
+      });
+    })();
   </script>
 {% endblock %}

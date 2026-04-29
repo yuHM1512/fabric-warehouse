@@ -114,10 +114,45 @@
       .hang-value { font-size: 30px; }
       .hang-small { font-size: 20px; }
       .hang-code { font-size: 30px; }
-      .hang-lot { font-size: 56px; }
-      .hang-lot-sm { font-size: 38px; }
-      .hang-lot-xs { font-size: 26px; }
-      .hang-lot-xxs { font-size: 18px; }
+      .hang-fixed-row {
+        height: 34mm;
+      }
+      .hang-fixed-row th,
+      .hang-fixed-row td {
+        height: 34mm;
+        box-sizing: border-box;
+      }
+      .hang-fit-box {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .hang-fit-text {
+        width: 100%;
+        line-height: 1.05;
+        text-align: center;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+      .hang-fit-text-left {
+        text-align: left;
+      }
+      .hang-lot-row th,
+      .hang-lot-row td {
+        height: 38mm;
+      }
+      .hang-lot-label {
+        font-size: 28px !important;
+        letter-spacing: 1px;
+      }
+      .hang-lot { font-size: 68px; }
+      .hang-lot-sm { font-size: 52px; }
+      .hang-lot-xs { font-size: 38px; }
+      .hang-lot-xxs { font-size: 28px; }
 
       @media print {
         body { background: #fff; }
@@ -156,5 +191,27 @@
         </div>
       {% endfor %}
     </div>
+    <script>
+      (function () {
+        function fitText(el) {
+          const min = Number.parseFloat(el.dataset.fitMin || "12");
+          const max = Number.parseFloat(el.dataset.fitMax || "30");
+          let size = max;
+          el.style.fontSize = `${size}px`;
+
+          while (size > min && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth)) {
+            size -= 1;
+            el.style.fontSize = `${size}px`;
+          }
+        }
+
+        function fitAll() {
+          document.querySelectorAll("[data-fit-text]").forEach(fitText);
+        }
+
+        window.addEventListener("load", fitAll);
+        window.addEventListener("beforeprint", fitAll);
+      })();
+    </script>
   </body>
 </html>
