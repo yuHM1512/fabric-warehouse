@@ -124,7 +124,7 @@ def list_issue_history(
     *,
     date_from: date | None,
     date_to: date | None,
-    limit: int = 200,
+    limit: int = 1000,
 ) -> list[Issue]:
     q = db.query(Issue).order_by(Issue.ngay_xuat.desc(), Issue.id.desc())
     if date_from:
@@ -144,4 +144,3 @@ def count_issue_lines(db: Session, *, issue_ids: list[int]) -> dict[int, int]:
         .all()
     )
     return {iid: int(c) for iid, c in rows}
-

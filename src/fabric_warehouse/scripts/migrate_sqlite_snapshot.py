@@ -96,6 +96,20 @@ def _as_float(v: object) -> float | None:
         return None
 
 
+def _limit_text(v: object, max_len: int) -> str | None:
+    if v is None:
+        return None
+    s = str(v).strip()
+    if not s:
+        return None
+    return s[:max_len]
+
+
+def _format_limited(v: object, max_len: int, *, default: str | None = None) -> str | None:
+    formatted = _format_code(v)
+    return _limit_text(formatted or v or default, max_len)
+
+
 def _open_sqlite(path: str) -> sqlite3.Connection:
     con = sqlite3.connect(path)
     con.row_factory = sqlite3.Row
@@ -262,8 +276,8 @@ def upsert_stored_rolls(db: Session, rows: list[StoredRollRow]) -> dict[str, int
         )
         if not sc:
             sc = StockCheck(
-                nhu_cau=r.nhu_cau,
-                lot=r.lot,
+                nhu_cau=_limit_text(r.nhu_cau, 64) or "UNKNOWN",
+                lot=_limit_text(r.lot, 64) or "UNKNOWN",
                 ma_cay=r.ma_cay,
                 expected_yards=r.expected_yards,
                 actual_yards=r.actual_yards,
@@ -272,6 +286,8 @@ def upsert_stored_rolls(db: Session, rows: list[StoredRollRow]) -> dict[str, int
             db.add(sc)
             upsert_checks += 1
         else:
+            sc.nhu_cau = _limit_text(r.nhu_cau, 64) or sc.nhu_cau
+            sc.lot = _limit_text(r.lot, 64) or sc.lot
             sc.expected_yards = r.expected_yards
             sc.actual_yards = r.actual_yards
             if r.updated_at:
@@ -282,9 +298,9 @@ def upsert_stored_rolls(db: Session, rows: list[StoredRollRow]) -> dict[str, int
         if not la:
             la = LocationAssignment(
                 ma_cay=r.ma_cay,
-                nhu_cau=r.nhu_cau,
-                lot=r.lot,
-                anh_mau=r.anh_mau,
+                nhu_cau=_limit_text(r.nhu_cau, 64) or "UNKNOWN",
+                lot=_limit_text(r.lot, 64) or "UNKNOWN",
+                anh_mau=_limit_text(r.anh_mau, 64),
                 vi_tri=r.vi_tri,
                 trang_thai="Đang lưu",
                 assigned_at=(r.assigned_at or now),
@@ -293,9 +309,9 @@ def upsert_stored_rolls(db: Session, rows: list[StoredRollRow]) -> dict[str, int
             db.add(la)
             upsert_assign += 1
         else:
-            la.nhu_cau = r.nhu_cau
-            la.lot = r.lot
-            la.anh_mau = r.anh_mau
+            la.nhu_cau = _limit_text(r.nhu_cau, 64) or la.nhu_cau
+            la.lot = _limit_text(r.lot, 64) or la.lot
+            la.anh_mau = _limit_text(r.anh_mau, 64)
             la.vi_tri = r.vi_tri
             la.trang_thai = "Đang lưu"
             if getattr(la, "assigned_at", None) is None:
@@ -429,6 +445,9 @@ def _issue_for_legacy_day(
     ngay_xuat,
     status: str,
 ) -> tuple[Issue, bool]:
+    nhu_cau = _limit_text(nhu_cau, 64) or "UNKNOWN"
+    lot = _limit_text(lot, 64) or "UNKNOWN"
+    status = _limit_text(status, 64) or "Cấp phát sản xuất"
     issue = (
         db.query(Issue)
         .filter(Issue.nhu_cau == nhu_cau)
@@ -548,11 +567,11 @@ def import_missing_legacy_history(
                     receipt_id=receipt.id,
                     roll_id=roll_id,
                     ma_cay=ma_cay,
-                    nhu_cau=nhu_cau,
-                    lot=lot,
-                    anh_mau=_format_code(anh_mau) or "CHUNG",
+                    nhu_cau=_limit_text(nhu_cau, 64),
+                    lot=_limit_text(lot, 64),
+                    anh_mau=_format_limited(anh_mau, 64, default="CHUNG") or "CHUNG",
                     model=None,
-                    art=_format_code(_row_value(ex, "Mã Art")),
+                    art=_format_limited(_row_value(ex, "Mã Art"), 64),
                     yards=expected_yards,
                     raw_data=dict(ex) if ex is not None else {},
                 )
@@ -569,12 +588,12 @@ def import_missing_legacy_history(
         if not existing_sc:
             db.add(
                 StockCheck(
-                    nhu_cau=nhu_cau,
-                    lot=lot,
+                    nhu_cau=_limit_text(nhu_cau, 64) or "UNKNOWN",
+                    lot=_limit_text(lot, 64) or "UNKNOWN",
                     ma_cay=ma_cay,
                     expected_yards=expected_yards,
                     actual_yards=actual_yards,
-                    note=_row_text(ck, "ghi_chu"),
+                    note=_limit_text(_row_text(ck, "ghi_chu"), 500),
                     updated_at=(
                         _dt_from_iso(_row_text(ck, "ngay_cap_nhat"))
                         or _dt_from_iso(_row_text(loc, "ngay_cap_nhat"))
@@ -594,11 +613,11 @@ def import_missing_legacy_history(
             db.add(
                 LocationAssignment(
                     ma_cay=ma_cay,
-                    nhu_cau=nhu_cau,
-                    lot=lot,
-                    anh_mau=_format_code(anh_mau) or "CHUNG",
+                    nhu_cau=_limit_text(nhu_cau, 64) or "UNKNOWN",
+                    lot=_limit_text(lot, 64) or "UNKNOWN",
+                    anh_mau=_format_limited(anh_mau, 64, default="CHUNG") or "CHUNG",
                     vi_tri=vi_tri[:16],
-                    trang_thai=final_status[:32],
+                    trang_thai=_limit_text(final_status, 32) or "Đã xuất",
                     assigned_at=(
                         _dt_from_iso(_row_text(loc, "ngay_cap_nhat"))
                         or _dt_from_iso(_row_text(ck, "ngay_cap_nhat"))
@@ -615,37 +634,42 @@ def import_missing_legacy_history(
             )
             stats["location_assignments_created"] += 1
 
-        if iss is not None or issue_date is not None:
-            if issue_date is None:
-                fallback_dt = _dt_from_iso(_row_text(loc, "ngay_cap_nhat")) or _dt_from_iso(_row_text(ck, "ngay_cap_nhat")) or now
-                issue_date = fallback_dt.date()
-            status = _issue_status(_row_text(iss, "status"))
-            issue, created_issue = _issue_for_legacy_day(
-                db,
-                nhu_cau=nhu_cau,
-                lot=lot,
-                ngay_xuat=issue_date,
-                status=status,
+        if issue_date is None:
+            fallback_dt = (
+                _dt_from_iso(_row_text(loc, "ngay_cap_nhat"))
+                or _dt_from_iso(_row_text(ck, "ngay_cap_nhat"))
+                or receipt_dt
+                or now
             )
-            if created_issue:
-                stats["issues_created"] += 1
-            existing_issue_line = (
-                db.query(IssueLine)
-                .filter(IssueLine.issue_id == issue.id)
-                .filter(IssueLine.ma_cay == ma_cay)
-                .first()
-            )
-            if not existing_issue_line:
-                db.add(
-                    IssueLine(
-                        issue_id=issue.id,
-                        ma_cay=ma_cay,
-                        so_luong_xuat=_as_float(_row_value(iss, "so_luong_xuat")) or actual_yards,
-                        vi_tri=vi_tri[:16] if vi_tri else None,
-                    )
+            issue_date = fallback_dt.date()
+
+        status = _issue_status(_row_text(iss, "status"))
+        issue, created_issue = _issue_for_legacy_day(
+            db,
+            nhu_cau=nhu_cau,
+            lot=lot,
+            ngay_xuat=issue_date,
+            status=status,
+        )
+        if created_issue:
+            stats["issues_created"] += 1
+        existing_issue_line = (
+            db.query(IssueLine)
+            .filter(IssueLine.issue_id == issue.id)
+            .filter(IssueLine.ma_cay == ma_cay)
+            .first()
+        )
+        if not existing_issue_line:
+            db.add(
+                IssueLine(
+                    issue_id=issue.id,
+                    ma_cay=ma_cay,
+                    so_luong_xuat=_as_float(_row_value(iss, "so_luong_xuat")) or actual_yards,
+                    vi_tri=vi_tri[:16] if vi_tri else None,
                 )
-                db.flush()
-                stats["issue_lines_created"] += 1
+            )
+            db.flush()
+            stats["issue_lines_created"] += 1
 
         if ret is not None:
             issue_line = db.query(IssueLine).filter(IssueLine.ma_cay == ma_cay).order_by(IssueLine.id.desc()).first()
@@ -659,16 +683,80 @@ def import_missing_legacy_history(
                             ma_cay=ma_cay,
                             ngay_tai_nhap=ngay_tai_nhap,
                             yds_du=_as_float(_row_value(ret, "so_yds_du")),
-                            status=_row_text(ret, "trang_thai") or "Tái nhập kho",
-                            nhu_cau_moi=_row_text(ret, "nhu_cau_moi"),
+                            status=_limit_text(_row_text(ret, "trang_thai"), 64) or "Tái nhập kho",
+                            nhu_cau_moi=_limit_text(_row_text(ret, "nhu_cau_moi"), 64),
                             lot_moi=None,
-                            vi_tri_moi=_row_text(ret, "vi_tri_moi"),
-                            note=_row_text(ret, "ghi_chu"),
+                            vi_tri_moi=_limit_text(_row_text(ret, "vi_tri_moi"), 16),
+                            note=_limit_text(_row_text(ret, "ghi_chu"), 500),
                         )
                     )
                     stats["return_events_created"] += 1
 
     return stats
+
+
+def backfill_exported_issue_history(db: Session) -> dict[str, int]:
+    """
+    Ensure exported/non-stored rolls already present in Postgres appear in issue history.
+    """
+    stored_statuses = {"Đang lưu", "Dang luu", "Đang luu", "Dang lưu"}
+    rows = (
+        db.query(LocationAssignment)
+        .outerjoin(IssueLine, IssueLine.ma_cay == LocationAssignment.ma_cay)
+        .filter(IssueLine.id.is_(None))
+        .filter(~LocationAssignment.trang_thai.in_(stored_statuses))
+        .all()
+    )
+
+    issues_created = 0
+    lines_created = 0
+    for la in rows:
+        if not la.ma_cay:
+            continue
+
+        receipt_pair = (
+            db.query(ReceiptLine, Receipt)
+            .join(Receipt, Receipt.id == ReceiptLine.receipt_id)
+            .filter(ReceiptLine.ma_cay == la.ma_cay)
+            .first()
+        )
+        receipt_date = receipt_pair[1].receipt_date if receipt_pair else None
+        issue_date = receipt_date or (la.updated_at.date() if la.updated_at else None) or (la.assigned_at.date() if la.assigned_at else None)
+        if issue_date is None:
+            issue_date = datetime.now(timezone.utc).date()
+
+        status = _issue_status(la.trang_thai)
+        issue, created_issue = _issue_for_legacy_day(
+            db,
+            nhu_cau=la.nhu_cau,
+            lot=la.lot,
+            ngay_xuat=issue_date,
+            status=status,
+        )
+        if created_issue:
+            issues_created += 1
+
+        sc = (
+            db.query(StockCheck)
+            .filter(StockCheck.ma_cay == la.ma_cay)
+            .filter(StockCheck.nhu_cau == la.nhu_cau)
+            .filter(StockCheck.lot == la.lot)
+            .first()
+        )
+        db.add(
+            IssueLine(
+                issue_id=issue.id,
+                ma_cay=la.ma_cay,
+                so_luong_xuat=(sc.actual_yards if sc and sc.actual_yards is not None else (sc.expected_yards if sc else None)),
+                vi_tri=la.vi_tri[:16] if la.vi_tri else None,
+            )
+        )
+        lines_created += 1
+
+    return {
+        "backfill_issues_created": issues_created,
+        "backfill_issue_lines_created": lines_created,
+    }
 
 
 def upsert_excel_metadata(
@@ -775,11 +863,11 @@ def upsert_excel_metadata(
                 receipt_id=receipt.id,
                 roll_id=roll_id_by_ma.get(ma_cay),
                 ma_cay=ma_cay,
-                nhu_cau=nhu_cau,
-                lot=lot,
-                anh_mau=anh_mau or "CHUNG",
+                nhu_cau=_limit_text(nhu_cau, 64),
+                lot=_limit_text(lot, 64),
+                anh_mau=_limit_text(anh_mau, 64) or "CHUNG",
                 model=None,
-                art=art,
+                art=_limit_text(art, 64),
                 yards=yards,
                 raw_data=dict(r),
             )
@@ -897,6 +985,7 @@ def main(argv: list[str]) -> int:
                     limit=(args.history_limit or None),
                 )
             )
+            stats.update(backfill_exported_issue_history(db))
         if norms:
             stats.update(upsert_fabric_norms(db, norms))
         db.commit()
