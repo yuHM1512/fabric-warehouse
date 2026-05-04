@@ -12,8 +12,10 @@ from sqlalchemy.orm import Session
 from fabric_warehouse.db.models.fabric_data import FabricData
 from fabric_warehouse.db.models.fabric_roll import FabricRoll
 from fabric_warehouse.db.models.hanging_tag import HangingTag
+from fabric_warehouse.db.models.issue import Issue, IssueLine
 from fabric_warehouse.db.models.location_assignment import LocationAssignment
 from fabric_warehouse.db.models.receipt import Receipt, ReceiptLine
+from fabric_warehouse.db.models.return_event import ReturnEvent
 from fabric_warehouse.db.models.stock_check import StockCheck
 from fabric_warehouse.db.session import SessionLocal
 from fabric_warehouse.wms.receipts_service import _extract_ma_hang, _format_code
@@ -337,6 +339,338 @@ def _parse_ngay_xuat(s: str | None) -> object | None:
     return dt.date() if isinstance(dt, datetime) else None
 
 
+def _legacy_rows_by_ma(
+    con: sqlite3.Connection,
+    *,
+    table: str,
+    ma_col: str,
+) -> dict[str, sqlite3.Row]:
+    cur = con.cursor()
+    try:
+        rows = cur.execute(f'SELECT * FROM "{table}" WHERE "{ma_col}" IS NOT NULL AND "{ma_col}" <> ""').fetchall()
+    except sqlite3.Error:
+        return {}
+    out: dict[str, sqlite3.Row] = {}
+    for r in rows:
+        ma = str(r[ma_col] or "").strip()
+        if ma and ma not in out:
+            out[ma] = r
+    return out
+
+
+def _existing_postgres_ma_cays(db: Session) -> set[str]:
+    out: set[str] = set()
+    for model in (FabricRoll, ReceiptLine, StockCheck, LocationAssignment, IssueLine, ReturnEvent):
+        try:
+            for (ma,) in db.query(model.ma_cay).filter(model.ma_cay.isnot(None)).all():
+                ma_s = str(ma or "").strip()
+                if ma_s:
+                    out.add(ma_s)
+        except Exception:
+            continue
+    return out
+
+
+def _row_value(row: sqlite3.Row | None, *keys: str) -> object | None:
+    if row is None:
+        return None
+    available = set(row.keys())
+    for key in keys:
+        if key in available:
+            return row[key]
+    return None
+
+
+def _row_text(row: sqlite3.Row | None, *keys: str) -> str | None:
+    value = _row_value(row, *keys)
+    if value is None:
+        return None
+    s = str(value).strip()
+    return s or None
+
+
+def _issue_status(raw: str | None) -> str:
+    s = (raw or "").strip()
+    if "Trả Mẹ Nhu" in s or "Tra Me Nhu" in s:
+        return "Trả Mẹ Nhu"
+    return s or "Cấp phát sản xuất"
+
+
+def _ensure_fabric_roll(db: Session, *, ma_cay: str, created_at: datetime) -> int:
+    roll = db.query(FabricRoll).filter(FabricRoll.ma_cay == ma_cay).first()
+    if not roll:
+        roll = FabricRoll(ma_cay=ma_cay, created_at=created_at)
+        db.add(roll)
+        db.flush()
+    return roll.id
+
+
+def _receipt_for_legacy_day(db: Session, *, day_key: str, receipt_dt: datetime | None) -> tuple[Receipt, bool]:
+    receipt_date = receipt_dt.date() if isinstance(receipt_dt, datetime) else None
+    source_filename = f"sqlite_full_history::{day_key}"
+    receipt = db.query(Receipt).filter(Receipt.source_filename == source_filename).first()
+    if receipt:
+        return receipt, False
+    receipt = Receipt(
+        source_filename=source_filename,
+        receipt_date=receipt_date,
+        created_at=(receipt_dt if isinstance(receipt_dt, datetime) else datetime.now(timezone.utc)),
+    )
+    db.add(receipt)
+    db.flush()
+    return receipt, True
+
+
+def _issue_for_legacy_day(
+    db: Session,
+    *,
+    nhu_cau: str,
+    lot: str,
+    ngay_xuat,
+    status: str,
+) -> tuple[Issue, bool]:
+    issue = (
+        db.query(Issue)
+        .filter(Issue.nhu_cau == nhu_cau)
+        .filter(Issue.lot == lot)
+        .filter(Issue.ngay_xuat == ngay_xuat)
+        .filter(Issue.status == status)
+        .filter(Issue.note.is_(None))
+        .first()
+    )
+    if issue:
+        return issue, False
+    issue_created_at = datetime.combine(ngay_xuat, datetime.min.time(), tzinfo=timezone.utc)
+    issue = Issue(
+        nhu_cau=nhu_cau,
+        lot=lot,
+        ngay_xuat=ngay_xuat,
+        status=status,
+        created_at=issue_created_at,
+    )
+    db.add(issue)
+    db.flush()
+    return issue, True
+
+
+def import_missing_legacy_history(
+    db: Session,
+    *,
+    wms_db_path: str,
+    limit: int | None = None,
+) -> dict[str, int]:
+    """
+    Import legacy rolls not present in the new app, keyed by unique ma_cay.
+
+    This is intended for historical/trace data: missing legacy rolls are treated
+    as exported unless legacy state explicitly says otherwise.
+    """
+    existing_ma = _existing_postgres_ma_cays(db)
+
+    con = _open_sqlite(wms_db_path)
+    try:
+        excel_by_ma = _legacy_rows_by_ma(con, table="excel_data", ma_col="Mã cây")
+        check_by_ma = _legacy_rows_by_ma(con, table="kiemkho_data", ma_col="ma_cay")
+        loc_by_ma = _legacy_rows_by_ma(con, table="vi_tri_data", ma_col="ma_cay")
+        issue_by_ma = _legacy_rows_by_ma(con, table="xuatkho_data", ma_col="ma_cay")
+        return_by_ma = _legacy_rows_by_ma(con, table="tai_nhap_kho_data", ma_col="ma_cay")
+    finally:
+        con.close()
+
+    legacy_ma = set().union(excel_by_ma, check_by_ma, loc_by_ma, issue_by_ma, return_by_ma)
+    missing_ma = sorted(ma for ma in legacy_ma if ma and ma not in existing_ma)
+    if limit is not None:
+        missing_ma = missing_ma[: max(int(limit), 0)]
+
+    now = datetime.now(timezone.utc)
+    stats = {
+        "legacy_ma_cays_seen": len(legacy_ma),
+        "postgres_ma_cays_seen": len(existing_ma),
+        "missing_ma_cays_found": len(missing_ma),
+        "fabric_rolls_created": 0,
+        "receipts_created": 0,
+        "receipt_lines_created": 0,
+        "stock_checks_created": 0,
+        "location_assignments_created": 0,
+        "issues_created": 0,
+        "issue_lines_created": 0,
+        "return_events_created": 0,
+    }
+
+    for ma_cay in missing_ma:
+        ex = excel_by_ma.get(ma_cay)
+        ck = check_by_ma.get(ma_cay)
+        loc = loc_by_ma.get(ma_cay)
+        iss = issue_by_ma.get(ma_cay)
+        ret = return_by_ma.get(ma_cay)
+
+        nhu_cau = (
+            _row_text(ex, "Nhu cầu")
+            or _row_text(iss, "nhu_cau")
+            or _row_text(ck, "nhu_cau")
+            or _row_text(loc, "nhu_cau")
+            or _row_text(ret, "nhu_cau_cu")
+            or "UNKNOWN"
+        )
+        lot = (
+            _row_text(ex, "Lot")
+            or _row_text(iss, "lot")
+            or _row_text(ck, "lot")
+            or _row_text(loc, "lot")
+            or _row_text(ret, "lot")
+            or "UNKNOWN"
+        )
+
+        receipt_dt = (
+            _date_from_any(_row_text(ex, "Ngày nhập hàng"))
+            or _date_from_any(_row_text(ex, "Ngày nhập"))
+            or _dt_from_iso(_row_text(ck, "ngay_cap_nhat"))
+            or _dt_from_iso(_row_text(loc, "ngay_cap_nhat"))
+            or now
+        )
+        day_key = receipt_dt.date().isoformat() if isinstance(receipt_dt, datetime) else "unknown"
+        roll_id = _ensure_fabric_roll(db, ma_cay=ma_cay, created_at=receipt_dt if isinstance(receipt_dt, datetime) else now)
+        if ma_cay not in existing_ma:
+            stats["fabric_rolls_created"] += 1
+            existing_ma.add(ma_cay)
+
+        receipt, created_receipt = _receipt_for_legacy_day(db, day_key=day_key, receipt_dt=receipt_dt)
+        if created_receipt:
+            stats["receipts_created"] += 1
+
+        existing_line = db.query(ReceiptLine).filter(ReceiptLine.ma_cay == ma_cay).first()
+        expected_yards = _as_float(_row_value(ck, "so_luong")) or _as_float(_row_value(ex, "Số lượng"))
+        actual_yards = _as_float(_row_value(ck, "thuc_te")) or _as_float(_row_value(ex, "thuc_te")) or expected_yards
+        anh_mau = _row_text(ex, "Ành màu") or _row_text(ck, "Ành màu") or _row_text(loc, "Ành màu") or "CHUNG"
+        if not existing_line:
+            db.add(
+                ReceiptLine(
+                    receipt_id=receipt.id,
+                    roll_id=roll_id,
+                    ma_cay=ma_cay,
+                    nhu_cau=nhu_cau,
+                    lot=lot,
+                    anh_mau=_format_code(anh_mau) or "CHUNG",
+                    model=None,
+                    art=_format_code(_row_value(ex, "Mã Art")),
+                    yards=expected_yards,
+                    raw_data=dict(ex) if ex is not None else {},
+                )
+            )
+            stats["receipt_lines_created"] += 1
+
+        existing_sc = (
+            db.query(StockCheck)
+            .filter(StockCheck.nhu_cau == nhu_cau)
+            .filter(StockCheck.lot == lot)
+            .filter(StockCheck.ma_cay == ma_cay)
+            .first()
+        )
+        if not existing_sc:
+            db.add(
+                StockCheck(
+                    nhu_cau=nhu_cau,
+                    lot=lot,
+                    ma_cay=ma_cay,
+                    expected_yards=expected_yards,
+                    actual_yards=actual_yards,
+                    note=_row_text(ck, "ghi_chu"),
+                    updated_at=(
+                        _dt_from_iso(_row_text(ck, "ngay_cap_nhat"))
+                        or _dt_from_iso(_row_text(loc, "ngay_cap_nhat"))
+                        or receipt_dt
+                        or now
+                    ),
+                )
+            )
+            stats["stock_checks_created"] += 1
+
+        loc_status = _row_text(loc, "trang_thai")
+        issue_date = _parse_ngay_xuat(_row_text(iss, "ngay_xuat")) or _parse_ngay_xuat(_row_text(ex, "Ngày xuất"))
+        final_status = loc_status or ("Đã xuất" if issue_date or iss is not None else "Đã xuất")
+        vi_tri = _row_text(loc, "vi_tri") or _row_text(ck, "vi_tri_pallet") or "N/A"
+        existing_la = db.query(LocationAssignment).filter(LocationAssignment.ma_cay == ma_cay).first()
+        if not existing_la:
+            db.add(
+                LocationAssignment(
+                    ma_cay=ma_cay,
+                    nhu_cau=nhu_cau,
+                    lot=lot,
+                    anh_mau=_format_code(anh_mau) or "CHUNG",
+                    vi_tri=vi_tri[:16],
+                    trang_thai=final_status[:32],
+                    assigned_at=(
+                        _dt_from_iso(_row_text(loc, "ngay_cap_nhat"))
+                        or _dt_from_iso(_row_text(ck, "ngay_cap_nhat"))
+                        or receipt_dt
+                        or now
+                    ),
+                    updated_at=(
+                        _dt_from_iso(_row_text(loc, "ngay_cap_nhat"))
+                        or _dt_from_iso(_row_text(ck, "ngay_cap_nhat"))
+                        or receipt_dt
+                        or now
+                    ),
+                )
+            )
+            stats["location_assignments_created"] += 1
+
+        if iss is not None or issue_date is not None:
+            if issue_date is None:
+                fallback_dt = _dt_from_iso(_row_text(loc, "ngay_cap_nhat")) or _dt_from_iso(_row_text(ck, "ngay_cap_nhat")) or now
+                issue_date = fallback_dt.date()
+            status = _issue_status(_row_text(iss, "status"))
+            issue, created_issue = _issue_for_legacy_day(
+                db,
+                nhu_cau=nhu_cau,
+                lot=lot,
+                ngay_xuat=issue_date,
+                status=status,
+            )
+            if created_issue:
+                stats["issues_created"] += 1
+            existing_issue_line = (
+                db.query(IssueLine)
+                .filter(IssueLine.issue_id == issue.id)
+                .filter(IssueLine.ma_cay == ma_cay)
+                .first()
+            )
+            if not existing_issue_line:
+                db.add(
+                    IssueLine(
+                        issue_id=issue.id,
+                        ma_cay=ma_cay,
+                        so_luong_xuat=_as_float(_row_value(iss, "so_luong_xuat")) or actual_yards,
+                        vi_tri=vi_tri[:16] if vi_tri else None,
+                    )
+                )
+                db.flush()
+                stats["issue_lines_created"] += 1
+
+        if ret is not None:
+            issue_line = db.query(IssueLine).filter(IssueLine.ma_cay == ma_cay).order_by(IssueLine.id.desc()).first()
+            ngay_tai_nhap = _parse_ngay_xuat(_row_text(ret, "ngay_tai_nhap"))
+            if issue_line and ngay_tai_nhap:
+                existing_ret = db.query(ReturnEvent).filter(ReturnEvent.issue_line_id == issue_line.id).first()
+                if not existing_ret:
+                    db.add(
+                        ReturnEvent(
+                            issue_line_id=issue_line.id,
+                            ma_cay=ma_cay,
+                            ngay_tai_nhap=ngay_tai_nhap,
+                            yds_du=_as_float(_row_value(ret, "so_yds_du")),
+                            status=_row_text(ret, "trang_thai") or "Tái nhập kho",
+                            nhu_cau_moi=_row_text(ret, "nhu_cau_moi"),
+                            lot_moi=None,
+                            vi_tri_moi=_row_text(ret, "vi_tri_moi"),
+                            note=_row_text(ret, "ghi_chu"),
+                        )
+                    )
+                    stats["return_events_created"] += 1
+
+    return stats
+
+
 def upsert_excel_metadata(
     db: Session,
     *,
@@ -508,6 +842,17 @@ def main(argv: list[str]) -> int:
     p.add_argument("--wms-db", required=True, help="Path to legacy wms.db (SQLite).")
     p.add_argument("--fabric-db", default="", help="Optional path to legacy fabric.db (SQLite).")
     p.add_argument("--import-norms", action="store_true", help="Also import fabric norms into fabric_data.")
+    p.add_argument(
+        "--import-missing-history",
+        action="store_true",
+        help="Import legacy ma_cay not present in Postgres as historical exported rolls.",
+    )
+    p.add_argument(
+        "--history-limit",
+        type=int,
+        default=0,
+        help="Optional cap for --import-missing-history (0 = no cap).",
+    )
     args = p.parse_args(argv)
 
     rows = load_stored_rolls_from_wms_sqlite(wms_db_path=args.wms_db)
@@ -544,6 +889,14 @@ def main(argv: list[str]) -> int:
         except Exception:
             only_ma = None
         stats.update(upsert_excel_metadata(db, wms_db_path=args.wms_db, only_ma_cays=only_ma))
+        if args.import_missing_history:
+            stats.update(
+                import_missing_legacy_history(
+                    db,
+                    wms_db_path=args.wms_db,
+                    limit=(args.history_limit or None),
+                )
+            )
         if norms:
             stats.update(upsert_fabric_norms(db, norms))
         db.commit()
