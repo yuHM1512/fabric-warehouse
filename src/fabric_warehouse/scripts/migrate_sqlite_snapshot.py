@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sqlite3
 import sys
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -60,11 +62,10 @@ def _date_from_any(s: str | None) -> datetime | None:
     s = (s or "").strip()
     if not s:
         return None
-    try:
-        # ISO-like or full datetime
-        return _dt_from_iso(s)
-    except Exception:
-        pass
+    # ISO-like or full datetime
+    dt = _dt_from_iso(s)
+    if dt is not None:
+        return dt
 
     import re
 
@@ -114,6 +115,24 @@ def _open_sqlite(path: str) -> sqlite3.Connection:
     con = sqlite3.connect(path)
     con.row_factory = sqlite3.Row
     return con
+
+
+def _ascii_fold(value: object | None) -> str:
+    s = str(value or "").strip()
+    if not s:
+        return ""
+    normalized = unicodedata.normalize("NFKD", s)
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch)).casefold().strip()
+
+
+def _is_valid_legacy_ma_cay(value: object | None) -> bool:
+    ma_cay = str(value or "").strip()
+    if not ma_cay:
+        return False
+    folded = _ascii_fold(ma_cay)
+    if re.fullmatch(r"\d+\s*cay", folded):
+        return False
+    return True
 
 
 def load_stored_rolls_from_wms_sqlite(*, wms_db_path: str) -> list[StoredRollRow]:
@@ -248,7 +267,7 @@ def load_excel_rows_from_wms_sqlite(*, wms_db_path: str) -> list[dict[str, objec
     try:
         cur = con.cursor()
         rows = cur.execute('SELECT * FROM excel_data').fetchall()
-        return [dict(r) for r in rows]
+        return [dict(r) for r in rows if _is_valid_legacy_ma_cay(_row_value(r, "ma cay"))]
     finally:
         con.close()
 
@@ -362,16 +381,35 @@ def _legacy_rows_by_ma(
     ma_col: str,
 ) -> dict[str, sqlite3.Row]:
     cur = con.cursor()
+    resolved_ma_col = _resolve_sqlite_column_name(con, table=table, wanted=ma_col)
+    if resolved_ma_col is None:
+        return {}
     try:
-        rows = cur.execute(f'SELECT * FROM "{table}" WHERE "{ma_col}" IS NOT NULL AND "{ma_col}" <> ""').fetchall()
+        rows = cur.execute(
+            f'SELECT * FROM "{table}" WHERE "{resolved_ma_col}" IS NOT NULL AND "{resolved_ma_col}" <> ""'
+        ).fetchall()
     except sqlite3.Error:
         return {}
     out: dict[str, sqlite3.Row] = {}
     for r in rows:
-        ma = str(r[ma_col] or "").strip()
-        if ma and ma not in out:
+        ma = str(_row_value(r, ma_col) or "").strip()
+        if _is_valid_legacy_ma_cay(ma) and ma not in out:
             out[ma] = r
     return out
+
+
+def _resolve_sqlite_column_name(con: sqlite3.Connection, *, table: str, wanted: str) -> str | None:
+    cur = con.cursor()
+    try:
+        rows = cur.execute(f'PRAGMA table_info("{table}")').fetchall()
+    except sqlite3.Error:
+        return None
+    wanted_folded = _ascii_fold(wanted)
+    for row in rows:
+        name = row[1] if isinstance(row, tuple) else row["name"]
+        if _ascii_fold(name) == wanted_folded:
+            return str(name)
+    return None
 
 
 def _existing_postgres_ma_cays(db: Session) -> set[str]:
@@ -390,15 +428,35 @@ def _existing_postgres_ma_cays(db: Session) -> set[str]:
 def _row_value(row: sqlite3.Row | None, *keys: str) -> object | None:
     if row is None:
         return None
-    available = set(row.keys())
+    available = {_ascii_fold(key): key for key in row.keys()}
     for key in keys:
-        if key in available:
-            return row[key]
+        resolved = available.get(_ascii_fold(key))
+        if resolved is not None:
+            return row[resolved]
     return None
 
 
 def _row_text(row: sqlite3.Row | None, *keys: str) -> str | None:
     value = _row_value(row, *keys)
+    if value is None:
+        return None
+    s = str(value).strip()
+    return s or None
+
+
+def _mapping_value(row: dict[str, object] | None, *keys: str) -> object | None:
+    if row is None:
+        return None
+    available = {_ascii_fold(key): key for key in row.keys()}
+    for key in keys:
+        resolved = available.get(_ascii_fold(key))
+        if resolved is not None:
+            return row.get(resolved)
+    return None
+
+
+def _mapping_text(row: dict[str, object] | None, *keys: str) -> str | None:
+    value = _mapping_value(row, *keys)
     if value is None:
         return None
     s = str(value).strip()
@@ -488,7 +546,7 @@ def import_missing_legacy_history(
 
     con = _open_sqlite(wms_db_path)
     try:
-        excel_by_ma = _legacy_rows_by_ma(con, table="excel_data", ma_col="Mã cây")
+        excel_by_ma = _legacy_rows_by_ma(con, table="excel_data", ma_col="ma cay")
         check_by_ma = _legacy_rows_by_ma(con, table="kiemkho_data", ma_col="ma_cay")
         loc_by_ma = _legacy_rows_by_ma(con, table="vi_tri_data", ma_col="ma_cay")
         issue_by_ma = _legacy_rows_by_ma(con, table="xuatkho_data", ma_col="ma_cay")
@@ -524,7 +582,7 @@ def import_missing_legacy_history(
         ret = return_by_ma.get(ma_cay)
 
         nhu_cau = (
-            _row_text(ex, "Nhu cầu")
+            _row_text(ex, "nhu cau")
             or _row_text(iss, "nhu_cau")
             or _row_text(ck, "nhu_cau")
             or _row_text(loc, "nhu_cau")
@@ -532,7 +590,7 @@ def import_missing_legacy_history(
             or "UNKNOWN"
         )
         lot = (
-            _row_text(ex, "Lot")
+            _row_text(ex, "lot")
             or _row_text(iss, "lot")
             or _row_text(ck, "lot")
             or _row_text(loc, "lot")
@@ -541,8 +599,8 @@ def import_missing_legacy_history(
         )
 
         receipt_dt = (
-            _date_from_any(_row_text(ex, "Ngày nhập hàng"))
-            or _date_from_any(_row_text(ex, "Ngày nhập"))
+            _date_from_any(_row_text(ex, "ngay nhap hang"))
+            or _date_from_any(_row_text(ex, "ngay nhap"))
             or _dt_from_iso(_row_text(ck, "ngay_cap_nhat"))
             or _dt_from_iso(_row_text(loc, "ngay_cap_nhat"))
             or now
@@ -558,9 +616,9 @@ def import_missing_legacy_history(
             stats["receipts_created"] += 1
 
         existing_line = db.query(ReceiptLine).filter(ReceiptLine.ma_cay == ma_cay).first()
-        expected_yards = _as_float(_row_value(ck, "so_luong")) or _as_float(_row_value(ex, "Số lượng"))
+        expected_yards = _as_float(_row_value(ck, "so_luong")) or _as_float(_row_value(ex, "so luong"))
         actual_yards = _as_float(_row_value(ck, "thuc_te")) or _as_float(_row_value(ex, "thuc_te")) or expected_yards
-        anh_mau = _row_text(ex, "Ành màu") or _row_text(ck, "Ành màu") or _row_text(loc, "Ành màu") or "CHUNG"
+        anh_mau = _row_text(ex, "anh mau") or _row_text(ck, "anh mau") or _row_text(loc, "anh mau") or "CHUNG"
         if not existing_line:
             db.add(
                 ReceiptLine(
@@ -571,7 +629,7 @@ def import_missing_legacy_history(
                     lot=_limit_text(lot, 64),
                     anh_mau=_format_limited(anh_mau, 64, default="CHUNG") or "CHUNG",
                     model=None,
-                    art=_format_limited(_row_value(ex, "Mã Art"), 64),
+                    art=_format_limited(_row_value(ex, "ma art"), 64),
                     yards=expected_yards,
                     raw_data=dict(ex) if ex is not None else {},
                 )
@@ -605,7 +663,7 @@ def import_missing_legacy_history(
             stats["stock_checks_created"] += 1
 
         loc_status = _row_text(loc, "trang_thai")
-        issue_date = _parse_ngay_xuat(_row_text(iss, "ngay_xuat")) or _parse_ngay_xuat(_row_text(ex, "Ngày xuất"))
+        issue_date = _parse_ngay_xuat(_row_text(iss, "ngay_xuat")) or _parse_ngay_xuat(_row_text(ex, "ngay xuat"))
         final_status = loc_status or ("Đã xuất" if issue_date or iss is not None else "Đã xuất")
         vi_tri = _row_text(loc, "vi_tri") or _row_text(ck, "vi_tri_pallet") or "N/A"
         existing_la = db.query(LocationAssignment).filter(LocationAssignment.ma_cay == ma_cay).first()
@@ -778,7 +836,7 @@ def upsert_excel_metadata(
     if only_ma_cays is not None:
         filtered: list[dict[str, object]] = []
         for r in excel_rows:
-            ma = str(r.get("Mã cây") or "").strip()
+            ma = str(_mapping_value(r, "ma cay") or "").strip()
             if ma and ma in only_ma_cays:
                 filtered.append(r)
         excel_rows = filtered
@@ -786,10 +844,12 @@ def upsert_excel_metadata(
     # Group rows by "Ngày nhập hàng" (fallback "Ngày nhập"). Each group becomes 1 synthetic receipt.
     groups: dict[str, list[dict[str, object]]] = {}
     for r in excel_rows:
-        ma_cay = str(r.get("Mã cây") or "").strip()
+        ma_cay = str(_mapping_value(r, "ma cay") or "").strip()
         if not ma_cay:
             continue
-        d0 = _date_from_any(str(r.get("Ngày nhập hàng") or "")) or _date_from_any(str(r.get("Ngày nhập") or ""))
+        d0 = _date_from_any(str(_mapping_value(r, "ngay nhap hang") or "")) or _date_from_any(
+            str(_mapping_value(r, "ngay nhap") or "")
+        )
         day_key = d0.date().isoformat() if isinstance(d0, datetime) else "unknown"
         groups.setdefault(day_key, []).append(r)
 
@@ -821,7 +881,7 @@ def upsert_excel_metadata(
         # Ensure FabricRoll exists for roll_id FK.
         ma_cays = []
         for r in rows:
-            ma = str(r.get("Mã cây") or "").strip()
+            ma = str(_mapping_value(r, "ma cay") or "").strip()
             if ma:
                 ma_cays.append(ma)
         ma_cays = list(dict.fromkeys(ma_cays))
@@ -846,18 +906,18 @@ def upsert_excel_metadata(
         existing_ma = {str(x[0]) for x in existing_lines if x and x[0]}
 
         for r in rows:
-            ma_cay = str(r.get("Mã cây") or "").strip()
+            ma_cay = str(_mapping_value(r, "ma cay") or "").strip()
             if not ma_cay or ma_cay in existing_ma:
                 continue
 
-            nhu_cau = str(r.get("Nhu cầu") or "").strip() or None
-            lot = str(r.get("Lot") or "").strip() or None
-            anh_mau = str(r.get("Ành màu") or "").strip() or None
+            nhu_cau = _mapping_text(r, "nhu cau")
+            lot = _mapping_text(r, "lot")
+            anh_mau = _mapping_text(r, "anh mau")
             if anh_mau:
                 anh_mau = _format_code(anh_mau) or anh_mau
 
-            yards = _as_float(r.get("Số lượng"))
-            art = _format_code(r.get("Mã Art"))
+            yards = _as_float(_mapping_value(r, "so luong"))
+            art = _format_code(_mapping_value(r, "ma art"))
 
             line = ReceiptLine(
                 receipt_id=receipt.id,
@@ -879,8 +939,8 @@ def upsert_excel_metadata(
         # Pick the first row encountered for each (nhu_cau, lot).
         by_key: dict[tuple[str | None, str | None], dict[str, object]] = {}
         for r in rows:
-            nhu_cau = str(r.get("Nhu cầu") or "").strip() or None
-            lot = str(r.get("Lot") or "").strip() or None
+            nhu_cau = _mapping_text(r, "nhu cau")
+            lot = _mapping_text(r, "lot")
             if not lot:
                 continue
             key = (nhu_cau, lot)
@@ -894,7 +954,7 @@ def upsert_excel_metadata(
             if not tag:
                 tag = HangingTag(receipt_id=receipt.id, id_bang_treo=id_bang_treo)
 
-            customer = _format_code(r.get("Customer"))
+            customer = _format_code(_mapping_value(r, "customer"))
             tag.ngay_nhap_hang = receipt_date  # type: ignore[assignment]
             tag.nhu_cau = nhu_cau  # type: ignore[assignment]
             tag.lot = lot  # type: ignore[assignment]
@@ -902,12 +962,12 @@ def upsert_excel_metadata(
             tag.customer = customer  # type: ignore[assignment]
             tag.nha_cung_cap = customer  # type: ignore[assignment]
             tag.khach_hang = "DECATHLON"  # type: ignore[assignment]
-            tag.ngay_xuat = _parse_ngay_xuat(str(r.get("Ngày xuất") or ""))  # type: ignore[assignment]
+            tag.ngay_xuat = _parse_ngay_xuat(str(_mapping_value(r, "ngay xuat") or ""))  # type: ignore[assignment]
 
-            tag.loai_vai = _format_code(r.get("Tên Art"))  # type: ignore[assignment]
-            tag.ma_art = _format_code(r.get("Mã Art"))  # type: ignore[assignment]
-            tag.mau_vai = _format_code(r.get("Tên Màu"))  # type: ignore[assignment]
-            tag.ma_mau = _format_code(r.get("Mã Màu"))  # type: ignore[assignment]
+            tag.loai_vai = _format_code(_mapping_value(r, "ten art"))  # type: ignore[assignment]
+            tag.ma_art = _format_code(_mapping_value(r, "ma art"))  # type: ignore[assignment]
+            tag.mau_vai = _format_code(_mapping_value(r, "ten mau"))  # type: ignore[assignment]
+            tag.ma_mau = _format_code(_mapping_value(r, "ma mau"))  # type: ignore[assignment]
             tag.ket_qua_kiem_tra = "OK"  # type: ignore[assignment]
 
             db.add(tag)

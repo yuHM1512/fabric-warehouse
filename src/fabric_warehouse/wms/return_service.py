@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+import re
+import unicodedata
 
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, aliased
 
 from fabric_warehouse.db.models.issue import Issue, IssueLine
@@ -25,8 +27,23 @@ class ReturnCandidateRow:
     ten_art: str | None
 
 
+def _ascii_fold(value: str | None) -> str:
+    s = (value or "").strip()
+    if not s:
+        return ""
+    normalized = unicodedata.normalize("NFKD", s)
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch)).casefold().strip()
+
+
+def _is_valid_pending_return_ma_cay(value: str | None) -> bool:
+    folded = _ascii_fold(value)
+    if not folded:
+        return False
+    return re.fullmatch(r"\d+\s*cay", folded) is None
+
+
 def _pending_return_base_query(db: Session):
-    sub = db.query(ReturnEvent.issue_line_id).subquery()
+    sub = select(ReturnEvent.issue_line_id)
     rl_latest = (
         db.query(
             ReceiptLine.ma_cay.label("ma_cay"),
@@ -99,7 +116,7 @@ def list_return_candidates(
     if ten_art:
         q = q.filter(func.coalesce(ten_art_expr, "").ilike(f"%{ten_art}%"))
 
-    rows = q.order_by(Issue.ngay_xuat.desc(), IssueLine.id.desc()).limit(limit).all()
+    rows = q.order_by(Issue.ngay_xuat.desc(), IssueLine.id.desc()).all()
     return [
         ReturnCandidateRow(
             issue_line_id=row.issue_line_id,
@@ -112,7 +129,8 @@ def list_return_candidates(
             ten_art=row.ten_art,
         )
         for row in rows
-    ]
+        if _is_valid_pending_return_ma_cay(row.ma_cay)
+    ][:limit]
 
 
 def list_pending_return_nhu_cau_options(db: Session, *, limit: int = 2000) -> list[str]:
