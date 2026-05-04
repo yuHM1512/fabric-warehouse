@@ -36,6 +36,25 @@ def _format_code(val: object) -> str | None:
     return s or None
 
 
+def _limit_text(val: object, max_len: int) -> str | None:
+    formatted = _format_code(val)
+    if not formatted:
+        return None
+    return formatted[:max_len]
+
+
+def _normalize_anh_mau(val: object) -> str | None:
+    formatted = _format_code(val)
+    if not formatted:
+        return None
+    import re
+
+    match = re.search(r"(Ánh\s*\d+\s*-\s*Nhóm\s*\d+)", formatted, flags=re.IGNORECASE)
+    if match:
+        return re.sub(r"\s+", " ", match.group(1)).strip()
+    return formatted
+
+
 def _parse_ngay_xuat(raw: dict[str, Any]) -> date | None:
     import re
 
@@ -175,6 +194,9 @@ def import_receipt_from_excel(
     db.flush()  # assign receipt.id
 
     ma_cays: list[str] = [r["ma_cay"] for r in rows_to_import]
+    for ma_cay in ma_cays:
+        if len(str(ma_cay)) > 64:
+            raise ValueError(f"Mã cây vượt quá 64 ký tự, không thể import an toàn: {ma_cay}")
     if ma_cays:
         stmt = (
             pg_insert(FabricRoll.__table__)
@@ -200,11 +222,11 @@ def import_receipt_from_excel(
                 "receipt_id": receipt.id,
                 "roll_id": roll_id_by_ma_cay.get(ma_cay),
                 "ma_cay": ma_cay,
-                "nhu_cau": row.get("nhu_cau"),
-                "lot": row.get("lot"),
-                "anh_mau": row.get("anh_mau") or "CHUNG",
-                "model": row.get("model"),
-                "art": row.get("art"),
+                "nhu_cau": _limit_text(row.get("nhu_cau"), 64),
+                "lot": _limit_text(row.get("lot"), 64),
+                "anh_mau": _limit_text(_normalize_anh_mau(row.get("anh_mau")), 64) or "CHUNG",
+                "model": _limit_text(row.get("model"), 64),
+                "art": _limit_text(row.get("art"), 64),
                 "yards": row.get("yards"),
                 "raw_data": raw_data,
             }
@@ -229,13 +251,13 @@ def import_receipt_from_excel(
             continue
         raw = row.get("raw_data") or {}
         by_key[key] = {
-            "nhu_cau": nhu_cau,
-            "lot": lot,
-            "ma_art": _format_code(row.get("art")),
-            "ma_mau": _format_code(raw.get("Mã Màu") or raw.get("Ma Mau") or raw.get("Ma Màu")),
+            "nhu_cau": _limit_text(nhu_cau, 64),
+            "lot": _limit_text(lot, 64),
+            "ma_art": _limit_text(row.get("art"), 64),
+            "ma_mau": _limit_text(raw.get("Mã Màu") or raw.get("Ma Mau") or raw.get("Ma Màu"), 64),
             "loai_vai": _format_code(raw.get("Tên Art") or raw.get("Ten Art")),
             "mau_vai": _format_code(raw.get("Tên Màu") or raw.get("Ten Mau") or raw.get("Ten Màu")),
-            "customer": _format_code(raw.get("Customer")) or None,
+            "customer": _limit_text(raw.get("Customer"), 255),
             "ngay_xuat": _parse_ngay_xuat(raw),
         }
 
@@ -250,8 +272,8 @@ def import_receipt_from_excel(
                 receipt_id=receipt.id,
                 id_bang_treo=id_bang_treo,
                 ngay_nhap_hang=ngay_nhap,
-                nhu_cau=nhu_cau,
-                lot=lot,
+                nhu_cau=_limit_text(nhu_cau, 64),
+                lot=_limit_text(lot, 64),
                 ma_hang=_extract_ma_hang(nhu_cau),
                 customer=info.get("customer") or None,
                 ngay_xuat=info.get("ngay_xuat") if isinstance(info.get("ngay_xuat"), date) else None,

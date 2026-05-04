@@ -165,6 +165,8 @@ def parse_receipt_excel(
             col = norm_to_col.get(_norm(alias))
             if col:
                 return col
+        if key in {"art", "model"}:
+            return None
         # fallback: partial contains match
         want = {_norm(a) for a in _COLUMN_ALIASES.get(key, [])}
         for nc, col in norm_to_col.items():
