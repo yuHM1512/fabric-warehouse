@@ -307,6 +307,15 @@ def hanging_merge_print(
                 seen.append(s)
         return sep.join(seen)
 
+    def _uniq_list(vals) -> list[str]:
+        seen: list[str] = []
+        for v in vals:
+            s = (v or "").strip()
+            if s and s not in seen:
+                seen.append(s)
+        return seen
+
+    lot_lines = _uniq_list(t.lot for t in tags)
     merged = types.SimpleNamespace(
         khach_hang=(tags[0].khach_hang or "DECATHLON").strip() or "DECATHLON",
         nha_cung_cap=_uniq_join(t.nha_cung_cap for t in tags),
@@ -318,7 +327,8 @@ def hanging_merge_print(
         ma_art=_uniq_join(t.ma_art for t in tags),
         mau_vai=_uniq_join(t.mau_vai for t in tags),
         ma_mau=_uniq_join(t.ma_mau for t in tags),
-        lot=_uniq_join(t.lot for t in tags),
+        lot=lot_lines[0] if len(lot_lines) == 1 else "",
+        lot_lines=lot_lines,
         ket_qua_kiem_tra=tags[0].ket_qua_kiem_tra if tags else "OK",
     )
     return templates.TemplateResponse(

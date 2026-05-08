@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from datetime import date
 from io import BytesIO
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Flowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from fabric_warehouse.db.models.hanging_tag import HangingTag
 
@@ -77,6 +78,86 @@ def _shrink_to_fit(
     return Paragraph(s, fb)
 
 
+def _shrink_single_line_then_wrap(
+    text: str,
+    style: ParagraphStyle,
+    avail_w: float,
+    avail_h: float,
+    min_size: float = 7.0,
+) -> Paragraph:
+    """
+    Prefer a single-line fit by shrinking width-aware font size first.
+    If the text is still too long at min_size, fall back to wrapped layout.
+    """
+    raw = (text or "").strip()
+    if not raw:
+        return Paragraph("", style)
+
+    single_line_markup = f"<nobr>{escape(raw)}</nobr>"
+    size = style.fontSize
+    while size >= min_size:
+        leading = max(size * 1.1, size + 0.5)
+        fit_style = ParagraphStyle(
+            "_fit_single",
+            parent=style,
+            fontSize=size,
+            leading=leading,
+            wordWrap="CJK",
+            splitLongWords=False,
+        )
+        paragraph = Paragraph(single_line_markup, fit_style)
+        width, height = paragraph.wrap(avail_w, 99999)
+        if width <= avail_w and height <= avail_h:
+            return paragraph
+        size -= 0.5
+
+    return _shrink_to_fit(raw, style, avail_w, avail_h, min_size=min_size)
+
+
+class _SingleLineFittedText(Flowable):
+    def __init__(
+        self,
+        text: str,
+        *,
+        font_name: str,
+        font_size: float,
+        width: float,
+        height: float,
+    ) -> None:
+        super().__init__()
+        self.text = (text or "").strip()
+        self.font_name = font_name
+        self.font_size = font_size
+        self.width = width
+        self.height = height
+        self._fitted_size = self._fit_size()
+
+    def _fit_size(self) -> float:
+        if not self.text:
+            return self.font_size
+
+        base_width = pdfmetrics.stringWidth(self.text, self.font_name, self.font_size)
+        if base_width <= 0:
+            return self.font_size
+
+        width_ratio = self.width / base_width
+        height_limit = max(self.height * 0.72, 1.0)
+        fitted = min(self.font_size * width_ratio, height_limit, self.font_size)
+        return max(fitted, 1.0)
+
+    def wrap(self, availWidth, availHeight):
+        return min(self.width, availWidth), min(self.height, availHeight)
+
+    def draw(self):
+        if not self.text:
+            return
+        self.canv.setFont(self.font_name, self._fitted_size)
+        text_width = pdfmetrics.stringWidth(self.text, self.font_name, self._fitted_size)
+        x = max((self.width - text_width) / 2.0, 0.0)
+        y = max((self.height - self._fitted_size) / 2.0 - (self._fitted_size * 0.12), 0.0)
+        self.canv.drawString(x, y, self.text)
+
+
 def _merge_tag_fields(tags: list[HangingTag]) -> dict:
     def uniq_join(vals, sep: str = " / ") -> str:
         seen: list[str] = []
@@ -85,6 +166,12 @@ def _merge_tag_fields(tags: list[HangingTag]) -> dict:
             if s and s not in seen:
                 seen.append(s)
         return sep.join(seen)
+
+    unique_lots = []
+    for tag in tags:
+        lot = (tag.lot or "").strip()
+        if lot and lot not in unique_lots:
+            unique_lots.append(lot)
 
     return {
         "khach_hang": (tags[0].khach_hang or "DECATHLON").strip() or "DECATHLON",
@@ -97,6 +184,7 @@ def _merge_tag_fields(tags: list[HangingTag]) -> dict:
         "mau_vai": uniq_join(t.mau_vai for t in tags),
         "ma_mau": uniq_join(t.ma_mau for t in tags),
         "lot": uniq_join(t.lot for t in tags),
+        "lot_is_merged": len(unique_lots) > 1,
         "ket_qua_kiem_tra": tags[0].ket_qua_kiem_tra if tags else "OK",
     }
 
@@ -164,8 +252,16 @@ def _render_tag_pdf(fields: dict, doc_title: str = "Bang treo") -> bytes:
         )
         return _shrink_to_fit(text or "", s, _avail_w(col, span), _avail_h(row))
 
-    def _lot(text: str) -> Paragraph:
-        return _shrink_to_fit(text or "", lot_style, _avail_w(1, 2), _avail_h(6))
+    def _lot(text: str, *, merged: bool = False):
+        if merged:
+            return _shrink_to_fit(text or "", lot_style, _avail_w(1, 2), _avail_h(6), min_size=8.0)
+        return _SingleLineFittedText(
+            text or "",
+            font_name=lot_style.fontName,
+            font_size=lot_style.fontSize,
+            width=_avail_w(1, 2),
+            height=_avail_h(6),
+        )
 
     story: list[object] = []
     story.append(Spacer(1, 4 * mm))
@@ -187,7 +283,7 @@ def _render_tag_pdf(fields: dict, doc_title: str = "Bang treo") -> bytes:
             _v(fields["mau_vai"], 5, 1, bold=True),
             _v(fields["ma_mau"], 5, 2, bold=True, center=True),
         ],
-        [L("LOT:"), _lot(fields["lot"]), ""],
+        [L("LOT:"), _lot(fields["lot"], merged=bool(fields.get("lot_is_merged"))), ""],
     ]
 
     tbl = Table(rows, colWidths=_COL_W, rowHeights=_ROW_H)

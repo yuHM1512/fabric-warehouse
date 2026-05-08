@@ -53,11 +53,26 @@
     <tr class="hang-lot-row">
       <th class="hang-lot-label">LOT:</th>
       {% set lot_text = t.lot or "" %}
-      {% if lot_text|length > 28 %}{% set lot_cls = "hang-lot-xxs" %}
-      {% elif lot_text|length > 18 %}{% set lot_cls = "hang-lot-xs" %}
-      {% elif lot_text|length > 10 %}{% set lot_cls = "hang-lot-sm" %}
-      {% else %}{% set lot_cls = "hang-lot" %}{% endif %}
-      <td colspan="2" class="{{ lot_cls }} hang-bold hang-center">{{ lot_text }}</td>
+      {% set lot_is_merged = t.lot_lines is defined and t.lot_lines and (t.lot_lines|length > 1) %}
+      <td colspan="2" class="hang-bold hang-center">
+        <div class="hang-fit-box">
+          {% if lot_is_merged %}
+            <div
+              class="hang-fit-text hang-fit-text-lines"
+              data-fit-text
+              data-fit-min="18"
+              data-fit-max="76"
+            >{% for lot_line in t.lot_lines %}<span class="hang-fit-line">{{ lot_line }}</span>{% endfor %}</div>
+          {% else %}
+            <div
+              class="hang-fit-text hang-fit-text-nowrap"
+              data-fit-text
+              data-fit-min="10"
+              data-fit-max="108"
+            >{{ lot_text }}</div>
+          {% endif %}
+        </div>
+      </td>
     </tr>
   </table>
 </div>

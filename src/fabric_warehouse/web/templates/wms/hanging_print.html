@@ -131,12 +131,27 @@
         overflow: hidden;
       }
       .hang-fit-text {
-        width: 100%;
+        display: inline-block;
+        max-width: 100%;
         line-height: 1;
         text-align: center;
         white-space: normal;
         word-break: break-word;
         overflow-wrap: anywhere;
+      }
+      .hang-fit-text-nowrap {
+        white-space: nowrap;
+        word-break: normal;
+        overflow-wrap: normal;
+      }
+      .hang-fit-text-lines {
+        width: 100%;
+      }
+      .hang-fit-line {
+        display: block;
+        white-space: nowrap;
+        word-break: normal;
+        overflow-wrap: normal;
       }
       .hang-fit-text-left {
         text-align: left;
@@ -196,12 +211,23 @@
         function fitText(el) {
           const min = Number.parseFloat(el.dataset.fitMin || "12");
           const max = Number.parseFloat(el.dataset.fitMax || "30");
+          const box = el.parentElement;
+          if (!box) return;
+          const availableWidth = Math.max(box.clientWidth, 0);
+          const availableHeight = Math.max(box.clientHeight, 0);
+          if (!availableWidth || !availableHeight) return;
+
           let size = max;
           el.style.fontSize = `${size}px`;
+          el.style.maxWidth = `${availableWidth}px`;
 
-          while (size > min && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth)) {
-            size -= 1;
+          while (size > min && (el.scrollWidth > availableWidth || el.scrollHeight > availableHeight)) {
+            size -= 0.5;
             el.style.fontSize = `${size}px`;
+          }
+
+          if (el.classList.contains("hang-fit-text-nowrap")) {
+            el.style.lineHeight = "1";
           }
         }
 
