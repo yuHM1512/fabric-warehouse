@@ -183,13 +183,75 @@
       (function () {
         const sel = document.getElementById("inboundNhuCau");
         if (!sel) return;
-        sel.addEventListener("change", () => {
-          const v = sel.value || "";
-          const url = new URL(window.location.href);
-          url.searchParams.set("view", "inbound");
-          if (v) url.searchParams.set("nhu_cau", v);
-          else url.searchParams.delete("nhu_cau");
-          window.location.href = url.toString();
+
+        const url = new URL(window.location.href);
+        const selectedStatus = url.searchParams.get("status") || "";
+        const selectedDemand = url.searchParams.get("nhu_cau") || sel.value || "";
+        const filterRow = sel.parentElement?.parentElement;
+        const demandWrap = sel.parentElement;
+        if (!filterRow || !demandWrap) return;
+
+        const options = Array.from(sel.querySelectorAll("option"))
+          .map((opt) => opt.value)
+          .filter(Boolean);
+
+        const statusWrap = document.createElement("div");
+        statusWrap.innerHTML = `
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="inboundStatus">Trạng thái</label>
+          <select id="inboundStatus" class="mt-2 rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0 min-w-[220px]">
+            <option value="">Tất cả</option>
+            <option value="Đang lưu kho">Đang lưu kho</option>
+            <option value="Đã xuất kho">Đã xuất kho</option>
+          </select>
+        `;
+        filterRow.insertBefore(statusWrap, demandWrap);
+
+        const demandInput = document.createElement("input");
+        demandInput.id = "inboundNhuCauInput";
+        demandInput.setAttribute("list", "inboundNhuCauList");
+        demandInput.setAttribute("autocomplete", "off");
+        demandInput.setAttribute("placeholder", "Gõ để lọc nhu cầu...");
+        demandInput.className = "mt-2 rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0 min-w-[320px]";
+        demandInput.value = selectedDemand;
+
+        const datalist = document.createElement("datalist");
+        datalist.id = "inboundNhuCauList";
+        options.forEach((value) => {
+          const opt = document.createElement("option");
+          opt.value = value;
+          datalist.appendChild(opt);
+        });
+
+        sel.style.display = "none";
+        demandWrap.appendChild(demandInput);
+        demandWrap.appendChild(datalist);
+
+        const statusSel = document.getElementById("inboundStatus");
+        if (statusSel) {
+          if (statusSel.options[1]) statusSel.options[1].value = "dang_luu_kho";
+          if (statusSel.options[2]) statusSel.options[2].value = "da_xuat_kho";
+          statusSel.value = selectedStatus;
+        }
+
+        function applyFilters() {
+          const nextUrl = new URL(window.location.href);
+          const demandVal = demandInput.value.trim();
+          const statusVal = statusSel ? statusSel.value.trim() : "";
+          nextUrl.searchParams.set("view", "inbound");
+          if (demandVal) nextUrl.searchParams.set("nhu_cau", demandVal);
+          else nextUrl.searchParams.delete("nhu_cau");
+          if (statusVal) nextUrl.searchParams.set("status", statusVal);
+          else nextUrl.searchParams.delete("status");
+          window.location.href = nextUrl.toString();
+        }
+
+        if (statusSel) statusSel.addEventListener("change", applyFilters);
+        demandInput.addEventListener("change", applyFilters);
+        demandInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            applyFilters();
+          }
         });
       })();
     </script>

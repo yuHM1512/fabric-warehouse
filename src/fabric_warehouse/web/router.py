@@ -998,9 +998,11 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
 
     if view == "inbound":
         selected_nhu_cau = (request.query_params.get("nhu_cau") or "").strip()
+        selected_status = (request.query_params.get("status") or "").strip()
         nhu_cau_val = selected_nhu_cau or None
-        groups = inbound_status_by_nhu_cau(db, nhu_cau=nhu_cau_val, limit_lots=8000)
-        nhu_cau_options = list_active_inbound_nhu_cau_options(db, limit=5000)
+        status_val = selected_status if selected_status in {"dang_luu_kho", "da_xuat_kho"} else None
+        groups = inbound_status_by_nhu_cau(db, nhu_cau=nhu_cau_val, status=status_val, limit_lots=8000)
+        nhu_cau_options = list_active_inbound_nhu_cau_options(db, status=status_val, limit=5000)
 
         return templates.TemplateResponse(
             request,
@@ -1011,6 +1013,7 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
                 "tab": tab,
                 "inbound_groups": groups,
                 "selected_nhu_cau": selected_nhu_cau,
+                "selected_status": selected_status,
                 "nhu_cau_options": nhu_cau_options,
             },
         )
