@@ -14,6 +14,12 @@ from fabric_warehouse.db.models.receipt import ReceiptLine
 from fabric_warehouse.db.models.return_event import ReturnEvent
 from fabric_warehouse.db.models.stock_check import StockCheck
 
+RETURN_TO_STOCK = "Tái nhập kho"
+RETURN_TO_MOTHER = "Trả Mẹ Nhu"
+ACTIVE_STORAGE_STATUS = "Đang lưu"
+_RETURN_TO_STOCK_ALIASES = {RETURN_TO_STOCK, "TÃ¡i nháº­p kho", "TÃƒÂ¡i nhÃ¡ÂºÂ­p kho"}
+_RETURN_TO_MOTHER_ALIASES = {RETURN_TO_MOTHER, "Tráº£ Máº¹ Nhu", "TrÃ¡ÂºÂ£ MÃ¡ÂºÂ¹ Nhu"}
+
 
 @dataclass(frozen=True)
 class ReturnCandidateRow:
@@ -40,6 +46,13 @@ def _is_valid_pending_return_ma_cay(value: str | None) -> bool:
     if not folded:
         return False
     return re.fullmatch(r"\d+\s*cay", folded) is None
+
+
+def _normalize_return_status(status: str | None) -> str:
+    cleaned = (status or "").strip()
+    if cleaned in _RETURN_TO_MOTHER_ALIASES:
+        return RETURN_TO_MOTHER
+    return RETURN_TO_STOCK
 
 
 def _pending_return_base_query(db: Session):
@@ -172,6 +185,8 @@ def create_return(
     vi_tri_moi: str | None,
     note: str | None,
 ) -> int:
+    status = _normalize_return_status(status)
+
     ev = ReturnEvent(
         issue_line_id=issue_line_id,
         ma_cay=ma_cay,
@@ -188,16 +203,16 @@ def create_return(
 
     assign = db.query(LocationAssignment).filter(LocationAssignment.ma_cay == ma_cay).first()
     if assign:
-        if status == "Tái nhập kho":
+        if status == RETURN_TO_STOCK:
             if nhu_cau_moi:
                 assign.nhu_cau = nhu_cau_moi
             if lot_moi:
                 assign.lot = lot_moi
             if vi_tri_moi:
                 assign.vi_tri = vi_tri_moi
-            assign.trang_thai = "Đang lưu"
-        elif status == "Trả Mẹ Nhu":
-            assign.trang_thai = "Trả Mẹ Nhu"
+            assign.trang_thai = ACTIVE_STORAGE_STATUS
+        elif status == RETURN_TO_MOTHER:
+            assign.trang_thai = RETURN_TO_MOTHER
         db.add(assign)
 
     return ev.id

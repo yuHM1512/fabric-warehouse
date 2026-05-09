@@ -122,7 +122,7 @@
                         </thead>
                         <tbody>
                           {% for it in g.lots %}
-                            <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0">
+                            <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0 {% if it.is_complete %}opacity-45{% endif %}">
                               <td class="px-6 py-4 font-semibold text-on-surface">{{ it.lot }}</td>
                               <td class="px-6 py-4">
                                 {% if it.vi_tri_list %}
@@ -200,8 +200,8 @@
           <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="inboundStatus">Trạng thái</label>
           <select id="inboundStatus" class="mt-2 rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0 min-w-[220px]">
             <option value="">Tất cả</option>
-            <option value="Đang lưu kho">Đang lưu kho</option>
-            <option value="Đã xuất kho">Đã xuất kho</option>
+            <option value="Đang nhập kho">Đang nhập kho</option>
+            <option value="Nhập đủ">Nhập đủ</option>
           </select>
         `;
         filterRow.insertBefore(statusWrap, demandWrap);
@@ -228,8 +228,8 @@
 
         const statusSel = document.getElementById("inboundStatus");
         if (statusSel) {
-          if (statusSel.options[1]) statusSel.options[1].value = "dang_luu_kho";
-          if (statusSel.options[2]) statusSel.options[2].value = "da_xuat_kho";
+          if (statusSel.options[1]) statusSel.options[1].value = "dang_nhap_kho";
+          if (statusSel.options[2]) statusSel.options[2].value = "nhap_du";
           statusSel.value = selectedStatus;
         }
 

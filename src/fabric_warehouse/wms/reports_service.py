@@ -7,10 +7,8 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from fabric_warehouse.db.models.hanging_tag import HangingTag
-from fabric_warehouse.db.models.issue import Issue, IssueLine
 from fabric_warehouse.db.models.location_assignment import LocationAssignment
 from fabric_warehouse.db.models.receipt import ReceiptLine
-from fabric_warehouse.db.models.return_event import ReturnEvent
 from fabric_warehouse.db.models.stock_check import StockCheck
 
 _DANG_LUU = "Đang lưu"
@@ -309,6 +307,7 @@ class InboundLotRow:
     tong_yds: float
     da_nhap_yds: float
     vi_tri_list: str | None
+    is_complete: bool
 
 
 @dataclass(frozen=True)
@@ -341,20 +340,6 @@ def inbound_status_by_nhu_cau(
         .subquery()
     )
     rl = db.query(ReceiptLine).subquery()
-    active_issue_rolls = (
-        db.query(
-            Issue.nhu_cau.label("nhu_cau"),
-            Issue.lot.label("lot"),
-            IssueLine.ma_cay.label("ma_cay"),
-            func.coalesce(func.sum(IssueLine.so_luong_xuat), 0).label("issued_yds"),
-        )
-        .join(Issue, Issue.id == IssueLine.issue_id)
-        .outerjoin(ReturnEvent, ReturnEvent.issue_line_id == IssueLine.id)
-        .filter(Issue.status == "\u0043\u1ea5p ph\u00e1t s\u1ea3n xu\u1ea5t")
-        .filter(ReturnEvent.id.is_(None))
-        .group_by(Issue.nhu_cau, Issue.lot, IssueLine.ma_cay)
-        .subquery()
-    )
 
     vi_tri_agg = func.string_agg(func.distinct(LocationAssignment.vi_tri), ", ").filter(
         LocationAssignment.vi_tri.isnot(None)
@@ -371,8 +356,6 @@ def inbound_status_by_nhu_cau(
                 func.sum(func.coalesce(StockCheck.actual_yards, StockCheck.expected_yards, 0)),
                 0,
             ).label("da_nhap_yds"),
-            func.count(func.distinct(active_issue_rolls.c.ma_cay)).label("issued_rolls"),
-            func.coalesce(func.sum(func.coalesce(active_issue_rolls.c.issued_yds, 0)), 0).label("issued_yds"),
             vi_tri_agg.label("vi_tri_list"),
         )
         .join(rl, rl.c.id == rr.c.rid)
@@ -382,14 +365,6 @@ def inbound_status_by_nhu_cau(
                 StockCheck.ma_cay == rr.c.ma_cay,
                 StockCheck.nhu_cau == rr.c.nhu_cau,
                 StockCheck.lot == rr.c.lot,
-            ),
-        )
-        .outerjoin(
-            active_issue_rolls,
-            and_(
-                active_issue_rolls.c.ma_cay == rr.c.ma_cay,
-                active_issue_rolls.c.nhu_cau == rr.c.nhu_cau,
-                active_issue_rolls.c.lot == rr.c.lot,
             ),
         )
         .outerjoin(
@@ -412,45 +387,55 @@ def inbound_status_by_nhu_cau(
     )
 
     grouped: dict[str, dict[str, object]] = {}
-    for nc, lt, so_cay, da_nhap_cay, tong_yds, da_nhap_yds, issued_rolls, issued_yds, vi_tri_list in rows:
+    for nc, lt, so_cay, da_nhap_cay, tong_yds, da_nhap_yds, vi_tri_list in rows:
         nc_s = str(nc or "").strip() or "(Khong xac dinh)"
         lt_s = str(lt or "").strip() or "(Khong xac dinh)"
+        so_cay_i = int(so_cay or 0)
+        da_nhap_cay_i = int(da_nhap_cay or 0)
+        tong_yds_f = float(tong_yds or 0)
+        da_nhap_yds_f = float(da_nhap_yds or 0)
+        lot_complete = (
+            so_cay_i > 0
+            and da_nhap_cay_i >= so_cay_i
+            and da_nhap_yds_f + 1e-6 >= tong_yds_f
+        )
         payload = grouped.setdefault(
             nc_s,
             {
                 "lots": [],
                 "total_rolls": 0,
                 "total_yds": 0.0,
-                "issued_rolls": 0,
-                "issued_yds": 0.0,
+                "checked_rolls": 0,
+                "checked_yds": 0.0,
             },
         )
         payload["lots"].append(
             InboundLotRow(
                 nhu_cau=nc_s,
                 lot=lt_s,
-                so_cay=int(so_cay or 0),
-                da_nhap_cay=int(da_nhap_cay or 0),
-                tong_yds=float(tong_yds or 0),
-                da_nhap_yds=float(da_nhap_yds or 0),
+                so_cay=so_cay_i,
+                da_nhap_cay=da_nhap_cay_i,
+                tong_yds=tong_yds_f,
+                da_nhap_yds=da_nhap_yds_f,
                 vi_tri_list=(str(vi_tri_list).strip() if vi_tri_list else None),
+                is_complete=lot_complete,
             )
         )
-        payload["total_rolls"] = int(payload["total_rolls"]) + int(so_cay or 0)
-        payload["total_yds"] = float(payload["total_yds"]) + float(tong_yds or 0)
-        payload["issued_rolls"] = int(payload["issued_rolls"]) + int(issued_rolls or 0)
-        payload["issued_yds"] = float(payload["issued_yds"]) + float(issued_yds or 0)
+        payload["total_rolls"] = int(payload["total_rolls"]) + so_cay_i
+        payload["total_yds"] = float(payload["total_yds"]) + tong_yds_f
+        payload["checked_rolls"] = int(payload["checked_rolls"]) + da_nhap_cay_i
+        payload["checked_yds"] = float(payload["checked_yds"]) + da_nhap_yds_f
 
     groups: list[InboundDemandGroup] = []
     for nc, payload in grouped.items():
         total_rolls = int(payload["total_rolls"])
         total_yds = float(payload["total_yds"])
-        issued_rolls = int(payload["issued_rolls"])
-        issued_yds = float(payload["issued_yds"])
+        checked_rolls = int(payload["checked_rolls"])
+        checked_yds = float(payload["checked_yds"])
         demand_status = (
-            "da_xuat_kho"
-            if total_rolls > 0 and issued_rolls >= total_rolls and issued_yds + 1e-6 >= total_yds
-            else "dang_luu_kho"
+            "nhap_du"
+            if total_rolls > 0 and checked_rolls >= total_rolls and checked_yds + 1e-6 >= total_yds
+            else "dang_nhap_kho"
         )
         if status and status != demand_status:
             continue

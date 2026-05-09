@@ -22,6 +22,10 @@ class LocationRollRow:
     trang_thai: str | None
 
 
+def _has_position(expr):
+    return expr.isnot(None) & (func.btrim(expr) != "")
+
+
 def tang_options() -> list[str]:
     return ["A", "B", "C"]
 
@@ -31,16 +35,16 @@ def line_options() -> list[str]:
 
 
 def pallet_options() -> list[str]:
-    # Legacy "Định danh vị trí" used 01-12 regardless of line.
+    # Legacy location assignment used 01-12 regardless of line.
     return [f"{i:02d}" for i in range(1, 13)]
 
 
 def list_nhu_cau_options_for_location(db: Session) -> list[str]:
     """
-    UX: only show demands that still have checked rolls WITHOUT a pallet/location assignment.
+    Show demands that still have checked rolls without any known position.
 
-    We consider "ready for location" rolls = stock_checks with actual_yards filled.
-    A demand should appear if assigned_count < checked_count.
+    The roll is considered ready for location after stock check has actual_yards.
+    A demand remains visible while assigned_count < checked_count.
     """
     checked_sq = (
         db.query(
@@ -57,7 +61,7 @@ def list_nhu_cau_options_for_location(db: Session) -> list[str]:
             LocationAssignment.nhu_cau.label("nhu_cau"),
             func.count(func.distinct(LocationAssignment.ma_cay)).label("assigned"),
         )
-        .filter(LocationAssignment.trang_thai == "Đang lưu")
+        .filter(_has_position(LocationAssignment.vi_tri))
         .group_by(LocationAssignment.nhu_cau)
         .subquery()
     )
@@ -86,7 +90,7 @@ def list_anh_mau_options(db: Session, *, nhu_cau: str) -> list[str]:
 
 
 def list_lot_options_for_location(db: Session, *, nhu_cau: str, anh_mau: str | None) -> list[str]:
-    # Lots that have at least one checked roll and at least one roll not assigned yet.
+    # Lots that have at least one checked roll and at least one roll without a known location.
     base = (
         db.query(ReceiptLine.lot)
         .filter(ReceiptLine.nhu_cau == nhu_cau)
@@ -112,7 +116,6 @@ def list_lot_options_for_location(db: Session, *, nhu_cau: str, anh_mau: str | N
         if r[0]
     }
 
-    # Determine lots that are fully assigned among checked rolls: if every checked roll has a location.
     out: list[str] = []
     for lot in lots:
         if lot not in checked_lots:
@@ -130,7 +133,7 @@ def list_lot_options_for_location(db: Session, *, nhu_cau: str, anh_mau: str | N
             db.query(func.count(func.distinct(LocationAssignment.ma_cay)))
             .filter(LocationAssignment.nhu_cau == nhu_cau)
             .filter(LocationAssignment.lot == lot)
-            .filter(LocationAssignment.trang_thai == "Đang lưu")
+            .filter(_has_position(LocationAssignment.vi_tri))
             .scalar()
         ) or 0
         if assigned_rolls < checked_rolls:
@@ -146,7 +149,6 @@ def list_rolls_for_location(
     anh_mau: str | None,
     lot: str,
 ) -> list[LocationRollRow]:
-    # rolls in receipts for that nhu_cau/lot/(anh_mau)
     q = (
         db.query(ReceiptLine.ma_cay, ReceiptLine.yards, ReceiptLine.anh_mau)
         .filter(ReceiptLine.nhu_cau == nhu_cau)
@@ -174,22 +176,26 @@ def list_rolls_for_location(
         db.query(LocationAssignment)
         .filter(LocationAssignment.nhu_cau == nhu_cau)
         .filter(LocationAssignment.lot == lot)
-        .filter(LocationAssignment.trang_thai == "Đang lưu")
+        .filter(_has_position(LocationAssignment.vi_tri))
+        .order_by(LocationAssignment.updated_at.desc(), LocationAssignment.id.desc())
         .all()
     )
-    assign_by_ma_cay = {a.ma_cay: a for a in assigns}
+    assign_by_ma_cay: dict[str, LocationAssignment] = {}
+    for assignment in assigns:
+        if assignment.ma_cay and assignment.ma_cay not in assign_by_ma_cay:
+            assign_by_ma_cay[assignment.ma_cay] = assignment
 
     out: list[LocationRollRow] = []
     for ma_cay, expected in expected_by_ma_cay.items():
         actual = actual_by_ma_cay.get(ma_cay)
-        a = assign_by_ma_cay.get(ma_cay)
+        assignment = assign_by_ma_cay.get(ma_cay)
         out.append(
             LocationRollRow(
                 ma_cay=ma_cay,
                 expected_yards=expected,
                 actual_yards=actual,
-                vi_tri=a.vi_tri if a else None,
-                trang_thai=a.trang_thai if a else None,
+                vi_tri=assignment.vi_tri if assignment else None,
+                trang_thai=assignment.trang_thai if assignment else None,
             )
         )
     return out

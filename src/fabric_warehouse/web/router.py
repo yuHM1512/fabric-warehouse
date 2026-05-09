@@ -752,7 +752,7 @@ async def returns_save(request: Request, db: Session = Depends(get_db)):
     issue_line_id = int(form.get("issue_line_id") or 0)
     ma_cay = (form.get("ma_cay") or "").strip()
     ngay_s = (form.get("ngay_tai_nhap") or "").strip()
-    status = (form.get("status") or "").strip() or "TÃ¡i nháº­p kho"
+    status = (form.get("status") or "").strip() or "Tái nhập kho"
     note = (form.get("note") or "").strip() or None
     nhu_cau_moi = (form.get("nhu_cau_moi") or "").strip() or None
     lot_moi = (form.get("lot_moi") or "").strip() or None
@@ -771,19 +771,19 @@ async def returns_save(request: Request, db: Session = Depends(get_db)):
     yds_du = to_float(form.get("yds_du"))
 
     if not issue_line_id or not ma_cay or not ngay_s:
-        raise HTTPException(status_code=400, detail="Thiáº¿u dá»¯ liá»‡u.")
+        raise HTTPException(status_code=400, detail="Thiếu dữ liệu.")
     try:
         ngay_tai_nhap = date.fromisoformat(ngay_s)
     except Exception as e:
-        raise HTTPException(status_code=400, detail="NgÃ y tÃ¡i nháº­p khÃ´ng há»£p lá»‡.") from e
+        raise HTTPException(status_code=400, detail="Ngày tái nhập không hợp lệ.") from e
 
     vi_tri_moi = None
-    if status == "TÃ¡i nháº­p kho":
+    if status in {"Tái nhập kho", "TÃ¡i nháº­p kho"}:
         tang = (form.get("tang") or "").strip()
         line = (form.get("line") or "").strip()
         pallet = (form.get("pallet") or "").strip()
         if not tang or not line or not pallet:
-            raise HTTPException(status_code=400, detail="Thiáº¿u vá»‹ trÃ­ má»›i.")
+            raise HTTPException(status_code=400, detail="Thiếu vị trí mới.")
         vi_tri_moi = f"{tang}.{line}.{pallet}"
 
     create_return(
@@ -1002,7 +1002,7 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
         selected_nhu_cau = (request.query_params.get("nhu_cau") or "").strip()
         selected_status = (request.query_params.get("status") or "").strip()
         nhu_cau_val = selected_nhu_cau or None
-        status_val = selected_status if selected_status in {"dang_luu_kho", "da_xuat_kho"} else None
+        status_val = selected_status if selected_status in {"dang_nhap_kho", "nhap_du"} else None
         groups = inbound_status_by_nhu_cau(db, nhu_cau=nhu_cau_val, status=status_val, limit_lots=8000)
         nhu_cau_options = list_active_inbound_nhu_cau_options(db, status=status_val, limit=5000)
 
