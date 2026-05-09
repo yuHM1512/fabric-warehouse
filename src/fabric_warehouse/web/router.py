@@ -714,12 +714,14 @@ def returns_home(request: Request, db: Session = Depends(get_db)):
     df = parse_date(date_from)
     dt = parse_date(date_to)
 
+    candidate_limit = 5000 if (nhu_cau or lot or loai_vai) else 300
     candidates = (
         list_return_candidates(
             db,
             nhu_cau=nhu_cau or None,
             lot=lot or None,
             ten_art=loai_vai or None,
+            limit=candidate_limit,
         )
         if tab == "todo"
         else []

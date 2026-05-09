@@ -41,34 +41,44 @@
   {% if tab == 'todo' %}
     <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
       <div class="px-10 py-8 bg-surface-container-low">
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-12 md:items-end">
+        <form method="get" action="/wms/stock/returns" class="grid grid-cols-1 gap-4 md:grid-cols-12 md:items-end">
+          <input type="hidden" name="tab" value="todo" />
           <div class="md:col-span-4">
             <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="filterNhuCau">Nhu cầu</label>
-            <input id="filterNhuCau" type="text" list="nhuCauOptions" value="{{ filter_nhu_cau or '' }}" placeholder="Gõ để lọc..." class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+            <input id="filterNhuCau" name="nhu_cau" type="text" list="nhuCauOptions" value="{{ filter_nhu_cau or '' }}" placeholder="Gõ để lọc..." class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:bg-white focus:ring-0" />
             <datalist id="nhuCauOptions">
               {% for nc in nhu_cau_options %}<option value="{{ nc }}"></option>{% endfor %}
             </datalist>
           </div>
           <div class="md:col-span-3">
             <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="filterLot">Lot</label>
-            <input id="filterLot" type="text" list="lotOptions" value="{{ filter_lot or '' }}" placeholder="Gõ để lọc..." class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+            <input id="filterLot" name="lot" type="text" list="lotOptions" value="{{ filter_lot or '' }}" placeholder="Gõ để lọc..." class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:bg-white focus:ring-0" />
             <datalist id="lotOptions">
               {% for lt in lot_options %}<option value="{{ lt }}"></option>{% endfor %}
             </datalist>
           </div>
           <div class="md:col-span-3">
             <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="filterLoaiVai">Loại vải (Tên Art)</label>
-            <input id="filterLoaiVai" type="text" value="{{ filter_loai_vai or '' }}" placeholder="Gõ để lọc..." class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+            <input id="filterLoaiVai" name="loai_vai" type="text" value="{{ filter_loai_vai or '' }}" placeholder="Gõ để lọc..." class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:bg-white focus:ring-0" />
           </div>
           <div class="md:col-span-2 flex items-center gap-2 md:justify-end">
-            <button type="button" class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="clearReturnFilters()">
+            <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-white hover:opacity-90 transition-opacity">
+              <span class="material-symbols-outlined text-base">filter_alt</span>
+              Lọc
+            </button>
+            <a href="/wms/stock/returns?tab=todo" class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors">
               <span class="material-symbols-outlined text-base">backspace</span>
               Xoá lọc
-            </button>
+            </a>
           </div>
-        </div>
+        </form>
         <div class="mt-4 text-xs text-on-surface-variant">
-          Hiển thị: <span class="font-extrabold text-on-surface" id="visibleCount">0</span> / {{ candidates|length }}
+          Hiển thị: <span class="font-extrabold text-on-surface">{{ candidates|length }}</span>
+          {% if filter_nhu_cau or filter_lot or filter_loai_vai %}
+            <span class="ml-2">theo bộ lọc hiện tại.</span>
+          {% else %}
+            <span class="ml-2">300 dòng mới nhất. Dùng bộ lọc để tìm nhu cầu cũ.</span>
+          {% endif %}
         </div>
       </div>
       <div class="overflow-x-auto">
@@ -86,13 +96,7 @@
           </thead>
           <tbody class="bg-surface-container-lowest" id="candidateRows">
             {% for r in candidates %}
-              <tr
-                class="hover:bg-surface-container-low transition-colors"
-                data-row="1"
-                data-nc="{{ r.nhu_cau }}"
-                data-lot="{{ r.lot }}"
-                data-art="{{ r.ten_art or '' }}"
-              >
+              <tr class="hover:bg-surface-container-low transition-colors">
                 <td class="px-10 py-4">
                   <button
                     data-open-return-modal="1"
@@ -202,37 +206,6 @@
     </div>
 
     <script>
-      function normalizeText(value) {
-        return (value || "").toString().toLowerCase().trim();
-      }
-
-      function applyReturnFilters() {
-        const qNc = normalizeText(document.getElementById("filterNhuCau")?.value);
-        const qLot = normalizeText(document.getElementById("filterLot")?.value);
-        const qArt = normalizeText(document.getElementById("filterLoaiVai")?.value);
-        let visible = 0;
-        document.querySelectorAll("#candidateRows tr[data-row]").forEach((tr) => {
-          const nc = normalizeText(tr.dataset.nc);
-          const lot = normalizeText(tr.dataset.lot);
-          const art = normalizeText(tr.dataset.art);
-          const ok = (!qNc || nc.includes(qNc)) && (!qLot || lot.includes(qLot)) && (!qArt || art.includes(qArt));
-          tr.style.display = ok ? "" : "none";
-          if (ok) visible += 1;
-        });
-        const el = document.getElementById("visibleCount");
-        if (el) el.textContent = String(visible);
-      }
-
-      function clearReturnFilters() {
-        const nc = document.getElementById("filterNhuCau");
-        const lot = document.getElementById("filterLot");
-        const art = document.getElementById("filterLoaiVai");
-        if (nc) nc.value = "";
-        if (lot) lot.value = "";
-        if (art) art.value = "";
-        applyReturnFilters();
-      }
-
       function openForm(issueLineId, maCay, nhuCau, lot) {
         const modal = document.getElementById("modal");
         if (!modal) return;
@@ -273,10 +246,6 @@
       }
 
       document.addEventListener("DOMContentLoaded", () => {
-        ["filterNhuCau", "filterLot", "filterLoaiVai"].forEach((id) => {
-          const el = document.getElementById(id);
-          if (el) el.addEventListener("input", applyReturnFilters);
-        });
         document.addEventListener("click", (event) => {
           const button = event.target.closest("[data-open-return-modal]");
           if (!button) return;
@@ -290,7 +259,6 @@
         document.addEventListener("keydown", (event) => {
           if (event.key === "Escape") closeForm();
         });
-        applyReturnFilters();
         toggleLocation();
       });
     </script>
