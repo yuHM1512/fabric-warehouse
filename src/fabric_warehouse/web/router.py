@@ -638,7 +638,7 @@ def issue_home(request: Request, db: Session = Depends(get_db)):
 
     df = parse_date(date_from)
     dt = parse_date(date_to)
-    issues = list_issue_history(db, date_from=df, date_to=dt) if tab == "history" else []
+    issues = list_issue_history(db, date_from=df, date_to=dt, nhu_cau=nhu_cau) if tab == "history" else []
     counts = count_issue_lines(db, issue_ids=[i.id for i in issues]) if issues else {}
 
     return templates.TemplateResponse(
@@ -649,6 +649,8 @@ def issue_home(request: Request, db: Session = Depends(get_db)):
             "tab": tab,
             "nhu_cau": nhu_cau,
             "lot": lot,
+            "date_from": date_from,
+            "date_to": date_to,
             "nhu_cau_options": nhu_cau_options,
             "lot_options": lot_options,
             "candidates": candidates,

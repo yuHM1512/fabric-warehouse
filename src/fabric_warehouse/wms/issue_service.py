@@ -124,6 +124,7 @@ def list_issue_history(
     *,
     date_from: date | None,
     date_to: date | None,
+    nhu_cau: str | None = None,
     limit: int = 1000,
 ) -> list[Issue]:
     q = db.query(Issue).order_by(Issue.ngay_xuat.desc(), Issue.id.desc())
@@ -131,6 +132,8 @@ def list_issue_history(
         q = q.filter(Issue.ngay_xuat >= date_from)
     if date_to:
         q = q.filter(Issue.ngay_xuat <= date_to)
+    if nhu_cau:
+        q = q.filter(Issue.nhu_cau.ilike(f"%{nhu_cau}%"))
     return q.limit(limit).all()
 
 
