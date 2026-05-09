@@ -357,10 +357,7 @@ def inbound_status_by_nhu_cau(
     )
 
     vi_tri_agg = func.string_agg(func.distinct(LocationAssignment.vi_tri), ", ").filter(
-        and_(
-            LocationAssignment.vi_tri.isnot(None),
-            LocationAssignment.trang_thai.in_(_DANG_LUU_VARIANTS),
-        )
+        LocationAssignment.vi_tri.isnot(None)
     )
 
     q = (
