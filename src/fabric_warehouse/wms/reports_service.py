@@ -302,11 +302,11 @@ def ton_kho_by_age_split(
 class InboundLotRow:
     nhu_cau: str
     lot: str
+    vi_tri: str | None
     so_cay: int
     da_nhap_cay: int
     tong_yds: float
     da_nhap_yds: float
-    vi_tri_list: str | None
     is_complete: bool
 
 
@@ -319,6 +319,10 @@ class InboundDemandGroup:
     @property
     def rowspan(self) -> int:
         return len(self.lots)
+
+    @property
+    def lot_count(self) -> int:
+        return len({row.lot for row in self.lots})
 
 def inbound_status_by_nhu_cau(
     db: Session,
@@ -341,14 +345,11 @@ def inbound_status_by_nhu_cau(
     )
     rl = db.query(ReceiptLine).subquery()
 
-    vi_tri_agg = func.string_agg(func.distinct(LocationAssignment.vi_tri), ", ").filter(
-        LocationAssignment.vi_tri.isnot(None)
-    )
-
     q = (
         db.query(
             rr.c.nhu_cau,
             rr.c.lot,
+            LocationAssignment.vi_tri.label("vi_tri"),
             func.count(rr.c.ma_cay).label("so_cay"),
             func.count(func.distinct(StockCheck.ma_cay)).label("da_nhap_cay"),
             func.coalesce(func.sum(func.coalesce(rl.c.yards, 0)), 0).label("tong_yds"),
@@ -356,7 +357,6 @@ def inbound_status_by_nhu_cau(
                 func.sum(func.coalesce(StockCheck.actual_yards, StockCheck.expected_yards, 0)),
                 0,
             ).label("da_nhap_yds"),
-            vi_tri_agg.label("vi_tri_list"),
         )
         .join(rl, rl.c.id == rr.c.rid)
         .outerjoin(
@@ -380,25 +380,22 @@ def inbound_status_by_nhu_cau(
         q = q.filter(rr.c.nhu_cau.ilike(f"%{nhu_cau}%"))
 
     rows = (
-        q.group_by(rr.c.nhu_cau, rr.c.lot)
-        .order_by(rr.c.nhu_cau, rr.c.lot)
+        q.group_by(rr.c.nhu_cau, rr.c.lot, LocationAssignment.vi_tri)
+        .order_by(rr.c.nhu_cau, rr.c.lot, LocationAssignment.vi_tri.nullsfirst())
         .limit(int(limit_lots))
         .all()
     )
 
     grouped: dict[str, dict[str, object]] = {}
-    for nc, lt, so_cay, da_nhap_cay, tong_yds, da_nhap_yds, vi_tri_list in rows:
+    for nc, lt, vi_tri, so_cay, da_nhap_cay, tong_yds, da_nhap_yds in rows:
         nc_s = str(nc or "").strip() or "(Khong xac dinh)"
         lt_s = str(lt or "").strip() or "(Khong xac dinh)"
+        vi_tri_s = str(vi_tri).strip() if vi_tri else None
         so_cay_i = int(so_cay or 0)
         da_nhap_cay_i = int(da_nhap_cay or 0)
         tong_yds_f = float(tong_yds or 0)
         da_nhap_yds_f = float(da_nhap_yds or 0)
-        lot_complete = (
-            so_cay_i > 0
-            and da_nhap_cay_i >= so_cay_i
-            and da_nhap_yds_f + 1e-6 >= tong_yds_f
-        )
+        lot_complete = so_cay_i > 0 and da_nhap_cay_i >= so_cay_i and da_nhap_yds_f + 1e-6 >= tong_yds_f
         payload = grouped.setdefault(
             nc_s,
             {
@@ -413,11 +410,11 @@ def inbound_status_by_nhu_cau(
             InboundLotRow(
                 nhu_cau=nc_s,
                 lot=lt_s,
+                vi_tri=vi_tri_s,
                 so_cay=so_cay_i,
                 da_nhap_cay=da_nhap_cay_i,
                 tong_yds=tong_yds_f,
                 da_nhap_yds=da_nhap_yds_f,
-                vi_tri_list=(str(vi_tri_list).strip() if vi_tri_list else None),
                 is_complete=lot_complete,
             )
         )

@@ -76,7 +76,7 @@
             {% for g in inbound_groups %}
               {% set total_yds = g.lots | sum(attribute='tong_yds') %}
               {% set done_yds = g.lots | sum(attribute='da_nhap_yds') %}
-              {% set lot_count = g.lots | length %}
+              {% set lot_count = g.lot_count %}
               {% set acc_id = "inbound_" ~ loop.index %}
 
               <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5">
@@ -125,17 +125,10 @@
                             <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0 {% if it.is_complete %}opacity-45{% endif %}">
                               <td class="px-6 py-4 font-semibold text-on-surface">{{ it.lot }}</td>
                               <td class="px-6 py-4">
-                                {% if it.vi_tri_list %}
-                                  <div class="flex flex-wrap gap-2">
-                                    {% for vt in it.vi_tri_list.split(',') %}
-                                      {% set vtt = vt.strip() %}
-                                      {% if vtt %}
-                                        <span class="inline-flex items-center rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold text-white">
-                                          {{ vtt }}
-                                        </span>
-                                      {% endif %}
-                                    {% endfor %}
-                                  </div>
+                                {% if it.vi_tri %}
+                                  <span class="inline-flex items-center rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold text-white">
+                                    {{ it.vi_tri }}
+                                  </span>
                                 {% else %}
                                   <span class="text-xs text-on-surface-variant">—</span>
                                 {% endif %}
