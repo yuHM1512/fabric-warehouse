@@ -122,8 +122,12 @@
                         </thead>
                         <tbody>
                           {% for it in g.lots %}
+                            {% set prev_lot = g.lots[loop.index0 - 1].lot if loop.index0 > 0 else none %}
+                            {% set same_lot_rows = g.lots | selectattr('lot', 'equalto', it.lot) | list %}
                             <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0 {% if it.is_complete %}opacity-45{% endif %}">
-                              <td class="px-6 py-4 font-semibold text-on-surface">{{ it.lot }}</td>
+                              {% if it.lot != prev_lot %}
+                                <td class="px-6 py-4 font-semibold text-on-surface align-top" rowspan="{{ same_lot_rows|length }}">{{ it.lot }}</td>
+                              {% endif %}
                               <td class="px-6 py-4">
                                 {% if it.vi_tri %}
                                   <span class="inline-flex items-center rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold text-white">
