@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 from io import BytesIO
+from pathlib import Path
 
 from datetime import date
 
@@ -103,9 +104,12 @@ from fabric_warehouse.web.jinja_filters import clean_note, fmt_date_dmy, fmt_gmt
 from fabric_warehouse.config import settings
 from fabric_warehouse.db.models.user import User
 
+_WEB_DIR = Path(__file__).resolve().parent
+_TEMPLATES_DIR = _WEB_DIR / "templates"
+
 templates = Jinja2Templates(
     env=Environment(
-        loader=FileSystemLoader("src/fabric_warehouse/web/templates", encoding="utf-8"),
+        loader=FileSystemLoader(str(_TEMPLATES_DIR), encoding="utf-8"),
         autoescape=select_autoescape(["html", "xml"]),
     )
 )

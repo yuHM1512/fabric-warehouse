@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -22,12 +23,17 @@ from fabric_warehouse.wms.pallet_metrics import build_pallet_layout, compute_pal
 from fabric_warehouse.web.router import router as web_router
 from fabric_warehouse.web.jinja_filters import clean_note, fmt_date_dmy, fmt_gmt7
 
+_APP_DIR = Path(__file__).resolve().parent
+_WEB_DIR = _APP_DIR / "web"
+_STATIC_DIR = _WEB_DIR / "static"
+_TEMPLATES_DIR = _WEB_DIR / "templates"
+
 app = FastAPI(title=settings.app_name)
 app.include_router(api_router, prefix="/api")
 app.include_router(web_router)
 
-app.mount("/static", StaticFiles(directory="src/fabric_warehouse/web/static"), name="static")
-templates = Jinja2Templates(directory="src/fabric_warehouse/web/templates")
+app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
 templates.env.filters["gmt7"] = fmt_gmt7
 templates.env.filters["clean_note"] = clean_note
 templates.env.filters["dmy"] = fmt_date_dmy
