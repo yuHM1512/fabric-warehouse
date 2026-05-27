@@ -2,18 +2,25 @@
 
 {% block content %}
 <div class="space-y-12 pb-16">
-  <!-- Hero Section -->
   <section class="relative bg-gradient-to-br from-primary to-primary-container rounded-[2rem] overflow-hidden p-10 md:p-16 text-white min-h-[300px] flex flex-col justify-end" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
     <div class="absolute -top-32 -right-32 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
     <div class="absolute bottom-[-100px] left-[-50px] w-80 h-80 bg-black/10 rounded-full blur-3xl pointer-events-none"></div>
     <div class="relative z-10 w-full flex flex-col md:flex-row md:items-end justify-between gap-6">
-      <div class="max-w-2xl">
+      <div class="max-w-3xl">
         <div class="text-[12px] font-bold uppercase tracking-widest text-white/70 mb-4">Quản Lý Dữ Liệu</div>
         <h1 class="text-[40px] md:text-[56px] font-headline font-extrabold leading-tight tracking-[-0.02em]">
-          Phiếu <br/>Nhập Kho
+          {% if tab == "gon" %}
+            Khai Báo<br />Dữ Liệu Gòn
+          {% else %}
+            Phiếu<br />Nhập Kho
+          {% endif %}
         </h1>
         <p class="mt-6 text-lg text-white/90 leading-[1.6]">
-          Tải lên file Excel để tạo phiếu nhập kho. Hệ thống tự động nhận diện <span class="font-bold bg-white/20 px-2 py-1 rounded text-sm uppercase tracking-widest text-white">Mã Cây</span> và sinh dữ liệu cho bảng treo / kiểm kho.
+          {% if tab == "gon" %}
+            Nhập tay dữ liệu riêng cho <span class="font-bold bg-white/20 px-2 py-1 rounded text-sm uppercase tracking-widest text-white">Gòn</span>, không đi qua file Excel và lưu ở bảng tách biệt với vải thường.
+          {% else %}
+            Tải lên file Excel để tạo phiếu nhập kho. Hệ thống tự động nhận diện <span class="font-bold bg-white/20 px-2 py-1 rounded text-sm uppercase tracking-widest text-white">Mã Cây</span> và sinh dữ liệu cho bảng treo / kiểm kho.
+          {% endif %}
         </p>
       </div>
       <a href="/wms" class="bg-white/20 hover:bg-white/30 backdrop-blur-md transition-all rounded-xl px-8 py-4 border border-white/10 font-bold tracking-wide uppercase text-xs flex items-center gap-2 self-start md:self-auto shadow-[0_8px_32px_rgba(31,38,135,0.1)]">
@@ -23,85 +30,236 @@
     </div>
   </section>
 
-  <!-- Upload Section -->
-  <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10 relative overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
-    <h3 class="text-[20px] font-extrabold font-headline mb-6">Tải Lên Dữ Liệu</h3>
-    <form method="post" action="/wms/receipts/import" enctype="multipart/form-data" class="grid grid-cols-1 gap-8 md:grid-cols-3 md:items-end relative z-10">
-      <div class="md:col-span-2">
-        <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3">Chọn File Excel</label>
-        <input
-          name="file"
-          type="file"
-          accept=".xlsx,.xls"
-          required
-          class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm text-on-surface font-semibold file:mr-4 file:rounded-lg file:border-0 file:bg-primary/10 file:px-5 file:py-2 file:text-xs file:font-bold file:uppercase file:tracking-widest file:text-primary file:cursor-pointer hover:file:bg-primary/20 transition-all"
-        />
-        <div class="mt-3 flex items-start gap-2 text-xs text-on-surface-variant/80">
-          <span class="material-symbols-outlined text-[16px] text-primary/70">info</span>
-          <p>File báo cáo Excel sẽ được auto-detect header từ cột <span class="font-bold text-on-surface">Mã cây</span>. Hỗ trợ <span class="font-bold">.xlsx</span> và <span class="font-bold">.xls</span>.</p>
-        </div>
+  <section class="bg-surface-container-lowest rounded-[2rem] p-3 md:p-4 cloud-shadow">
+    <div class="inline-flex flex-wrap gap-2">
+      <a href="/wms/receipts" class="{% if tab == 'regular' %}bg-primary text-white{% else %}bg-surface-container-low text-on-surface-variant hover:text-primary{% endif %} rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors">
+        Phiếu nhập vải thường
+      </a>
+      <a href="/wms/receipts/gon" class="{% if tab == 'gon' %}bg-primary text-white{% else %}bg-surface-container-low text-on-surface-variant hover:text-primary{% endif %} rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors">
+        Khai báo dữ liệu gòn
+      </a>
+    </div>
+  </section>
+
+  {% if saved %}
+    <div class="rounded-2xl bg-primary/10 px-6 py-4 text-sm text-primary cloud-shadow">
+      {% if tab == "gon" %}
+        Đã lưu dữ liệu gòn.
+      {% else %}
+        Đã cập nhật dữ liệu.
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if tab == "gon" and gon_error %}
+    <div class="rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container cloud-shadow">
+      <div class="font-extrabold font-headline">Chưa tạo bảng dữ liệu gòn trong DB</div>
+      <div class="mt-1 text-xs">
+        Hãy chạy migration: <code class="font-mono font-bold">.\scripts\alembic.ps1 upgrade head</code>
       </div>
-      <div class="flex items-center gap-3">
+    </div>
+  {% endif %}
+
+  {% if tab == "gon" %}
+    <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10 relative overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+      <div class="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div class="max-w-2xl">
+          <h3 class="text-[20px] font-extrabold font-headline mb-3">Nguồn Dữ Liệu Gòn</h3>
+          <p class="text-sm text-on-surface-variant leading-6">
+            Tạo bản ghi gòn theo biểu mẫu riêng để phục vụ tab in tại <a href="/wms/hanging/gon" class="font-bold text-primary hover:opacity-80">/wms/hanging/gon</a>.
+          </p>
+        </div>
         <button
-          type="submit"
+          type="button"
+          onclick="openGonModal()"
           class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-8 py-3 text-sm font-bold text-white shadow-[0_8px_32px_rgba(0,64,161,0.2)] hover:opacity-95 transition-opacity uppercase tracking-widest"
         >
-          <span class="material-symbols-outlined text-base">upload_file</span>
-          Import
+          <span class="material-symbols-outlined text-base">add_circle</span>
+          Thêm dữ liệu gòn
         </button>
-        <a
-          href="/wms/receipts"
-          class="inline-flex items-center gap-2 rounded-xl bg-transparent border border-black/5 px-6 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors"
-        >
-          <span class="material-symbols-outlined text-[16px]">refresh</span>
-          Reset
-        </a>
       </div>
-    </form>
-  </section>
+    </section>
 
-  <!-- Receipts Table -->
-  <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
-    <div class="px-8 md:px-10 py-8 border-b border-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <h3 class="text-[24px] font-extrabold font-headline leading-tight tracking-[-0.01em]">Danh Sách Phiếu</h3>
-      <div class="bg-surface-container-low px-4 py-2 rounded-lg text-xs font-bold text-on-surface-variant uppercase tracking-widest">
-        {{ receipts|length }} phiếu gần nhất
+    <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+      <div class="px-8 md:px-10 py-8 border-b border-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h3 class="text-[24px] font-extrabold font-headline leading-tight tracking-[-0.01em]">Danh Sách Gòn</h3>
+        <div class="bg-surface-container-low px-4 py-2 rounded-lg text-xs font-bold text-on-surface-variant uppercase tracking-widest">
+          {{ gon_receipts|length }} bản ghi gần nhất
+        </div>
       </div>
-    </div>
 
-    <div class="overflow-x-auto p-4 md:p-6">
-      <table class="min-w-full text-sm">
-        <thead>
-          <tr class="text-left border-b border-black/5">
-            <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">ID Phiếu</th>
-            <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Ngày Phiếu</th>
-            <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Tên File Nguồn</th>
-            <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Hành Động</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in receipts %}
-            <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0 rounded-xl">
-              <td class="px-4 py-3 font-semibold text-primary">#{{ r.id }}</td>
-              <td class="px-4 py-3 text-on-surface text-sm">{{ r.receipt_date or "—" }}</td>
-              <td class="px-4 py-3 truncate max-w-[520px] text-on-surface-variant">{{ r.source_filename }}</td>
-              <td class="px-4 py-3 text-right whitespace-nowrap">
-                <a class="inline-flex items-center justify-center rounded-lg bg-surface hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors border border-black/5 hover:border-primary/20 px-4 py-2 text-xs font-bold uppercase tracking-widest gap-2 shadow-sm" href="/wms/receipts/{{ r.id }}">
-                  <span class="material-symbols-outlined text-[16px]">visibility</span>
-                  Mở
-                </a>
-                <a class="ml-2 inline-flex items-center justify-center rounded-lg bg-surface hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors border border-black/5 hover:border-primary/20 px-4 py-2 text-xs font-bold uppercase tracking-widest gap-2 shadow-sm" href="/wms/receipts/{{ r.id }}/pdf">
-                  <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
-                  PDF
-                </a>
-              </td>
+      <div class="overflow-x-auto p-4 md:p-6">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left border-b border-black/5">
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">ID</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Nhà cung cấp</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Tên gòn</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Quy cách</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mã hàng</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mùa</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Ngày nhập</th>
             </tr>
-          {% else %}
-            <tr><td class="px-4 py-16 text-center text-on-surface-variant text-base" colspan="4">Chưa có phiếu nhập kho. Hãy tải lên file Excel để bắt đầu.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {% for item in gon_receipts %}
+              <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0 rounded-xl">
+                <td class="px-4 py-3 font-semibold text-primary">#{{ item.id }}</td>
+                <td class="px-4 py-3 text-on-surface">{{ item.nha_cung_cap or "—" }}</td>
+                <td class="px-4 py-3 text-on-surface font-semibold">{{ item.ten_gon }}</td>
+                <td class="px-4 py-3 text-on-surface-variant">{{ item.quy_cach or "—" }}</td>
+                <td class="px-4 py-3 text-on-surface-variant">{{ item.ma_hang or "—" }}</td>
+                <td class="px-4 py-3 text-on-surface-variant">{{ item.mua or "—" }}</td>
+                <td class="px-4 py-3 text-on-surface-variant">{{ item.ngay_nhap|dmy if item.ngay_nhap else "—" }}</td>
+              </tr>
+            {% else %}
+              <tr><td class="px-4 py-16 text-center text-on-surface-variant text-base" colspan="7">Chưa có dữ liệu gòn. Hãy dùng nút <span class="font-semibold text-on-surface">Thêm dữ liệu gòn</span> để bắt đầu.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div id="gonModal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-black/30" onclick="closeGonModal()"></div>
+      <div class="relative mx-auto max-w-3xl px-6 py-10">
+        <div class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-8">
+          <div class="flex items-start justify-between gap-6">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Khai báo dữ liệu gòn</div>
+              <h3 class="mt-2 text-2xl font-extrabold font-headline">Nhập thông tin gòn</h3>
+            </div>
+            <button type="button" onclick="closeGonModal()" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant hover:text-primary">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <form method="post" action="/wms/receipts/gon" class="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
+            <label class="block">
+              <span class="mb-2 block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Nhà cung cấp</span>
+              <input name="nha_cung_cap" type="text" class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold" />
+            </label>
+            <label class="block">
+              <span class="mb-2 block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tên gòn</span>
+              <input name="ten_gon" type="text" required class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold" />
+            </label>
+            <label class="block">
+              <span class="mb-2 block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Quy cách</span>
+              <input name="quy_cach" type="text" class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold" />
+            </label>
+            <label class="block">
+              <span class="mb-2 block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Mã hàng</span>
+              <input name="ma_hang" type="text" class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold" />
+            </label>
+            <label class="block">
+              <span class="mb-2 block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Mùa</span>
+              <input name="mua" type="text" class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold" />
+            </label>
+            <label class="block">
+              <span class="mb-2 block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Ngày nhập</span>
+              <input name="ngay_nhap" type="date" class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold" />
+            </label>
+            <div class="md:col-span-2 flex items-center justify-end gap-3 pt-2">
+              <button type="button" onclick="closeGonModal()" class="inline-flex items-center gap-2 rounded-xl border border-black/5 px-6 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors">
+                Hủy
+              </button>
+              <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-6 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-[0_8px_32px_rgba(0,64,161,0.2)]">
+                Lưu dữ liệu gòn
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
-  </section>
+
+    <script>
+      function openGonModal() {
+        document.getElementById("gonModal").classList.remove("hidden");
+      }
+
+      function closeGonModal() {
+        document.getElementById("gonModal").classList.add("hidden");
+      }
+    </script>
+  {% else %}
+    <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10 relative overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+      <h3 class="text-[20px] font-extrabold font-headline mb-6">Tải Lên Dữ Liệu</h3>
+      <form method="post" action="/wms/receipts/import" enctype="multipart/form-data" class="grid grid-cols-1 gap-8 md:grid-cols-3 md:items-end relative z-10">
+        <div class="md:col-span-2">
+          <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3">Chọn File Excel</label>
+          <input
+            name="file"
+            type="file"
+            accept=".xlsx,.xls"
+            required
+            class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm text-on-surface font-semibold file:mr-4 file:rounded-lg file:border-0 file:bg-primary/10 file:px-5 file:py-2 file:text-xs file:font-bold file:uppercase file:tracking-widest file:text-primary file:cursor-pointer hover:file:bg-primary/20 transition-all"
+          />
+          <div class="mt-3 flex items-start gap-2 text-xs text-on-surface-variant/80">
+            <span class="material-symbols-outlined text-[16px] text-primary/70">info</span>
+            <p>File báo cáo Excel sẽ được auto-detect header từ cột <span class="font-bold text-on-surface">Mã cây</span>. Hỗ trợ <span class="font-bold">.xlsx</span> và <span class="font-bold">.xls</span>.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            type="submit"
+            class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-8 py-3 text-sm font-bold text-white shadow-[0_8px_32px_rgba(0,64,161,0.2)] hover:opacity-95 transition-opacity uppercase tracking-widest"
+          >
+            <span class="material-symbols-outlined text-base">upload_file</span>
+            Import
+          </button>
+          <a
+            href="/wms/receipts"
+            class="inline-flex items-center gap-2 rounded-xl bg-transparent border border-black/5 px-6 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors"
+          >
+            <span class="material-symbols-outlined text-[16px]">refresh</span>
+            Reset
+          </a>
+        </div>
+      </form>
+    </section>
+
+    <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+      <div class="px-8 md:px-10 py-8 border-b border-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h3 class="text-[24px] font-extrabold font-headline leading-tight tracking-[-0.01em]">Danh Sách Phiếu</h3>
+        <div class="bg-surface-container-low px-4 py-2 rounded-lg text-xs font-bold text-on-surface-variant uppercase tracking-widest">
+          {{ receipts|length }} phiếu gần nhất
+        </div>
+      </div>
+
+      <div class="overflow-x-auto p-4 md:p-6">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left border-b border-black/5">
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">ID Phiếu</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Ngày Phiếu</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Tên File Nguồn</th>
+              <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Hành Động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in receipts %}
+              <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0 rounded-xl">
+                <td class="px-4 py-3 font-semibold text-primary">#{{ r.id }}</td>
+                <td class="px-4 py-3 text-on-surface text-sm">{{ r.receipt_date or "—" }}</td>
+                <td class="px-4 py-3 truncate max-w-[520px] text-on-surface-variant">{{ r.source_filename }}</td>
+                <td class="px-4 py-3 text-right whitespace-nowrap">
+                  <a class="inline-flex items-center justify-center rounded-lg bg-surface hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors border border-black/5 hover:border-primary/20 px-4 py-2 text-xs font-bold uppercase tracking-widest gap-2 shadow-sm" href="/wms/receipts/{{ r.id }}">
+                    <span class="material-symbols-outlined text-[16px]">visibility</span>
+                    Mở
+                  </a>
+                  <a class="ml-2 inline-flex items-center justify-center rounded-lg bg-surface hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors border border-black/5 hover:border-primary/20 px-4 py-2 text-xs font-bold uppercase tracking-widest gap-2 shadow-sm" href="/wms/receipts/{{ r.id }}/pdf">
+                    <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                    PDF
+                  </a>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td class="px-4 py-16 text-center text-on-surface-variant text-base" colspan="4">Chưa có phiếu nhập kho. Hãy tải lên file Excel để bắt đầu.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
 </div>
 {% endblock %}

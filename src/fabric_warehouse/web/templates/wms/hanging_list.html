@@ -3,308 +3,554 @@
 {% block content %}
 <div class="space-y-12 pb-16">
   <div id="hanging-ajax">
-  <!-- Hero Section -->
-  <section class="relative bg-gradient-to-br from-primary to-primary-container rounded-[2rem] overflow-hidden p-10 md:p-16 text-white min-h-[320px] flex flex-col justify-end" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
-    <div class="absolute -top-32 -right-32 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute bottom-[-100px] left-[-50px] w-80 h-80 bg-black/10 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="relative z-10 w-full flex flex-col md:flex-row md:items-end justify-between gap-6">
-      <div class="max-w-2xl">
-        <div class="text-[12px] font-bold uppercase tracking-widest text-white/70 mb-4">Quản Lý Nhãn</div>
-        <h1 class="text-[40px] md:text-[56px] font-headline font-extrabold leading-tight tracking-[-0.02em]">
-          Dữ Liệu<br/>Bảng Treo
-        </h1>
-        <p class="mt-6 text-lg text-white/90 leading-[1.6]">
-          Mỗi bảng treo tương ứng một <span class="font-bold text-white uppercase tracking-widest text-sm bg-white/20 px-2 py-1 rounded">Lot</span> nhập khẩu. Phục vụ việc in ấn thẻ bài trên cây vải trước khi đưa lên kệ.
-        </p>
+    <section class="relative bg-gradient-to-br from-primary to-primary-container rounded-[2rem] overflow-hidden p-10 md:p-16 text-white min-h-[320px] flex flex-col justify-end" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+      <div class="absolute -top-32 -right-32 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute bottom-[-100px] left-[-50px] w-80 h-80 bg-black/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="relative z-10 w-full flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div class="max-w-2xl">
+          <div class="text-[12px] font-bold uppercase tracking-widest text-white/70 mb-4">Quản Lý Nhãn</div>
+          <h1 class="text-[40px] md:text-[56px] font-headline font-extrabold leading-tight tracking-[-0.02em]">
+            {% if tab == "gon" %}
+              In<br />Bảng Treo Gòn
+            {% else %}
+              Dữ Liệu<br />Bảng Treo
+            {% endif %}
+          </h1>
+          <p class="mt-6 text-lg text-white/90 leading-[1.6]">
+            {% if tab == "gon" %}
+              Dùng dữ liệu gòn đã khai báo ở <span class="font-bold text-white uppercase tracking-widest text-sm bg-white/20 px-2 py-1 rounded">/wms/receipts/gon</span> để render mẫu in tạm thời riêng cho gòn.
+            {% else %}
+              Mỗi bảng treo tương ứng một <span class="font-bold text-white uppercase tracking-widest text-sm bg-white/20 px-2 py-1 rounded">Lot</span> nhập khẩu. Phục vụ việc in ấn thẻ bài trên cây vải trước khi đưa lên kệ.
+            {% endif %}
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="/wms/receipts{% if tab == 'gon' %}/gon{% endif %}" class="bg-white/10 hover:bg-white/20 backdrop-blur-md transition-all rounded-xl px-6 py-3 border border-white/10 font-bold tracking-wide uppercase text-xs flex items-center justify-center gap-2">
+            Phiếu
+          </a>
+          <a href="/guide" class="bg-white/20 hover:bg-white/30 backdrop-blur-md transition-all rounded-xl px-6 py-3 border border-white/10 font-bold tracking-wide uppercase text-xs flex items-center justify-center gap-2 shadow-[0_8px_32px_rgba(31,38,135,0.1)]">
+            <span class="material-symbols-outlined text-sm">menu_book</span>
+            Hướng dẫn
+          </a>
+        </div>
       </div>
-      <div class="flex items-center gap-3">
-        <a href="/wms/receipts" class="bg-white/10 hover:bg-white/20 backdrop-blur-md transition-all rounded-xl px-6 py-3 border border-white/10 font-bold tracking-wide uppercase text-xs flex items-center justify-center gap-2">
-          Phiếu
+    </section>
+
+    <section class="bg-surface-container-lowest rounded-[2rem] p-3 md:p-4 cloud-shadow">
+      <div class="inline-flex flex-wrap gap-2">
+        <a href="/wms/hanging" class="{% if tab == 'regular' %}bg-primary text-white{% else %}bg-surface-container-low text-on-surface-variant hover:text-primary{% endif %} rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors">
+          Bảng treo thường
         </a>
-        <a href="/guide" class="bg-white/20 hover:bg-white/30 backdrop-blur-md transition-all rounded-xl px-6 py-3 border border-white/10 font-bold tracking-wide uppercase text-xs flex items-center justify-center gap-2 shadow-[0_8px_32px_rgba(31,38,135,0.1)]">
-          <span class="material-symbols-outlined text-sm">menu_book</span>
-          Hướng dẫn
-        </a>
-      </div>
-    </div>
-  </section>
-
-  {% if error %}
-    <div class="rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container cloud-shadow">
-      <div class="font-extrabold font-headline">Chưa tạo bảng trong DB</div>
-      <div class="mt-1 text-xs">
-        Hãy chạy migration: <code class="font-mono font-bold">.\scripts\alembic.ps1 upgrade head</code>
-      </div>
-    </div>
-  {% endif %}
-
-  <!-- Control Panel -->
-  <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10 relative overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
-    <form
-      id="filterForm"
-      class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between relative z-10"
-      method="get"
-      action="/wms/hanging"
-      data-ajax-filter
-      data-ajax-target="#hanging-ajax"
-      data-ajax-debounce="100"
-    >
-      <div class="flex-1 max-w-sm">
-        <label for="nhu_cau" class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3">Lọc Theo Nhu Cầu</label>
-        <select
-          id="nhu_cau"
-          name="nhu_cau"
-          class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all"
-        >
-          <option value="" {% if not nhu_cau %}selected{% endif %}>Tất cả nhu cầu</option>
-          {% for nc in nhu_cau_options %}
-            <option value="{{ nc }}" {% if nhu_cau == nc %}selected{% endif %}>{{ nc }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors" onclick="selectAll(true)">
-          Chọn hết
-        </button>
-        <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors" onclick="selectAll(false)">
-          Bỏ chọn
-        </button>
-        <button
-          type="button"
-          class="rounded-xl bg-primary/10 border border-primary/10 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary/20 transition-colors"
-          onclick="printSelected()"
-        >
-          In (Đã chọn)
-        </button>
-        <button
-          type="button"
-          class="rounded-xl bg-secondary/10 border border-secondary/10 px-5 py-3 text-xs font-bold uppercase tracking-widest text-secondary hover:bg-secondary/20 transition-colors"
-          onclick="mergeSelected()"
-        >
-          Gộp bảng treo
-        </button>
-        <a
-          class="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white bg-gradient-to-br from-primary to-primary-container shadow-[0_8px_32px_rgba(0,64,161,0.2)] hover:opacity-95 transition-opacity uppercase tracking-widest"
-          href="/wms/hanging/print{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}"
-          target="_blank"
-          rel="noopener"
-        >
-          <span class="material-symbols-outlined text-base">print</span>
-          In toàn bộ
+        <a href="/wms/hanging/gon" class="{% if tab == 'gon' %}bg-primary text-white{% else %}bg-surface-container-low text-on-surface-variant hover:text-primary{% endif %} rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors">
+          In gòn
         </a>
       </div>
-    </form>
-    <div class="mt-4 flex items-start gap-2 text-xs text-on-surface-variant/80 relative z-10">
-      <span class="material-symbols-outlined text-[16px] text-primary/70">print</span>
-      <p>Preview in ấn tối ưu cho giấy A4 khổ ngang (2 bảng treo / trang).</p>
-    </div>
-  </section>
+    </section>
 
-  <!-- Data Display -->
-  <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
-    <div class="px-8 md:px-10 py-8 border-b border-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <h2 class="text-[28px] font-extrabold font-headline text-on-surface tracking-tight">Danh sách in</h2>
-      <div class="bg-surface-container-low px-4 py-2 rounded-lg text-xs font-bold text-on-surface-variant uppercase tracking-widest">
-        {{ tags|length }} bảng treo đang hiển thị
-      </div>
-    </div>
+    {% if tab == "gon" %}
+      {% if error %}
+        <div class="rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container cloud-shadow">
+          <div class="font-extrabold font-headline">Chưa tạo bảng dữ liệu gòn trong DB</div>
+          <div class="mt-1 text-xs">
+            Hãy chạy migration: <code class="font-mono font-bold">.\scripts\alembic.ps1 upgrade head</code>
+          </div>
+        </div>
+      {% endif %}
 
-    <div class="overflow-x-auto p-4 md:p-6">
-      <table class="min-w-full text-xs">
-        <thead>
-          <tr class="text-left border-b border-black/5">
-            <th class="px-4 py-4 w-10"></th>
-            <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">ID Mã</th>
-            <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Ngày nhập</th>
-            <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Customer</th>
-            <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Ngày Xuất</th>
-            <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Nhu cầu</th>
-            <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Lot</th>
-            <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mã hàng</th>
-            <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for t in tags %}
-            <tr id="tag-row-{{ t.id }}" class="group hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0 rounded-xl">
-              <td class="px-4 py-3">
-                <input class="tag-checkbox h-5 w-5 rounded border-black/20 text-primary focus:ring-primary/50" type="checkbox" value="{{ t.id }}" />
-              </td>
-              <td class="px-4 py-3 font-bold text-on-surface text-sm">#{{ t.id }}</td>
-              <td class="px-4 py-3 text-on-surface-variant text-sm">{{ t.ngay_nhap_hang or "—" }}</td>
-              <td class="px-4 py-3 text-on-surface-variant text-sm" data-field="customer">{{ t.customer or "—" }}</td>
-              <td class="px-4 py-3 text-on-surface-variant text-sm" data-field="ngay_xuat">{{ t.ngay_xuat or "—" }}</td>
-              <td class="px-4 py-3 font-bold text-on-surface text-sm">{{ t.nhu_cau or "—" }}</td>
-              <td class="px-4 py-3 font-extrabold font-headline text-sm bg-surface rounded">{{ t.lot or "—" }}</td>
-              <td class="px-4 py-3 text-on-surface-variant text-sm">{{ t.ma_hang or "—" }}</td>
-              <td class="px-4 py-3 text-right whitespace-nowrap">
-                <a
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-surface hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors border border-black/5 hover:border-primary/20"
-                  href="/wms/hanging/print?ids={{ t.id }}"
-                  target="_blank"
-                  rel="noopener"
-                  title="Preview"
-                  aria-label="Preview"
-                >
-                  <span class="material-symbols-outlined text-[18px]">visibility</span>
-                </a>
-                <button
-                  type="button"
-                  class="js-edit-btn ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-surface hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors border border-black/5 hover:border-primary/20"
-                  data-tag-id="{{ t.id }}"
-                  title="Edit"
-                  aria-label="Edit"
-                >
-                  <span class="material-symbols-outlined text-[18px]">edit</span>
+      <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10 relative overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+        <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between relative z-10">
+          <div class="max-w-2xl">
+            <h3 class="text-[20px] font-extrabold font-headline mb-3">Dữ Liệu In Gòn</h3>
+            <p class="text-sm text-on-surface-variant leading-6">
+              Mẫu in này đang dùng layout tạm thời dựa trên mẫu vải thường, nhưng bind dữ liệu từ bảng gòn riêng.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors" onclick="selectAllGon(true)">
+              Chọn hết
+            </button>
+            <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors" onclick="selectAllGon(false)">
+              Bỏ chọn
+            </button>
+            <button type="button" class="rounded-xl bg-primary/10 border border-primary/10 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary/20 transition-colors" onclick="printSelectedGon()">
+              In (đã chọn)
+            </button>
+            <a class="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white bg-gradient-to-br from-primary to-primary-container shadow-[0_8px_32px_rgba(0,64,161,0.2)] hover:opacity-95 transition-opacity uppercase tracking-widest" href="/wms/hanging/gon/print" target="_blank" rel="noopener">
+              <span class="material-symbols-outlined text-base">print</span>
+              In toàn bộ
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+        <div class="px-8 md:px-10 py-8 border-b border-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h2 class="text-[28px] font-extrabold font-headline text-on-surface tracking-tight">Danh sách in gòn</h2>
+          <div class="bg-surface-container-low px-4 py-2 rounded-lg text-xs font-bold text-on-surface-variant uppercase tracking-widest">
+            {{ gon_items|length }} bản ghi đang hiển thị
+          </div>
+        </div>
+
+        <div class="overflow-x-auto p-4 md:p-6">
+          <table class="min-w-full text-xs">
+            <thead>
+              <tr class="text-left border-b border-black/5">
+                <th class="px-4 py-4 w-10"></th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">ID</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Nhà cung cấp</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Tên gòn</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Quy cách</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mã hàng</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mùa</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Ngày nhập</th>
+                <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in gon_items %}
+                <tr id="gon-row-{{ item.id }}" class="group hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0 rounded-xl">
+                  <td class="px-4 py-3">
+                    <input class="gon-checkbox h-5 w-5 rounded border-black/20 text-primary focus:ring-primary/50" type="checkbox" value="{{ item.id }}" />
+                  </td>
+                  <td class="px-4 py-3 font-bold text-on-surface text-sm">#{{ item.id }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm">{{ item.nha_cung_cap or "—" }}</td>
+                  <td class="px-4 py-3 font-semibold text-on-surface text-sm">{{ item.ten_gon }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm">{{ item.quy_cach or "—" }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm">{{ item.ma_hang or "—" }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm">{{ item.mua or "—" }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm" data-field="ngay_nhap">{{ item.ngay_nhap|dmy if item.ngay_nhap else "—" }}</td>
+                  <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <a
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-surface hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors border border-black/5 hover:border-primary/20"
+                      href="/wms/hanging/gon/print?ids={{ item.id }}"
+                      target="_blank"
+                      rel="noopener"
+                      title="Preview"
+                      aria-label="Preview"
+                    >
+                      <span class="material-symbols-outlined text-[18px]">visibility</span>
+                    </a>
+                    <button
+                      type="button"
+                      class="js-edit-gon-btn ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-surface hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors border border-black/5 hover:border-primary/20"
+                      data-item-id="{{ item.id }}"
+                      data-ngay-nhap="{{ item.ngay_nhap.isoformat() if item.ngay_nhap else '' }}"
+                      title="Sửa ngày nhập"
+                      aria-label="Sửa ngày nhập"
+                    >
+                      <span class="material-symbols-outlined text-[18px]">edit_calendar</span>
+                    </button>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td class="px-4 py-16 text-center text-on-surface-variant text-base" colspan="9">Chưa có dữ liệu gòn để in. Vào <a href="/wms/receipts/gon" class="font-semibold text-primary hover:opacity-80">Khai báo dữ liệu gòn</a> để tạo bản ghi.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div id="gonEditModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/30" onclick="closeGonEditModal()"></div>
+        <div class="relative mx-auto max-w-lg px-6 py-10">
+          <div class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-8">
+            <div class="flex items-start justify-between gap-6">
+              <div>
+                <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Dữ liệu gòn</div>
+                <h3 class="mt-2 text-2xl font-extrabold font-headline">Sửa ngày nhập</h3>
+              </div>
+              <button type="button" onclick="closeGonEditModal()" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant hover:text-primary">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form id="gonEditForm" class="mt-8 space-y-5">
+              <input type="hidden" name="item_id" />
+              <label class="block">
+                <span class="mb-2 block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Ngày nhập</span>
+                <input name="ngay_nhap" type="date" required class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold" />
+              </label>
+              <div data-gon-edit-error class="hidden rounded-2xl bg-error-container px-4 py-3 text-sm text-on-error-container"></div>
+              <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" onclick="closeGonEditModal()" class="inline-flex items-center gap-2 rounded-xl border border-black/5 px-6 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors">
+                  Hủy
                 </button>
-              </td>
-            </tr>
-          {% else %}
-            <tr>
-              <td class="px-4 py-16 text-center text-on-surface-variant text-base" colspan="9">Chưa tải bảng treo hoặc không có dữ liệu cho truy vấn này.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <div id="editModal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/30" onclick="closeEditModal()"></div>
-    <div class="relative mx-auto max-w-xl px-6 py-10">
-      <div class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-8">
-        <div id="editModalContent" class="min-h-[120px]"></div>
+                <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-6 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-[0_8px_32px_rgba(0,64,161,0.2)]">
+                  Lưu ngày nhập
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <script>
-    const currentNhuCau = "{{ nhu_cau|urlencode if nhu_cau else '' }}";
-
-    function selectAll(flag) {
-      document.querySelectorAll(".tag-checkbox").forEach((el) => {
-        el.checked = !!flag;
-      });
-    }
-
-    function printSelected() {
-      const ids = Array.from(document.querySelectorAll(".tag-checkbox"))
-        .filter((el) => el.checked)
-        .map((el) => el.value);
-
-      if (!ids.length) {
-        alert("Chưa chọn bảng treo nào.");
-        return;
-      }
-
-      const params = ids.map((id) => `ids=${encodeURIComponent(id)}`).join("&");
-      window.open(`/wms/hanging/print?${params}`, "_blank", "noopener");
-    }
-
-    function mergeSelected() {
-      const ids = Array.from(document.querySelectorAll(".tag-checkbox"))
-        .filter((el) => el.checked)
-        .map((el) => el.value);
-
-      if (ids.length < 2) {
-        alert("Cần chọn ít nhất 2 bảng treo để gộp.");
-        return;
-      }
-
-      const params = ids.map((id) => `ids=${encodeURIComponent(id)}`).join("&");
-      window.open(`/wms/hanging/merge-print?${params}`, "_blank", "noopener");
-    }
-
-    function closeEditModal() {
-      const modal = document.getElementById("editModal");
-      const content = document.getElementById("editModalContent");
-      modal.classList.add("hidden");
-      content.innerHTML = "";
-    }
-
-    async function openEditModal(tagId) {
-      const modal = document.getElementById("editModal");
-      const content = document.getElementById("editModalContent");
-      modal.classList.remove("hidden");
-      content.innerHTML = `
-        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Bảng treo</div>
-        <div class="mt-2 text-sm font-extrabold font-headline">Đang tải...</div>
-      `;
-
-      const query = currentNhuCau ? `?nhu_cau=${currentNhuCau}` : "";
-      const url = `/wms/hanging/${tagId}/edit/fragment` + query;
-      try {
-        const res = await fetch(url, { headers: { "X-Requested-With": "fetch" } });
-        if (!res.ok) throw new Error(await res.text());
-        content.innerHTML = await res.text();
-
-        const form = content.querySelector("form[data-edit-fragment-form]");
-        if (form) {
-          form.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            await submitEditFragmentForm(tagId, form);
+      <script>
+        function selectAllGon(flag) {
+          document.querySelectorAll(".gon-checkbox").forEach((el) => {
+            el.checked = !!flag;
           });
         }
-      } catch (e) {
-        content.innerHTML = `
-          <div class="mt-1 rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container">
-            <div class="font-extrabold font-headline">Không tải được form</div>
-            <div class="mt-1 text-xs">${String(e || "")}</div>
+
+        function printSelectedGon() {
+          const ids = Array.from(document.querySelectorAll(".gon-checkbox"))
+            .filter((el) => el.checked)
+            .map((el) => el.value);
+
+          if (!ids.length) {
+            alert("Chưa chọn dữ liệu gòn nào.");
+            return;
+          }
+
+          const params = ids.map((id) => `ids=${encodeURIComponent(id)}`).join("&");
+          window.open(`/wms/hanging/gon/print?${params}`, "_blank", "noopener");
+        }
+
+        function closeGonEditModal() {
+          const modal = document.getElementById("gonEditModal");
+          const form = document.getElementById("gonEditForm");
+          const errorBox = form.querySelector("[data-gon-edit-error]");
+          modal.classList.add("hidden");
+          form.reset();
+          errorBox.textContent = "";
+          errorBox.classList.add("hidden");
+        }
+
+        function openGonEditModal(itemId, ngayNhap) {
+          const modal = document.getElementById("gonEditModal");
+          const form = document.getElementById("gonEditForm");
+          form.elements["item_id"].value = itemId;
+          form.elements["ngay_nhap"].value = ngayNhap || "";
+          modal.classList.remove("hidden");
+        }
+
+        async function submitGonEditForm(form) {
+          const submitBtn = form.querySelector("button[type='submit']");
+          const itemId = form.elements["item_id"].value;
+          const errorBox = form.querySelector("[data-gon-edit-error]");
+          if (submitBtn) submitBtn.disabled = true;
+          errorBox.textContent = "";
+          errorBox.classList.add("hidden");
+
+          try {
+            const formData = new FormData();
+            formData.append("ngay_nhap", form.elements["ngay_nhap"].value);
+
+            const res = await fetch(`/wms/hanging/gon/${itemId}/edit-date`, {
+              method: "POST",
+              body: formData,
+              headers: { "X-Requested-With": "fetch" },
+            });
+            const payload = await res.json();
+            if (!res.ok || !payload.ok) throw new Error(payload.error || "Lỗi lưu.");
+
+            const row = document.getElementById(`gon-row-${itemId}`);
+            if (row) {
+              const dateCell = row.querySelector("[data-field='ngay_nhap']");
+              const editBtn = row.querySelector(".js-edit-gon-btn");
+              if (dateCell) dateCell.textContent = payload.ngay_nhap || "";
+              if (editBtn) editBtn.dataset.ngayNhap = payload.ngay_nhap || "";
+            }
+            closeGonEditModal();
+          } catch (e) {
+            errorBox.textContent = String(e || "Lỗi lưu.");
+            errorBox.classList.remove("hidden");
+          } finally {
+            if (submitBtn) submitBtn.disabled = false;
+          }
+        }
+
+        const gonEditForm = document.getElementById("gonEditForm");
+        if (gonEditForm) {
+          gonEditForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            await submitGonEditForm(gonEditForm);
+          });
+        }
+
+        const gonRoot = document.getElementById("hanging-ajax");
+        if (gonRoot) gonRoot.addEventListener("click", (e) => {
+          const btn = e.target.closest(".js-edit-gon-btn");
+          if (!btn) return;
+          openGonEditModal(btn.dataset.itemId, btn.dataset.ngayNhap);
+        });
+      </script>
+    {% else %}
+      {% if error %}
+        <div class="rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container cloud-shadow">
+          <div class="font-extrabold font-headline">Chưa tạo bảng trong DB</div>
+          <div class="mt-1 text-xs">
+            Hãy chạy migration: <code class="font-mono font-bold">.\scripts\alembic.ps1 upgrade head</code>
           </div>
-          <div class="mt-4">
-            <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="closeEditModal()">
-              Đóng
+        </div>
+      {% endif %}
+
+      <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10 relative overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+        <form
+          id="filterForm"
+          class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between relative z-10"
+          method="get"
+          action="/wms/hanging"
+          data-ajax-filter
+          data-ajax-target="#hanging-ajax"
+          data-ajax-debounce="100"
+        >
+          <div class="flex-1 max-w-sm">
+            <label for="nhu_cau" class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3">Lọc Theo Nhu Cầu</label>
+            <select
+              id="nhu_cau"
+              name="nhu_cau"
+              class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all"
+            >
+              <option value="" {% if not nhu_cau %}selected{% endif %}>Tất cả nhu cầu</option>
+              {% for nc in nhu_cau_options %}
+                <option value="{{ nc }}" {% if nhu_cau == nc %}selected{% endif %}>{{ nc }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors" onclick="selectAll(true)">
+              Chọn hết
             </button>
+            <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors" onclick="selectAll(false)">
+              Bỏ chọn
+            </button>
+            <button
+              type="button"
+              class="rounded-xl bg-primary/10 border border-primary/10 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary/20 transition-colors"
+              onclick="printSelected()"
+            >
+              In (đã chọn)
+            </button>
+            <button
+              type="button"
+              class="rounded-xl bg-secondary/10 border border-secondary/10 px-5 py-3 text-xs font-bold uppercase tracking-widest text-secondary hover:bg-secondary/20 transition-colors"
+              onclick="mergeSelected()"
+            >
+              Gộp bảng treo
+            </button>
+            <a
+              class="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white bg-gradient-to-br from-primary to-primary-container shadow-[0_8px_32px_rgba(0,64,161,0.2)] hover:opacity-95 transition-opacity uppercase tracking-widest"
+              href="/wms/hanging/print{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}"
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="material-symbols-outlined text-base">print</span>
+              In toàn bộ
+            </a>
           </div>
-        `;
-      }
-    }
+        </form>
+        <div class="mt-4 flex items-start gap-2 text-xs text-on-surface-variant/80 relative z-10">
+          <span class="material-symbols-outlined text-[16px] text-primary/70">print</span>
+          <p>Preview in ấn tối ưu cho giấy A4 khổ ngang (2 bảng treo / trang).</p>
+        </div>
+      </section>
 
-    async function submitEditFragmentForm(tagId, form) {
-      const submitBtn = form.querySelector("button[type='submit']");
-      if (submitBtn) submitBtn.disabled = true;
+      <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+        <div class="px-8 md:px-10 py-8 border-b border-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h2 class="text-[28px] font-extrabold font-headline text-on-surface tracking-tight">Danh sách in</h2>
+          <div class="bg-surface-container-low px-4 py-2 rounded-lg text-xs font-bold text-on-surface-variant uppercase tracking-widest">
+            {{ tags|length }} bảng treo đang hiển thị
+          </div>
+        </div>
 
-      const formData = new FormData(form);
-      const query = currentNhuCau ? `?nhu_cau=${currentNhuCau}` : "";
-      const url = `/wms/hanging/${tagId}/edit/fragment` + query;
+        <div class="overflow-x-auto p-4 md:p-6">
+          <table class="min-w-full text-xs">
+            <thead>
+              <tr class="text-left border-b border-black/5">
+                <th class="px-4 py-4 w-10"></th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">ID Mã</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Ngày nhập</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Customer</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Ngày Xuất</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Nhu cầu</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Lot</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mã hàng</th>
+                <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in tags %}
+                <tr id="tag-row-{{ t.id }}" class="group hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0 rounded-xl">
+                  <td class="px-4 py-3">
+                    <input class="tag-checkbox h-5 w-5 rounded border-black/20 text-primary focus:ring-primary/50" type="checkbox" value="{{ t.id }}" />
+                  </td>
+                  <td class="px-4 py-3 font-bold text-on-surface text-sm">#{{ t.id }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm">{{ t.ngay_nhap_hang or "—" }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm" data-field="customer">{{ t.customer or "—" }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm" data-field="ngay_xuat">{{ t.ngay_xuat or "—" }}</td>
+                  <td class="px-4 py-3 font-bold text-on-surface text-sm">{{ t.nhu_cau or "—" }}</td>
+                  <td class="px-4 py-3 font-extrabold font-headline text-sm bg-surface rounded">{{ t.lot or "—" }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm">{{ t.ma_hang or "—" }}</td>
+                  <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <a
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-surface hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors border border-black/5 hover:border-primary/20"
+                      href="/wms/hanging/print?ids={{ t.id }}"
+                      target="_blank"
+                      rel="noopener"
+                      title="Preview"
+                      aria-label="Preview"
+                    >
+                      <span class="material-symbols-outlined text-[18px]">visibility</span>
+                    </a>
+                    <button
+                      type="button"
+                      class="js-edit-btn ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-surface hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors border border-black/5 hover:border-primary/20"
+                      data-tag-id="{{ t.id }}"
+                      title="Edit"
+                      aria-label="Edit"
+                    >
+                      <span class="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td class="px-4 py-16 text-center text-on-surface-variant text-base" colspan="9">Chưa tải bảng treo hoặc không có dữ liệu cho truy vấn này.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-      try {
-        const res = await fetch(url, { method: "POST", body: formData, headers: { "X-Requested-With": "fetch" } });
-        const payload = await res.json();
-        if (!res.ok || !payload.ok) throw new Error(payload.error || "Lỗi lưu.");
+      <div id="editModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/30" onclick="closeEditModal()"></div>
+        <div class="relative mx-auto max-w-xl px-6 py-10">
+          <div class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-8">
+            <div id="editModalContent" class="min-h-[120px]"></div>
+          </div>
+        </div>
+      </div>
 
-        const row = document.getElementById(`tag-row-${tagId}`);
-        if (row) {
-          const customerCell = row.querySelector("[data-field='customer']");
-          const ngayXuatCell = row.querySelector("[data-field='ngay_xuat']");
-          if (customerCell) customerCell.textContent = payload.customer || "";
-          if (ngayXuatCell) ngayXuatCell.textContent = payload.ngay_xuat || "";
+      <script>
+        const currentNhuCau = "{{ nhu_cau|urlencode if nhu_cau else '' }}";
+
+        function selectAll(flag) {
+          document.querySelectorAll(".tag-checkbox").forEach((el) => {
+            el.checked = !!flag;
+          });
         }
 
-        closeEditModal();
-      } catch (e) {
-        const errBox = form.querySelector("[data-edit-error]");
-        if (errBox) {
-          errBox.textContent = String(e || "Lỗi lưu.");
-          errBox.classList.remove("hidden");
-        } else {
-          alert(String(e || "Lỗi lưu."));
-        }
-      } finally {
-        if (submitBtn) submitBtn.disabled = false;
-      }
-    }
+        function printSelected() {
+          const ids = Array.from(document.querySelectorAll(".tag-checkbox"))
+            .filter((el) => el.checked)
+            .map((el) => el.value);
 
-    const root = document.getElementById("hanging-ajax");
-    if (root) root.addEventListener("click", (e) => {
-      const btn = e.target.closest(".js-edit-btn");
-      if (!btn) return;
-      const tagId = btn.dataset.tagId;
-      if (!tagId) return;
-      openEditModal(tagId);
-    });
-  </script>
-</div>
+          if (!ids.length) {
+            alert("Chưa chọn bảng treo nào.");
+            return;
+          }
+
+          const params = ids.map((id) => `ids=${encodeURIComponent(id)}`).join("&");
+          window.open(`/wms/hanging/print?${params}`, "_blank", "noopener");
+        }
+
+        function mergeSelected() {
+          const ids = Array.from(document.querySelectorAll(".tag-checkbox"))
+            .filter((el) => el.checked)
+            .map((el) => el.value);
+
+          if (ids.length < 2) {
+            alert("Cần chọn ít nhất 2 bảng treo để gộp.");
+            return;
+          }
+
+          const params = ids.map((id) => `ids=${encodeURIComponent(id)}`).join("&");
+          window.open(`/wms/hanging/merge-print?${params}`, "_blank", "noopener");
+        }
+
+        function closeEditModal() {
+          const modal = document.getElementById("editModal");
+          const content = document.getElementById("editModalContent");
+          modal.classList.add("hidden");
+          content.innerHTML = "";
+        }
+
+        async function openEditModal(tagId) {
+          const modal = document.getElementById("editModal");
+          const content = document.getElementById("editModalContent");
+          modal.classList.remove("hidden");
+          content.innerHTML = `
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Bảng treo</div>
+            <div class="mt-2 text-sm font-extrabold font-headline">Đang tải...</div>
+          `;
+
+          const query = currentNhuCau ? `?nhu_cau=${currentNhuCau}` : "";
+          const url = `/wms/hanging/${tagId}/edit/fragment` + query;
+          try {
+            const res = await fetch(url, { headers: { "X-Requested-With": "fetch" } });
+            if (!res.ok) throw new Error(await res.text());
+            content.innerHTML = await res.text();
+
+            const form = content.querySelector("form[data-edit-fragment-form]");
+            if (form) {
+              form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                await submitEditFragmentForm(tagId, form);
+              });
+            }
+          } catch (e) {
+            content.innerHTML = `
+              <div class="mt-1 rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container">
+                <div class="font-extrabold font-headline">Không tải được form</div>
+                <div class="mt-1 text-xs">${String(e || "")}</div>
+              </div>
+              <div class="mt-4">
+                <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="closeEditModal()">
+                  Đóng
+                </button>
+              </div>
+            `;
+          }
+        }
+
+        async function submitEditFragmentForm(tagId, form) {
+          const submitBtn = form.querySelector("button[type='submit']");
+          if (submitBtn) submitBtn.disabled = true;
+
+          const formData = new FormData(form);
+          const query = currentNhuCau ? `?nhu_cau=${currentNhuCau}` : "";
+          const url = `/wms/hanging/${tagId}/edit/fragment` + query;
+
+          try {
+            const res = await fetch(url, { method: "POST", body: formData, headers: { "X-Requested-With": "fetch" } });
+            const payload = await res.json();
+            if (!res.ok || !payload.ok) throw new Error(payload.error || "Lỗi lưu.");
+
+            const row = document.getElementById(`tag-row-${tagId}`);
+            if (row) {
+              const customerCell = row.querySelector("[data-field='customer']");
+              const ngayXuatCell = row.querySelector("[data-field='ngay_xuat']");
+              if (customerCell) customerCell.textContent = payload.customer || "";
+              if (ngayXuatCell) ngayXuatCell.textContent = payload.ngay_xuat || "";
+            }
+
+            closeEditModal();
+          } catch (e) {
+            const errBox = form.querySelector("[data-edit-error]");
+            if (errBox) {
+              errBox.textContent = String(e || "Lỗi lưu.");
+              errBox.classList.remove("hidden");
+            } else {
+              alert(String(e || "Lỗi lưu."));
+            }
+          } finally {
+            if (submitBtn) submitBtn.disabled = false;
+          }
+        }
+
+        const root = document.getElementById("hanging-ajax");
+        if (root) root.addEventListener("click", (e) => {
+          const btn = e.target.closest(".js-edit-btn");
+          if (!btn) return;
+          const tagId = btn.dataset.tagId;
+          if (!tagId) return;
+          openEditModal(tagId);
+        });
+      </script>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

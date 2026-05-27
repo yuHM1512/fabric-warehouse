@@ -23,6 +23,12 @@ from fabric_warehouse.wms.reports_service import (
     ton_kho_by_nhu_cau,
 )
 from fabric_warehouse.wms.hanging_service import backfill_hanging_tags, fill_missing_hanging_fields
+from fabric_warehouse.wms.gon_receipts_service import (
+    create_gon_receipt,
+    list_gon_receipts,
+    list_gon_receipts_by_ids,
+    update_gon_receipt_date,
+)
 from fabric_warehouse.wms.pdf import render_receipt_pdf
 from fabric_warehouse.wms.receipts_service import (
     get_receipt,
@@ -38,15 +44,27 @@ from fabric_warehouse.wms.stock_check_service import (
     list_nhu_cau_options,
     upsert_stock_checks,
 )
+from fabric_warehouse.wms.gon_stock_service import (
+    create_gon_stock_entry,
+    list_gon_block_rows,
+    list_gon_type_options,
+    list_recent_gon_stock_entries,
+)
 from fabric_warehouse.wms.location_service import (
     assign_location,
+    build_location_code,
+    expanded_block_options,
+    is_valid_location_parts,
+    parse_location_code,
     line_options,
     list_anh_mau_options,
     list_lot_options_for_location,
     list_nhu_cau_options_for_location,
     list_rolls_for_location,
     pallet_options,
+    pallet_options_by_line,
     tang_options,
+    warehouse_area_options,
 )
 from fabric_warehouse.wms.issue_service import (
     count_issue_lines,
@@ -149,10 +167,46 @@ def rcp_logout(request: Request):
 @router.get("/wms/receipts", response_class=HTMLResponse)
 def receipts_home(request: Request, db: Session = Depends(get_db)):
     receipts = list_receipts(db, limit=50)
+    gon_error: str | None = None
+    try:
+        gon_receipts = list_gon_receipts(db, limit=200)
+    except ProgrammingError as e:
+        gon_receipts = []
+        gon_error = str(e.orig) if getattr(e, "orig", None) else str(e)
     return templates.TemplateResponse(
         request,
         "wms/receipts.html",
-        {"title": "Phiếu nhập kho", "receipts": receipts},
+        {
+            "title": "Phiếu nhập kho",
+            "tab": "regular",
+            "receipts": receipts,
+            "gon_receipts": gon_receipts,
+            "gon_error": gon_error,
+            "saved": request.query_params.get("saved") == "1",
+        },
+    )
+
+
+@router.get("/wms/receipts/gon", response_class=HTMLResponse)
+def gon_receipts_home(request: Request, db: Session = Depends(get_db)):
+    receipts = list_receipts(db, limit=50)
+    gon_error: str | None = None
+    try:
+        gon_receipts = list_gon_receipts(db, limit=200)
+    except ProgrammingError as e:
+        gon_receipts = []
+        gon_error = str(e.orig) if getattr(e, "orig", None) else str(e)
+    return templates.TemplateResponse(
+        request,
+        "wms/receipts.html",
+        {
+            "title": "Phiếu nhập kho",
+            "tab": "gon",
+            "receipts": receipts,
+            "gon_receipts": gon_receipts,
+            "gon_error": gon_error,
+            "saved": request.query_params.get("saved") == "1",
+        },
     )
 
 
@@ -185,6 +239,62 @@ async def receipts_import(
             "lines": lines,
             "warnings": warnings,
         },
+    )
+
+
+@router.post("/wms/receipts/gon")
+async def gon_receipts_create(
+    nha_cung_cap: str | None = Form(default=None),
+    ten_gon: str = Form(...),
+    quy_cach: str | None = Form(default=None),
+    ma_hang: str | None = Form(default=None),
+    mua: str | None = Form(default=None),
+    ngay_nhap: date | None = Form(default=None),
+    db: Session = Depends(get_db),
+):
+    try:
+        create_gon_receipt(
+            db,
+            nha_cung_cap=nha_cung_cap,
+            ten_gon=ten_gon,
+            quy_cach=quy_cach,
+            ma_hang=ma_hang,
+            mua=mua,
+            ngay_nhap=ngay_nhap.isoformat() if ngay_nhap else None,
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return RedirectResponse(url="/wms/receipts/gon?saved=1", status_code=303)
+
+
+@router.post("/wms/hanging/gon/{item_id}/edit-date")
+def hanging_gon_edit_date(
+    item_id: int,
+    db: Session = Depends(get_db),
+    ngay_nhap: date | None = Form(default=None),
+):
+    try:
+        item = update_gon_receipt_date(
+            db,
+            item_id=item_id,
+            ngay_nhap=ngay_nhap.isoformat() if ngay_nhap else None,
+        )
+        if not item:
+            return JSONResponse({"ok": False, "error": "Không tìm thấy dữ liệu gòn."}, status_code=404)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+
+    return JSONResponse(
+        {
+            "ok": True,
+            "item_id": item.id,
+            "ngay_nhap": item.ngay_nhap.isoformat() if item.ngay_nhap else "",
+        }
     )
 
 
@@ -263,11 +373,57 @@ def hanging_list(request: Request, db: Session = Depends(get_db)):
         "wms/hanging_list.html",
         {
             "title": "Bảng treo",
+            "tab": "regular",
             "tags": tags,
+            "gon_items": [],
             "error": error,
             "nhu_cau": nhu_cau,
             "nhu_cau_options": nhu_cau_options,
         },
+    )
+
+
+@router.get("/wms/hanging/gon", response_class=HTMLResponse)
+def hanging_gon_list(request: Request, db: Session = Depends(get_db)):
+    gon_error: str | None = None
+    try:
+        gon_items = list_gon_receipts(db, limit=500)
+    except ProgrammingError as e:
+        gon_items = []
+        gon_error = str(e.orig) if getattr(e, "orig", None) else str(e)
+    return templates.TemplateResponse(
+        request,
+        "wms/hanging_list.html",
+        {
+            "title": "Bảng treo",
+            "tab": "gon",
+            "tags": [],
+            "gon_items": gon_items,
+            "error": gon_error,
+            "nhu_cau": None,
+            "nhu_cau_options": [],
+        },
+    )
+
+
+@router.get("/wms/hanging/gon/print", response_class=HTMLResponse)
+def hanging_gon_print(
+    request: Request,
+    db: Session = Depends(get_db),
+    ids: list[int] | None = Query(default=None),
+):
+    try:
+        items = (
+            list_gon_receipts_by_ids(db, ids=ids)
+            if ids
+            else list_gon_receipts(db, limit=500)
+        )
+    except ProgrammingError:
+        items = []
+    return templates.TemplateResponse(
+        request,
+        "wms/hanging_gon_print.html",
+        {"title": "In bảng treo gòn", "items": items},
     )
 
 
@@ -457,6 +613,9 @@ def hanging_edit_save(
 
 @router.get("/wms/stock", response_class=HTMLResponse)
 def stock_check_home(request: Request, db: Session = Depends(get_db)):
+    stock_tab = (request.query_params.get("tab") or "fabric").strip() or "fabric"
+    if stock_tab not in {"fabric", "gon"}:
+        stock_tab = "fabric"
     nhu_cau = request.query_params.get("nhu_cau")
     lot = request.query_params.get("lot")
 
@@ -473,17 +632,28 @@ def stock_check_home(request: Request, db: Session = Depends(get_db)):
 
     lot_summaries = list_incomplete_lot_summaries(db, nhu_cau=nhu_cau) if nhu_cau else []
     rows = get_roll_rows(db, nhu_cau=nhu_cau, lot=lot) if (nhu_cau and lot) else []
+    gon_type_options = list_gon_type_options(db)
+    gon_rows = list_recent_gon_stock_entries(db, limit=30)
     return templates.TemplateResponse(
         request,
         "wms/stock_check.html",
         {
             "title": "Nhập kho / kiểm kho",
+            "stock_tab": stock_tab,
             "nhu_cau": nhu_cau,
             "lot": lot,
             "nhu_cau_options": nhu_cau_options,
             "lot_options": lot_options,
             "lot_summaries": lot_summaries,
             "rows": rows,
+            "gon_type_options": gon_type_options,
+            "gon_rows": gon_rows,
+            "warehouse_area_options": warehouse_area_options(),
+            "expanded_block_options": expanded_block_options(),
+            "tang_options": tang_options(),
+            "line_options": line_options(),
+            "pallet_options": pallet_options(),
+            "line_pallet_map": pallet_options_by_line(),
         },
     )
 
@@ -539,7 +709,69 @@ async def stock_check_save(request: Request, db: Session = Depends(get_db)):
     upsert_stock_checks(db, nhu_cau=nhu_cau, lot=lot, items=items)
     db.commit()
 
-    return RedirectResponse(url=f"/wms/stock?nhu_cau={nhu_cau}&lot={lot}&saved=1", status_code=303)
+    return RedirectResponse(url=f"/wms/stock?tab=fabric&nhu_cau={nhu_cau}&lot={lot}&saved=1", status_code=303)
+
+
+@router.post("/wms/stock/gon")
+async def gon_stock_save(request: Request, db: Session = Depends(get_db)):
+    form = await request.form()
+    gon_type = (form.get("gon_type") or "").strip()
+    warehouse_area = (form.get("warehouse_area") or "").strip() or "expanded"
+    tang = (form.get("tang") or "").strip() or None
+    line = (form.get("line") or "").strip() or None
+    pallet = (form.get("pallet") or "").strip() or None
+    block = (form.get("block") or "").strip() or None
+
+    def to_int(v: object) -> int | None:
+        if v is None:
+            return None
+        s = str(v).strip().replace(",", "")
+        if not s:
+            return None
+        try:
+            return int(float(s))
+        except Exception:
+            return None
+
+    def to_float(v: object) -> float | None:
+        if v is None:
+            return None
+        s = str(v).strip().replace(",", "")
+        if not s:
+            return None
+        try:
+            return float(s)
+        except Exception:
+            return None
+
+    so_kien = to_int(form.get("so_kien"))
+    so_yds = to_float(form.get("so_yds"))
+    vi_tri = build_location_code(
+        warehouse_area=warehouse_area,
+        tang=tang,
+        line=line,
+        pallet=pallet,
+        block=block,
+    )
+
+    if not gon_type or so_kien is None or so_kien <= 0 or so_yds is None or so_yds <= 0 or not vi_tri:
+        raise HTTPException(status_code=400, detail="Thiếu hoặc sai dữ liệu nhập gòn.")
+
+    create_gon_stock_entry(
+        db,
+        gon_type=gon_type,
+        so_kien=so_kien,
+        so_yds=so_yds,
+        warehouse_area=warehouse_area,
+        tang=tang,
+        line=line,
+        pallet=pallet,
+        block=block,
+        vi_tri=vi_tri,
+    )
+    db.commit()
+
+    return RedirectResponse(url="/wms/stock?tab=gon&saved=1", status_code=303)
 
 
 @router.get("/wms/stock/locations", response_class=HTMLResponse)
@@ -569,9 +801,12 @@ def location_home(request: Request, db: Session = Depends(get_db)):
             "anh_mau_options": anh_mau_options,
             "lot_options": lot_options,
             "rows": rows,
+            "warehouse_area_options": warehouse_area_options(),
             "tang_options": tang_options(),
             "line_options": line_options(),
             "pallet_options": pallet_options(),
+            "line_pallet_map": pallet_options_by_line(),
+            "expanded_block_options": expanded_block_options(),
         },
     )
 
@@ -582,12 +817,20 @@ async def location_save(request: Request, db: Session = Depends(get_db)):
     nhu_cau = (form.get("nhu_cau") or "").strip()
     anh_mau = (form.get("anh_mau") or "").strip() or None
     lot = (form.get("lot") or "").strip()
-    tang = (form.get("tang") or "").strip()
-    line = (form.get("line") or "").strip()
-    pallet = (form.get("pallet") or "").strip()
-    if not nhu_cau or not lot or not tang or not line or not pallet:
+    warehouse_area = (form.get("warehouse_area") or "").strip() or "main"
+    tang = (form.get("tang") or "").strip() or None
+    line = (form.get("line") or "").strip() or None
+    pallet = (form.get("pallet") or "").strip() or None
+    block = (form.get("block") or "").strip() or None
+    vi_tri = build_location_code(
+        warehouse_area=warehouse_area,
+        tang=tang,
+        line=line,
+        pallet=pallet,
+        block=block,
+    )
+    if not nhu_cau or not lot or not vi_tri:
         raise HTTPException(status_code=400, detail="Thiáº¿u thÃ´ng tin lá»c hoáº·c vá»‹ trÃ­.")
-    vi_tri = f"{tang}.{line}.{pallet}"
 
     try:
         row_count = int(form.get("row_count") or 0)
@@ -741,9 +984,12 @@ def returns_home(request: Request, db: Session = Depends(get_db)):
             "filter_loai_vai": loai_vai,
             "nhu_cau_options": list_pending_return_nhu_cau_options(db, limit=2000) if tab == "todo" else [],
             "lot_options": list_pending_return_lot_options(db, limit=2000) if tab == "todo" else [],
+            "warehouse_area_options": warehouse_area_options(),
             "tang_options": tang_options(),
             "line_options": line_options(),
             "pallet_options": pallet_options(),
+            "line_pallet_map": pallet_options_by_line(),
+            "expanded_block_options": expanded_block_options(),
         },
     )
 
@@ -781,12 +1027,20 @@ async def returns_save(request: Request, db: Session = Depends(get_db)):
 
     vi_tri_moi = None
     if status in {"Tái nhập kho", "TÃ¡i nháº­p kho"}:
-        tang = (form.get("tang") or "").strip()
-        line = (form.get("line") or "").strip()
-        pallet = (form.get("pallet") or "").strip()
-        if not tang or not line or not pallet:
+        warehouse_area = (form.get("warehouse_area") or "").strip() or "main"
+        tang = (form.get("tang") or "").strip() or None
+        line = (form.get("line") or "").strip() or None
+        pallet = (form.get("pallet") or "").strip() or None
+        block = (form.get("block") or "").strip() or None
+        vi_tri_moi = build_location_code(
+            warehouse_area=warehouse_area,
+            tang=tang,
+            line=line,
+            pallet=pallet,
+            block=block,
+        )
+        if not vi_tri_moi:
             raise HTTPException(status_code=400, detail="Thiếu vị trí mới.")
-        vi_tri_moi = f"{tang}.{line}.{pallet}"
 
     create_return(
         db,
@@ -897,10 +1151,19 @@ async def tools_demand_transfer_save(request: Request, db: Session = Depends(get
 
 @router.get("/wms/tools/location-transfer", response_class=HTMLResponse)
 def tools_location_transfer(request: Request, db: Session = Depends(get_db)):
+    warehouse_area = (request.query_params.get("warehouse_area") or "main").strip() or "main"
     tang = request.query_params.get("tang") or "A"
     line = request.query_params.get("line") or "01"
     pallet = request.query_params.get("pallet") or "01"
-    vi_tri = f"{tang}.{line}.{pallet}"
+    block = request.query_params.get("block") or "A1"
+    vi_tri = build_location_code(
+        warehouse_area=warehouse_area,
+        tang=tang,
+        line=line,
+        pallet=pallet,
+        block=block,
+    ) or "A.01.01"
+    parsed = parse_location_code(vi_tri)
 
     from fabric_warehouse.db.models.location_assignment import LocationAssignment
 
@@ -916,14 +1179,19 @@ def tools_location_transfer(request: Request, db: Session = Depends(get_db)):
         "wms/tools_location_transfer.html",
         {
             "title": "Điều chuyển vị trí",
-            "tang": tang,
-            "line": line,
-            "pallet": pallet,
+            "warehouse_area": parsed["warehouse_area"],
+            "tang": parsed["tang"] or tang,
+            "line": parsed["line"] or line,
+            "pallet": parsed["pallet"] or pallet,
+            "block": parsed["block"] or block,
             "vi_tri": vi_tri,
             "rows": rows,
+            "warehouse_area_options": warehouse_area_options(),
             "tang_options": tang_options(),
             "line_options": line_options(),
             "pallet_options": pallet_options(),
+            "line_pallet_map": pallet_options_by_line(),
+            "expanded_block_options": expanded_block_options(),
         },
     )
 
@@ -931,11 +1199,21 @@ def tools_location_transfer(request: Request, db: Session = Depends(get_db)):
 @router.post("/wms/tools/location-transfer")
 async def tools_location_transfer_save(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
-    to_tang = (form.get("to_tang") or "").strip()
-    to_line = (form.get("to_line") or "").strip()
-    to_pallet = (form.get("to_pallet") or "").strip()
+    to_warehouse_area = (form.get("to_warehouse_area") or "").strip() or "main"
+    to_tang = (form.get("to_tang") or "").strip() or None
+    to_line = (form.get("to_line") or "").strip() or None
+    to_pallet = (form.get("to_pallet") or "").strip() or None
+    to_block = (form.get("to_block") or "").strip() or None
     note = (form.get("note") or "").strip() or None
-    to_vi_tri = f"{to_tang}.{to_line}.{to_pallet}"
+    to_vi_tri = build_location_code(
+        warehouse_area=to_warehouse_area,
+        tang=to_tang,
+        line=to_line,
+        pallet=to_pallet,
+        block=to_block,
+    )
+    if not to_vi_tri:
+        raise HTTPException(status_code=400, detail="Vị trí đích không hợp lệ.")
 
     try:
         row_count = int(form.get("row_count") or 0)
@@ -1129,4 +1407,14 @@ def pallet_rolls_fragment(request: Request, vi_tri: str, db: Session = Depends(g
         request,
         "wms/_pallet_rolls_fragment.html",
         {"vi_tri": vi_tri, "rows": rows},
+    )
+
+
+@router.get("/wms/gon-blocks/{block}/fragment", response_class=HTMLResponse)
+def gon_block_fragment(request: Request, block: str, db: Session = Depends(get_db)):
+    rows = list_gon_block_rows(db, block=block)
+    return templates.TemplateResponse(
+        request,
+        "wms/_gon_block_fragment.html",
+        {"block": block, "rows": rows},
     )

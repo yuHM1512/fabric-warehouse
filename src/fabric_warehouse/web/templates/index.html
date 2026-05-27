@@ -47,38 +47,116 @@
             Storage Map
           </h3>
           <p class="mt-3 text-on-surface-variant font-body text-lg max-w-3xl leading-relaxed">
-            Trực quan kho theo vị trí <span class="font-semibold text-on-surface">Tầng - Line - Pallet</span>.
-            Màu sắc theo sức chứa: <span class="font-semibold text-on-surface">Đỏ &gt; 90%</span>,
-            <span class="font-semibold text-on-surface">Vàng 70–90%</span>,
-            <span class="font-semibold text-on-surface">Xanh &lt; 70%</span>.
+            {% if layout_view == 'expanded' %}
+              Trực quan <span class="font-semibold text-on-surface">Kho mở rộng</span> theo 7 block A1-A7, dùng để bố trí gòn.
+            {% else %}
+              Trực quan kho theo vị trí <span class="font-semibold text-on-surface">Tầng - Line - Pallet</span>.
+              Màu sắc theo sức chứa: <span class="font-semibold text-on-surface">Đỏ &gt; 90%</span>,
+              <span class="font-semibold text-on-surface">Vàng 70–90%</span>,
+              <span class="font-semibold text-on-surface">Xanh &lt; 70%</span>.
+            {% endif %}
           </p>
         </div>
 
         <div class="flex gap-4 items-center bg-surface-container-lowest p-6 rounded-xl cloud-shadow border border-black/5">
           <div class="flex flex-col items-center gap-1 border-r border-black/5 pr-6">
-            <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em]">Global Utility</span>
+            <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em]">
+              {% if layout_view == 'expanded' %}Tổng gòn{% else %}Global Utility{% endif %}
+            </span>
             <span class="text-2xl font-headline font-extrabold">
-              {{ "%.1f"|format((100.0 - pallet_kpis.available_percent) if pallet_kpis else 0.0) }}%
+              {% if layout_view == 'expanded' %}
+                {{ gon_layout_totals.total_kien or 0 }}
+              {% else %}
+                {{ "%.1f"|format((100.0 - pallet_kpis.available_percent) if pallet_kpis else 0.0) }}%
+              {% endif %}
             </span>
           </div>
           <div class="flex flex-col gap-3 pl-6">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
-              <span class="text-xs font-bold text-on-surface-variant">Xanh &lt; 70%</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-amber-500"></div>
-              <span class="text-xs font-bold text-on-surface-variant">Vàng 70–90%</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-rose-500"></div>
-              <span class="text-xs font-bold text-on-surface-variant">Đỏ &gt; 90%</span>
-            </div>
+            {% if layout_view == 'expanded' %}
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-[#0040a1]"></div>
+                <span class="text-xs font-bold text-on-surface-variant">{{ gon_layout_totals.entries or 0 }} lượt nhập gòn</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-[#98b3ff]"></div>
+                <span class="text-xs font-bold text-on-surface-variant">{{ "%.2f"|format(gon_layout_totals.total_yds or 0) }} YDS đang lưu</span>
+              </div>
+            {% else %}
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                <span class="text-xs font-bold text-on-surface-variant">Xanh &lt; 70%</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                <span class="text-xs font-bold text-on-surface-variant">Vàng 70–90%</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                <span class="text-xs font-bold text-on-surface-variant">Đỏ &gt; 90%</span>
+              </div>
+            {% endif %}
           </div>
         </div>
       </div>
 
-      {% if not pallet_layout %}
+      <div class="mt-8 flex flex-wrap gap-3 text-sm">
+        <a
+          class="rounded-full px-6 py-3 font-bold transition-colors {% if layout_view == 'main' %}text-white soul-gradient cloud-shadow{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+          href="/?tab=layout&layout_view=main"
+        >
+          Kho chính
+        </a>
+        <a
+          class="rounded-full px-6 py-3 font-bold transition-colors {% if layout_view == 'expanded' %}text-white soul-gradient cloud-shadow{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+          href="/?tab=layout&layout_view=expanded"
+        >
+          Kho mở rộng
+        </a>
+      </div>
+
+      {% if layout_view == 'expanded' %}
+        <section class="mt-10">
+          <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {% for block in expanded_blocks %}
+              {% set summary = expanded_block_map.get(block) %}
+              {% set has_gon = summary and summary.entries > 0 %}
+              <article
+                class="min-h-[220px] rounded-[2rem] border border-black/5 p-8 cloud-shadow transition-colors {% if has_gon %}bg-gradient-to-br from-[#0040a1] via-[#1b5fd1] to-[#98b3ff] text-white{% else %}bg-white text-on-surface{% endif %}"
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <div class="text-[10px] font-bold uppercase tracking-[0.2em] {% if has_gon %}text-white/70{% else %}text-on-surface-variant{% endif %}">Kho mở rộng</div>
+                    <div class="mt-3 text-4xl font-extrabold font-headline tracking-[-0.03em]">{{ block }}</div>
+                  </div>
+                  <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl {% if has_gon %}bg-white/15{% else %}bg-surface-container-low{% endif %} text-lg font-extrabold">G</span>
+                </div>
+                <div class="mt-12 rounded-[1.5rem] {% if has_gon %}bg-white/12{% else %}bg-surface-container-low{% endif %} p-5 {% if has_gon %}backdrop-blur-sm{% endif %}">
+                  <div class="text-xs font-bold uppercase tracking-[0.2em] {% if has_gon %}text-white/70{% else %}text-on-surface-variant{% endif %}">Trạng thái</div>
+                  {% if has_gon %}
+                    <div class="mt-2 text-xl font-extrabold font-headline">Đang chứa gòn</div>
+                    <div class="mt-3 text-sm leading-relaxed text-white/85">
+                      {{ summary.total_kien }} kiện, {{ "%.2f"|format(summary.total_yds) }} YDS.
+                    </div>
+                    <button
+                      type="button"
+                      class="mt-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white hover:bg-white/20"
+                      data-gon-block-view="{{ block }}"
+                    >
+                      <span class="material-symbols-outlined text-[18px]">visibility</span>
+                      Xem chi tiết
+                    </button>
+                  {% else %}
+                    <div class="mt-2 text-xl font-extrabold font-headline">Đang trống</div>
+                    <div class="mt-3 text-sm leading-relaxed text-on-surface-variant">
+                      Chưa có gòn lưu tại block này.
+                    </div>
+                  {% endif %}
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+      {% elif not pallet_layout %}
         <div class="mt-10 rounded-2xl bg-surface-container-low px-6 py-4 text-sm text-on-surface-variant">
           Chưa có dữ liệu layout pallet.
         </div>
@@ -125,7 +203,7 @@
                             <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/80">({{ count }} cây)</span>
                           </div>
                           <div class="flex items-center gap-3">
-                            <span class="tabular-nums">{{ "%.2f"|format(used_m3) }} / 1.50 m³</span>
+                            <span class="tabular-nums">{{ "%.2f"|format(used_m3) }} / 1.50 m3</span>
                             <button
                               type="button"
                               class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-surface-container-lowest hover:bg-white transition-colors border border-black/5"
@@ -151,67 +229,70 @@
       {% endif %}
     </section>
 
-    <div id="palletModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
-      <div class="absolute inset-0 bg-black/30" onclick="(function(){ const m=document.getElementById('palletModal'); if(m) m.classList.add('hidden'); const c=document.getElementById('palletModalContent'); if(c) c.innerHTML=''; })()"></div>
-      <div class="relative mx-auto flex min-h-full max-w-6xl items-start px-6 py-10">
-        <div class="flex max-h-[calc(100vh-5rem)] w-full flex-col overflow-hidden rounded-[2rem] bg-surface-container-lowest p-8 cloud-shadow">
-          <div id="palletModalContent" class="min-h-[120px] overflow-y-auto pr-1"></div>
+    {% if layout_view == 'main' or layout_view == 'expanded' %}
+      <div id="palletModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="absolute inset-0 bg-black/30" onclick="(function(){ const m=document.getElementById('palletModal'); if(m) m.classList.add('hidden'); const c=document.getElementById('palletModalContent'); if(c) c.innerHTML=''; })()"></div>
+        <div class="relative mx-auto flex min-h-full max-w-6xl items-start px-6 py-10">
+          <div class="flex max-h-[calc(100vh-5rem)] w-full flex-col overflow-hidden rounded-[2rem] bg-surface-container-lowest p-8 cloud-shadow">
+            <div id="palletModalContent" class="min-h-[120px] overflow-y-auto pr-1"></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <script>
-      (function () {
-        const root = document.getElementById("pallet-layout-root");
-        if (!root) return;
+      <script>
+        (function () {
+          const root = document.getElementById("pallet-layout-root");
+          if (!root) return;
 
-        const modal = document.getElementById("palletModal");
-        const content = document.getElementById("palletModalContent");
+          const modal = document.getElementById("palletModal");
+          const content = document.getElementById("palletModalContent");
 
-        function closeModal() {
-          if (modal) modal.classList.add("hidden");
-          if (content) content.innerHTML = "";
-        }
-
-        root.addEventListener("click", async (e) => {
-          const btn = e.target.closest("[data-pallet-view]");
-          if (!btn) return;
-          const viTri = btn.getAttribute("data-pallet-view") || "";
-          if (!viTri) return;
-
-          if (modal) modal.classList.remove("hidden");
-          if (content) {
-            content.innerHTML = `
-              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Pallet</div>
-              <div class="mt-2 text-sm font-extrabold font-headline">Đang tải...</div>
-            `;
+          function closeModal() {
+            if (modal) modal.classList.add("hidden");
+            if (content) content.innerHTML = "";
           }
 
-          try {
-            const url = "/wms/pallets/" + encodeURIComponent(viTri) + "/fragment";
-            const res = await fetch(url, { headers: { "X-Requested-With": "fetch" } });
-            if (!res.ok) throw new Error(await res.text());
-            if (content) content.innerHTML = await res.text();
-          } catch (err) {
+          root.addEventListener("click", async (e) => {
+            const btn = e.target.closest("[data-pallet-view]");
+            const blockBtn = e.target.closest("[data-gon-block-view]");
+            if (!btn && !blockBtn) return;
+
+            if (modal) modal.classList.remove("hidden");
             if (content) {
               content.innerHTML = `
-                <div class="mt-1 rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container">
-                  <div class="font-extrabold font-headline">Không tải được dữ liệu</div>
-                  <div class="mt-1 text-xs">${String(err || "")}</div>
-                </div>
-                <div class="mt-4">
-                  <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" id="palletCloseBtn">
-                    Đóng
-                  </button>
-                </div>
+                <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">${blockBtn ? "Block gòn" : "Pallet"}</div>
+                <div class="mt-2 text-sm font-extrabold font-headline">Đang tải...</div>
               `;
-              const closeBtn = document.getElementById("palletCloseBtn");
-              if (closeBtn) closeBtn.addEventListener("click", closeModal);
             }
-          }
-        });
-      })();
-    </script>
+
+            try {
+              const url = blockBtn
+                ? "/wms/gon-blocks/" + encodeURIComponent(blockBtn.getAttribute("data-gon-block-view") || "") + "/fragment"
+                : "/wms/pallets/" + encodeURIComponent(btn.getAttribute("data-pallet-view") || "") + "/fragment";
+              const res = await fetch(url, { headers: { "X-Requested-With": "fetch" } });
+              if (!res.ok) throw new Error(await res.text());
+              if (content) content.innerHTML = await res.text();
+            } catch (err) {
+              if (content) {
+                content.innerHTML = `
+                  <div class="mt-1 rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container">
+                    <div class="font-extrabold font-headline">Không tải được dữ liệu</div>
+                    <div class="mt-1 text-xs">${String(err || "")}</div>
+                  </div>
+                  <div class="mt-4">
+                    <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" id="palletCloseBtn">
+                      Đóng
+                    </button>
+                  </div>
+                `;
+                const closeBtn = document.getElementById("palletCloseBtn");
+                if (closeBtn) closeBtn.addEventListener("click", closeModal);
+              }
+            }
+          });
+        })();
+      </script>
+    {% endif %}
 
   {% else %}
     <section>
@@ -347,7 +428,6 @@
     </div>
   </section>
 
-  {# Keep all server-rendered values out of inline JS to avoid editor JS parse errors #}
   <script id="dashboard-data" type="application/json">
     {{
       {
@@ -376,7 +456,6 @@
         dashboard = {};
       }
 
-      // Set capacity bar width (avoid inline Jinja CSS parsing warnings in editors)
       document.querySelectorAll("[data-capacity-width]").forEach((el) => {
         const raw = String(el.getAttribute("data-capacity-width") || "0");
         const v = Math.max(0, Math.min(100, Number.parseFloat(raw) || 0));
@@ -386,13 +465,11 @@
       const labelsIso = dashboard.labelsIso || [];
       const inData = dashboard.inData || [];
       const outData = dashboard.outData || [];
-      const inYds = dashboard.inYds || [];
-      const outYds = dashboard.outYds || [];
 
       const labels = (labelsIso || []).map((s) => {
         const parts = String(s || "").split("-");
         if (parts.length !== 3) return s;
-        return `${parts[2]}-${parts[1]}`; // dd-mm
+        return `${parts[2]}-${parts[1]}`;
       });
 
       const ctx = document.getElementById("inoutChart");
@@ -439,7 +516,6 @@
                 enabled: true,
                 callbacks: {
                   label: (c) => {
-                    const idx = c.dataIndex;
                     const m3 = Number(c.parsed.y || 0);
                     return `${c.dataset.label}: ${m3.toFixed(3)} m³`;
                   },

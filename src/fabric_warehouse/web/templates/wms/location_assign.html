@@ -2,24 +2,23 @@
 
 {% block content %}
 <div class="space-y-12 pb-16">
-  <!-- Hero Section -->
   <section class="relative bg-gradient-to-br from-primary to-primary-container rounded-[2rem] overflow-hidden p-10 md:p-16 text-white min-h-[300px] flex flex-col justify-end" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
     <div class="absolute -top-32 -right-32 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
     <div class="absolute bottom-[-100px] left-[-50px] w-80 h-80 bg-black/10 rounded-full blur-3xl pointer-events-none"></div>
     <div class="relative z-10 w-full flex flex-col md:flex-row md:items-end justify-between gap-6">
       <div class="max-w-2xl">
-        <div class="text-[12px] font-bold uppercase tracking-widest text-white/70 mb-4">Quản Lý Kho</div>
+        <div class="text-[12px] font-bold uppercase tracking-widest text-white/70 mb-4">Quan Ly Kho</div>
         <h1 class="text-[40px] md:text-[56px] font-headline font-extrabold leading-tight tracking-[-0.02em]">
-          Định Danh <br/>Vị Trí Pallet
+          Dinh Danh <br/>Vi Tri Pallet
         </h1>
         <p class="mt-6 text-lg text-white/90 leading-[1.6]">
-          Gán tọa độ <span class="font-bold bg-white/20 px-2 py-1 rounded text-sm uppercase tracking-widest text-white">Tầng / Line / Pallet</span> cho từng cuộn vải đã được kiểm kho xác nhận. Cây vải phải có số liệu thực tế trước khi gán.
+          Gan toa do <span class="font-bold bg-white/20 px-2 py-1 rounded text-sm uppercase tracking-widest text-white">Tang / Line / Pallet</span> hoac <span class="font-bold bg-white/20 px-2 py-1 rounded text-sm uppercase tracking-widest text-white">Block mo rong</span> cho tung cuon vai da duoc kiem kho xac nhan.
         </p>
       </div>
       <div class="flex flex-col gap-3 self-start md:self-auto">
-        <a href="/wms/stock" class="bg-white/10 hover:bg-white/20 backdrop-blur-md transition-all rounded-xl px-6 py-3 border border-white/10 font-bold tracking-wide uppercase text-xs flex items-center justify-center gap-2">
+        <a href="/wms/stock?tab=fabric" class="bg-white/10 hover:bg-white/20 backdrop-blur-md transition-all rounded-xl px-6 py-3 border border-white/10 font-bold tracking-wide uppercase text-xs flex items-center justify-center gap-2">
           <span class="material-symbols-outlined text-sm">inventory_2</span>
-          Kiểm Kho
+          Kiem Kho
         </a>
         <a href="/wms" class="bg-white/20 hover:bg-white/30 backdrop-blur-md transition-all rounded-xl px-6 py-3 border border-white/10 font-bold tracking-wide uppercase text-xs flex items-center justify-center gap-2 shadow-[0_8px_32px_rgba(31,38,135,0.1)]">
           <span class="material-symbols-outlined text-sm">arrow_back</span>
@@ -31,7 +30,7 @@
 
   {% if request.query_params.get('saved') %}
     <div class="rounded-2xl bg-secondary-container px-6 py-4 text-sm text-on-surface cloud-shadow flex justify-between items-center">
-      <div><span class="font-bold">Đã gán vị trí thành công</span> cho các cây đã chọn.</div>
+      <div><span class="font-bold">Da gan vi tri thanh cong</span> cho cac cay da chon.</div>
       <button onclick="this.parentElement.remove()" class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-[20px]">close</span></button>
     </div>
   {% endif %}
@@ -43,8 +42,8 @@
           <span class="material-symbols-outlined text-emerald-700">check_circle</span>
         </div>
         <div class="min-w-0">
-          <div class="text-sm font-extrabold font-headline text-on-surface">Tất cả cây vải đã được gán vị trí</div>
-          <div class="mt-1 text-xs text-on-surface-variant">Không còn Nhu cầu nào cần định danh pallet.</div>
+          <div class="text-sm font-extrabold font-headline text-on-surface">Tat ca cay vai da duoc gan vi tri</div>
+          <div class="mt-1 text-xs text-on-surface-variant">Khong con Nhu cau nao can dinh danh pallet.</div>
         </div>
         <button type="button" class="ml-auto text-on-surface-variant hover:text-on-surface" onclick="document.getElementById('allAssignedToast').remove()">
           <span class="material-symbols-outlined text-[20px]">close</span>
@@ -54,7 +53,6 @@
   {% endif %}
 
   <div id="locations-ajax">
-  <!-- Filter Panel -->
   <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10 relative overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
     <form
       method="get"
@@ -65,123 +63,104 @@
       data-ajax-debounce="100"
     >
       <div>
-        <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="nhu_cau">Nhu Cầu</label>
-        <input
-          id="nhu_cau"
-          name="nhu_cau"
-          list="nhu_cau_list"
-          value="{{ nhu_cau or '' }}"
-          autocomplete="off"
-          data-ajax-change
-          placeholder="Gõ hoặc chọn..."
-          class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all"
-        />
+        <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="nhu_cau">Nhu Cau</label>
+        <input id="nhu_cau" name="nhu_cau" list="nhu_cau_list" value="{{ nhu_cau or '' }}" autocomplete="off" data-ajax-change placeholder="Go hoac chon..." class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all" />
         <datalist id="nhu_cau_list">
           {% for nc in nhu_cau_options %}<option value="{{ nc }}">{% endfor %}
         </datalist>
       </div>
       <div>
-        <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="anh_mau">Ánh Màu <span class="text-primary/60 normal-case font-normal tracking-normal">(đã kiểm)</span></label>
-        <input
-          id="anh_mau"
-          name="anh_mau"
-          list="anh_mau_list"
-          value="{{ anh_mau or '' }}"
-          autocomplete="off"
-          data-ajax-change
-          placeholder="{% if not nhu_cau %}Chọn Nhu Cầu trước{% else %}Gõ hoặc chọn...{% endif %}"
-          {% if not nhu_cau %}disabled{% endif %}
-          class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all disabled:opacity-50"
-        />
+        <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="anh_mau">Anh Mau</label>
+        <input id="anh_mau" name="anh_mau" list="anh_mau_list" value="{{ anh_mau or '' }}" autocomplete="off" data-ajax-change placeholder="{% if not nhu_cau %}Chon Nhu Cau truoc{% else %}Go hoac chon...{% endif %}" {% if not nhu_cau %}disabled{% endif %} class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all disabled:opacity-50" />
         <datalist id="anh_mau_list">
           {% for am in anh_mau_options %}<option value="{{ am }}">{% endfor %}
         </datalist>
       </div>
       <div>
-        <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="lot">Lot vải <span class="text-primary/60 normal-case font-normal tracking-normal">(đã kiểm)</span></label>
-        <input
-          id="lot"
-          name="lot"
-          list="lot_list"
-          value="{{ lot or '' }}"
-          autocomplete="off"
-          data-ajax-change
-          placeholder="{% if not nhu_cau %}Chọn Nhu Cầu trước{% else %}Gõ hoặc chọn...{% endif %}"
-          {% if not nhu_cau %}disabled{% endif %}
-          class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all disabled:opacity-50"
-        />
+        <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="lot">Lot vai</label>
+        <input id="lot" name="lot" list="lot_list" value="{{ lot or '' }}" autocomplete="off" data-ajax-change placeholder="{% if not nhu_cau %}Chon Nhu Cau truoc{% else %}Go hoac chon...{% endif %}" {% if not nhu_cau %}disabled{% endif %} class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all disabled:opacity-50" />
         <datalist id="lot_list">
           {% for l in lot_options %}<option value="{{ l }}">{% endfor %}
         </datalist>
       </div>
       <div class="flex items-end">
-        <a
-          class="inline-flex items-center gap-2 rounded-xl bg-transparent border border-black/5 px-6 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors"
-          href="/wms/stock/locations{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}"
-        >
+        <a class="inline-flex items-center gap-2 rounded-xl bg-transparent border border-black/5 px-6 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors" href="/wms/stock/locations{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}">
           <span class="material-symbols-outlined text-[16px]">refresh</span>
-          Làm mới
+          Lam moi
         </a>
       </div>
     </form>
   </section>
 
   {% if nhu_cau and lot %}
-    <!-- Location Assignment Section -->
     <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+      <script id="line-pallet-map" type="application/json">{{ line_pallet_map | tojson }}</script>
       <form method="post" action="/wms/stock/locations">
         <input type="hidden" name="nhu_cau" value="{{ nhu_cau }}" />
         <input type="hidden" name="anh_mau" value="{{ anh_mau or '' }}" />
         <input type="hidden" name="lot" value="{{ lot }}" />
         <input type="hidden" name="row_count" value="{{ rows|length }}" />
 
-        <!-- Pallet Config Panel -->
         <div class="px-8 md:px-10 py-8 border-b border-black/5 bg-surface-container-low">
-          <h3 class="text-[18px] font-extrabold font-headline mb-6">Thiết Lập Tọa Độ Pallet</h3>
-          <div class="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-6">
+          <h3 class="text-[18px] font-extrabold font-headline mb-6">Thiet Lap Toa Do Luu Tru</h3>
+
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 mb-6">
+            <div class="sm:col-span-2">
+              <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="warehouse_area">Chon Kho</label>
+              <select id="warehouse_area" name="warehouse_area" class="block w-full rounded-xl border border-black/5 bg-surface px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all">
+                {% for value, label in warehouse_area_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div id="mainLocationFields" class="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-6">
             <div>
-              <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="tang">Tầng Cất Giữ</label>
+              <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="tang">Tang</label>
               <select id="tang" name="tang" class="block w-full rounded-xl border border-black/5 bg-surface px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all">
                 {% for t in tang_options %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
               </select>
             </div>
             <div>
-              <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="line">Dãy (Line)</label>
+              <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="line">Line</label>
               <select id="line" name="line" class="block w-full rounded-xl border border-black/5 bg-surface px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all">
                 {% for l in line_options %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
               </select>
             </div>
             <div>
-              <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="pallet">Mã Pallet</label>
+              <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="pallet">Pallet</label>
               <select id="pallet" name="pallet" class="block w-full rounded-xl border border-black/5 bg-surface px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all">
                 {% for p in pallet_options %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
               </select>
             </div>
           </div>
+
+          <div id="expandedLocationFields" class="mb-6">
+            <label class="block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-3" for="block">Block</label>
+            <select id="block" name="block" class="block w-full rounded-xl border border-black/5 bg-surface px-4 py-3 text-sm text-on-surface font-semibold focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all">
+              {% for item in expanded_block_options %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+            </select>
+          </div>
+
           <div class="flex flex-wrap items-center gap-3 pt-4 border-t border-black/5">
-            <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-lowest transition-colors" onclick="selectAll(true)">Chọn Tất Cả</button>
-            <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-lowest transition-colors" onclick="selectAll(false)">Bỏ Chọn</button>
-            <button
-              type="submit"
-              class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-8 py-3 text-sm font-bold text-white shadow-[0_8px_32px_rgba(0,64,161,0.2)] hover:opacity-95 transition-opacity uppercase tracking-widest"
-            >
+            <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-lowest transition-colors" onclick="selectAll(true)">Chon tat ca</button>
+            <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-lowest transition-colors" onclick="selectAll(false)">Bo chon</button>
+            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-8 py-3 text-sm font-bold text-white shadow-[0_8px_32px_rgba(0,64,161,0.2)] hover:opacity-95 transition-opacity uppercase tracking-widest">
               <span class="material-symbols-outlined text-base">location_on</span>
-              Gán Vị Trí
+              Gan Vi Tri
             </button>
           </div>
         </div>
 
-        <!-- Data Table -->
         <div class="overflow-x-auto p-4 md:p-6">
           <table class="min-w-full text-sm">
             <thead>
               <tr class="text-left border-b border-black/5">
                 <th class="px-4 py-4 w-10"></th>
-                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mã Cây Vải</th>
-                <th class="px-4 py-4 w-36 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">YDS Phiếu</th>
-                <th class="px-4 py-4 w-36 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Thực Tế</th>
-                <th class="px-4 py-4 w-40 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Vị Trí Hiện Tại</th>
-                <th class="px-4 py-4 w-40 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Trạng Thái</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Ma Cay Vai</th>
+                <th class="px-4 py-4 w-36 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">YDS Phieu</th>
+                <th class="px-4 py-4 w-36 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Thuc Te</th>
+                <th class="px-4 py-4 w-40 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Vi Tri Hien Tai</th>
+                <th class="px-4 py-4 w-40 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Trang Thai</th>
               </tr>
             </thead>
             <tbody>
@@ -189,20 +168,14 @@
                 {% set i = loop.index0 %}
                 <tr class="hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0">
                   <td class="px-4 py-3">
-                    <input
-                      class="sel-checkbox h-5 w-5 rounded border-black/20 text-primary focus:ring-primary/50 transition-colors cursor-pointer"
-                      type="checkbox"
-                      name="sel_{{ i }}"
-                      {% if r.actual_yards is none %}disabled{% endif %}
-                      {% if r.vi_tri %}disabled{% endif %}
-                    />
+                    <input class="sel-checkbox h-5 w-5 rounded border-black/20 text-primary focus:ring-primary/50 transition-colors cursor-pointer" type="checkbox" name="sel_{{ i }}" {% if r.actual_yards is none %}disabled{% endif %} {% if r.vi_tri %}disabled{% endif %} />
                     <input type="hidden" name="ma_cay_{{ i }}" value="{{ r.ma_cay }}" />
                   </td>
                   <td class="px-4 py-3 font-bold text-on-surface">{{ r.ma_cay }}</td>
-                  <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface-variant">{{ r.expected_yards or "—" }}</td>
+                  <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface-variant">{{ r.expected_yards or "-" }}</td>
                   <td class="px-4 py-3 text-right tabular-nums">
                     {% if r.actual_yards is none %}
-                      <span class="inline-flex items-center rounded-lg bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-800">Chưa kiểm</span>
+                      <span class="inline-flex items-center rounded-lg bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-800">Chua kiem</span>
                     {% else %}
                       <span class="font-bold tabular-nums">{{ r.actual_yards }}</span>
                     {% endif %}
@@ -214,7 +187,7 @@
                         {{ r.vi_tri }}
                       </span>
                     {% else %}
-                      <span class="text-on-surface-variant italic">—</span>
+                      <span class="text-on-surface-variant italic">-</span>
                     {% endif %}
                   </td>
                   <td class="px-4 py-3">
@@ -223,12 +196,12 @@
                     {% elif r.trang_thai %}
                       <span class="inline-flex items-center rounded-lg bg-surface border border-black/5 px-3 py-1 text-xs font-bold text-on-surface-variant uppercase tracking-widest">{{ r.trang_thai }}</span>
                     {% else %}
-                      <span class="inline-flex items-center rounded-lg bg-surface-container-low border border-black/5 px-3 py-1 text-xs font-bold text-on-surface-variant/60 uppercase tracking-widest">Chưa xác định</span>
+                      <span class="inline-flex items-center rounded-lg bg-surface-container-low border border-black/5 px-3 py-1 text-xs font-bold text-on-surface-variant/60 uppercase tracking-widest">Chua xac dinh</span>
                     {% endif %}
                   </td>
                 </tr>
               {% else %}
-                <tr><td class="px-4 py-16 text-center text-on-surface-variant text-base" colspan="6">Không có dữ liệu cho bộ lọc này.</td></tr>
+                <tr><td class="px-4 py-16 text-center text-on-surface-variant text-base" colspan="6">Khong co du lieu cho bo loc nay.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -236,7 +209,7 @@
 
         <div class="px-8 md:px-10 py-6 border-t border-black/5 bg-surface-container-low flex items-start gap-2 text-xs text-on-surface-variant/80">
           <span class="material-symbols-outlined text-[16px] text-primary/70">info</span>
-          <p>Chỉ có thể chọn các cây đã <span class="font-bold text-on-surface">kiểm kho</span> (có số thực tế) và <span class="font-bold text-on-surface">chưa có vị trí</span>. Checkbox bị vô hiệu hóa nếu không thỏa điều kiện.</p>
+          <p>Chi co the chon cac cay da <span class="font-bold text-on-surface">kiem kho</span> va <span class="font-bold text-on-surface">chua co vi tri</span>.</p>
         </div>
       </form>
     </section>
@@ -248,6 +221,53 @@
           el.checked = !!flag;
         });
       }
+
+      (function () {
+        const mapEl = document.getElementById("line-pallet-map");
+        const warehouseAreaSelect = document.getElementById("warehouse_area");
+        const lineSelect = document.getElementById("line");
+        const palletSelect = document.getElementById("pallet");
+        const mainFields = document.getElementById("mainLocationFields");
+        const expandedFields = document.getElementById("expandedLocationFields");
+        if (!mapEl || !warehouseAreaSelect || !lineSelect || !palletSelect || !mainFields || !expandedFields) return;
+
+        let linePalletMap = {};
+        try {
+          linePalletMap = JSON.parse(mapEl.textContent || "{}");
+        } catch (_err) {
+          linePalletMap = {};
+        }
+
+        function syncPalletOptions() {
+          const currentLine = lineSelect.value || "01";
+          const pallets = linePalletMap[currentLine] || [];
+          const currentPallet = palletSelect.value;
+
+          palletSelect.innerHTML = "";
+          pallets.forEach((pallet) => {
+            const option = document.createElement("option");
+            option.value = pallet;
+            option.textContent = pallet;
+            if (pallet === currentPallet) option.selected = true;
+            palletSelect.appendChild(option);
+          });
+
+          if (!pallets.includes(currentPallet) && pallets.length > 0) {
+            palletSelect.value = pallets[0];
+          }
+        }
+
+        function syncWarehouseFields() {
+          const isExpanded = warehouseAreaSelect.value === "expanded";
+          mainFields.style.display = isExpanded ? "none" : "grid";
+          expandedFields.style.display = isExpanded ? "block" : "none";
+        }
+
+        lineSelect.addEventListener("change", syncPalletOptions);
+        warehouseAreaSelect.addEventListener("change", syncWarehouseFields);
+        syncPalletOptions();
+        syncWarehouseFields();
+      })();
     </script>
   {% endif %}
   </div>

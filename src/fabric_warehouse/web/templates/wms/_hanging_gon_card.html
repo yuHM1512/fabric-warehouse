@@ -1,0 +1,59 @@
+<div class="hang-card">
+  <table class="hang-table">
+    <colgroup>
+      <col style="width: 36%;" />
+      <col style="width: 64%;" />
+    </colgroup>
+    <tr>
+      <th colspan="2" class="hang-title">DECATHLON</th>
+    </tr>
+    <tr class="hang-medium-row">
+      <th>NHÀ CUNG CẤP<br />(Supplier)</th>
+      <td class="hang-bold hang-medium-value">
+        <div class="hang-fit-box">
+          <div class="hang-fit-text hang-fit-text-left" data-fit-text data-fit-min="12" data-fit-max="24">{{ t.nha_cung_cap or "" }}</div>
+        </div>
+      </td>
+    </tr>
+    <tr class="hang-medium-row">
+      <th>TÊN GÒN<br />(Cotton Item)</th>
+      <td class="hang-bold hang-medium-value">
+        <div class="hang-fit-box">
+          <div class="hang-fit-text hang-fit-text-left" data-fit-text data-fit-min="12" data-fit-max="24">{{ t.ten_gon or "" }}</div>
+        </div>
+      </td>
+    </tr>
+    <tr class="hang-medium-row">
+      <th>QUY CÁCH<br />(Specification)</th>
+      <td class="hang-medium-value">
+        <div class="hang-fit-box">
+          <div class="hang-fit-text hang-fit-text-left" data-fit-text data-fit-min="12" data-fit-max="24">{{ t.quy_cach or "" }}</div>
+        </div>
+      </td>
+    </tr>
+    <tr class="hang-medium-row">
+      <th>MÃ HÀNG</th>
+      <td class="hang-bold hang-center hang-medium-value">
+        <div class="hang-fit-box">
+          <div class="hang-fit-text hang-fit-text-nowrap" data-fit-text data-fit-min="14" data-fit-max="34">{{ t.ma_hang or "" }}</div>
+        </div>
+      </td>
+    </tr>
+    <tr class="hang-medium-row">
+      <th>MÙA<br />(Season)</th>
+      <td class="hang-bold hang-center hang-medium-value">
+        <div class="hang-fit-box">
+          <div class="hang-fit-text hang-fit-text-nowrap" data-fit-text data-fit-min="14" data-fit-max="34">{{ t.mua or "" }}</div>
+        </div>
+      </td>
+    </tr>
+    <tr class="hang-large-row">
+      <th>NGÀY NHẬP<br />(Date of import)</th>
+      <td class="hang-bold hang-center">
+        <div class="hang-fit-box">
+          <div class="hang-fit-text hang-fit-text-nowrap" data-fit-text data-fit-min="18" data-fit-max="46">{{ t.ngay_nhap | dmy if t.ngay_nhap else "" }}</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>

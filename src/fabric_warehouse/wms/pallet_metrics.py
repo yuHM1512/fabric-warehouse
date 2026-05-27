@@ -111,7 +111,7 @@ def _get_yds_max(*, norms: dict[str, float], ma_art: str | None) -> float:
 
 
 def _layout_lines() -> list[PalletLayoutLine]:
-    lines = ["01", "02", "03"]
+    lines = ["01", "02", "03", "04"]
 
     def pallets_for_line(line: str) -> list[str]:
         if line == "01":
@@ -119,6 +119,20 @@ def _layout_lines() -> list[PalletLayoutLine]:
         return [f"{i:02d}" for i in range(1, 11)]
 
     return [PalletLayoutLine(line=l, pallets=pallets_for_line(l)) for l in lines]
+
+
+def _is_main_pallet_location(vi_tri: str) -> bool:
+    parts = str(vi_tri or "").strip().split(".")
+    if len(parts) != 3:
+        return False
+    tang, line, pallet = parts
+    if tang not in {"A", "B", "C"}:
+        return False
+    if line == "01":
+        return pallet in {f"{i:02d}" for i in range(1, 13)}
+    if line in {"02", "03", "04"}:
+        return pallet in {f"{i:02d}" for i in range(1, 11)}
+    return False
 
 
 def _compute_pallet_ratio_map(db: Session) -> dict[str, float]:
@@ -176,7 +190,7 @@ def _compute_pallet_ratio_map(db: Session) -> dict[str, float]:
     pallet_ratio: dict[str, float] = {}
     for vi_tri, nc, lot, ma in assignments:
         vi_tri_s = str(vi_tri or "").strip()
-        if not vi_tri_s:
+        if not vi_tri_s or not _is_main_pallet_location(vi_tri_s):
             continue
         actual = actual_map.get((str(nc), str(lot), str(ma)), 0.0)
         yds_max = _get_yds_max(norms=norms, ma_art=art_map.get(str(ma)))
@@ -187,7 +201,7 @@ def _compute_pallet_ratio_map(db: Session) -> dict[str, float]:
 
 def compute_pallet_kpis(db: Session) -> PalletKpis:
     tangs = ["A", "B", "C"]
-    lines = ["01", "02", "03"]
+    lines = ["01", "02", "03", "04"]
 
     def pallets_for_line(line: str) -> list[str]:
         if line == "01":
@@ -207,7 +221,7 @@ def compute_pallet_kpis(db: Session) -> PalletKpis:
         .filter(LocationAssignment.trang_thai == STORED_STATUS)
         .all()
     )
-    pallets_has_fabric = len({a.vi_tri for a in assignments if a.vi_tri})
+    pallets_has_fabric = len({a.vi_tri for a in assignments if a.vi_tri and _is_main_pallet_location(str(a.vi_tri))})
     ma_cays = sorted({a.ma_cay for a in assignments if a.ma_cay})
 
     sc_rows = (
@@ -252,7 +266,7 @@ def compute_pallet_kpis(db: Session) -> PalletKpis:
     pallet_ratio: dict[str, float] = {}
     for vi_tri, nc, lot, ma in assignments:
         vi_tri_s = str(vi_tri or "").strip()
-        if not vi_tri_s:
+        if not vi_tri_s or not _is_main_pallet_location(vi_tri_s):
             continue
         actual = actual_map.get((str(nc), str(lot), str(ma)), 0.0)
         yds_max = _get_yds_max(norms=norms, ma_art=art_map.get(str(ma)))
@@ -287,7 +301,7 @@ def build_pallet_layout(db: Session) -> PalletLayout:
     roll_count_map: dict[str, int] = {}
     for (vi_tri,) in counts:
         key = str(vi_tri or "").strip()
-        if not key:
+        if not key or not _is_main_pallet_location(key):
             continue
         roll_count_map[key] = roll_count_map.get(key, 0) + 1
 

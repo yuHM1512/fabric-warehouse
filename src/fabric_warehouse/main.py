@@ -17,6 +17,7 @@ from fabric_warehouse.db.models.issue import Issue
 from fabric_warehouse.db.models.location_assignment import LocationAssignment
 from fabric_warehouse.db.session import get_db
 from fabric_warehouse.wms.dashboard_service import compute_age_split_for_stored, list_in_out_by_day
+from fabric_warehouse.wms.gon_stock_service import get_expanded_block_summaries, get_gon_layout_totals
 from fabric_warehouse.wms.pallet_metrics import build_pallet_layout, compute_pallet_kpis
 from fabric_warehouse.web.router import router as web_router
 from fabric_warehouse.web.jinja_filters import clean_note, fmt_date_dmy, fmt_gmt7
@@ -92,6 +93,9 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         )
 
     tab = (request.query_params.get("tab") or "overview").strip() or "overview"
+    layout_view = (request.query_params.get("layout_view") or "main").strip() or "main"
+    if layout_view not in {"main", "expanded"}:
+        layout_view = "main"
 
     def _parse_day(key: str) -> date | None:
         v = (request.query_params.get(key) or "").strip()
@@ -120,11 +124,21 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
 
     # Layout: pallet map (only on demand)
     pallet_layout = None
-    if tab == "layout":
+    if tab == "layout" and layout_view == "main":
         try:
             pallet_layout = build_pallet_layout(db)
         except Exception:
             pallet_layout = None
+
+    gon_layout_totals = {"entries": 0, "total_kien": 0, "total_yds": 0.0}
+    expanded_block_map: dict[str, object] = {}
+    if tab == "layout" and layout_view == "expanded":
+        try:
+            gon_layout_totals = get_gon_layout_totals(db)
+            expanded_block_map = get_expanded_block_summaries(db)
+        except Exception:
+            gon_layout_totals = {"entries": 0, "total_kien": 0, "total_yds": 0.0}
+            expanded_block_map = {}
 
     # Chart: IN/OUT for last 7 days by default.
     # Default to the latest activity date in DB so production (historical) data still shows.
@@ -179,9 +193,13 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "title": "Dashboard",
             "app_name": settings.app_name,
             "tab": tab,
+            "layout_view": layout_view,
             "total_rolls_stored": total_rolls_stored,
             "pallet_kpis": pallet_kpis,
             "pallet_layout": pallet_layout,
+            "gon_layout_totals": gon_layout_totals,
+            "expanded_blocks": [f"A{i}" for i in range(1, 8)],
+            "expanded_block_map": expanded_block_map,
             "from_day": from_day,
             "to_day": to_day,
             "chart_labels": labels,

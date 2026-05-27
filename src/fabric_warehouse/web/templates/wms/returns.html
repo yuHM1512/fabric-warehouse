@@ -39,6 +39,7 @@
   </section>
 
   {% if tab == 'todo' %}
+    <script id="line-pallet-map" type="application/json">{{ line_pallet_map | tojson }}</script>
     <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
       <div class="px-10 py-8 bg-surface-container-low">
         <form method="get" action="/wms/stock/returns" class="grid grid-cols-1 gap-4 md:grid-cols-12 md:items-end">
@@ -171,23 +172,37 @@
             <input id="note" name="note" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" placeholder="Tuỳ chọn" />
           </div>
 
-          <div id="locFields" class="md:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-3 bg-surface-container-low rounded-[2rem] p-6">
+          <div id="locFields" class="md:col-span-2 bg-surface-container-low rounded-[2rem] p-6">
             <div>
-              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="tang">Tầng</label>
-              <select id="tang" name="tang" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
-                {% for t in tang_options %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="warehouse_area">Kho</label>
+              <select id="warehouse_area" name="warehouse_area" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                {% for value, label in warehouse_area_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
               </select>
             </div>
-            <div>
-              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="line">Line</label>
-              <select id="line" name="line" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
-                {% for l in line_options %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
-              </select>
+            <div id="mainLocationFields" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="tang">Tầng</label>
+                <select id="tang" name="tang" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                  {% for t in tang_options %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="line">Line</label>
+                <select id="line" name="line" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                  {% for l in line_options %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="pallet">Pallet</label>
+                <select id="pallet" name="pallet" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                  {% for p in pallet_options %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+                </select>
+              </div>
             </div>
-            <div>
-              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="pallet">Pallet</label>
-              <select id="pallet" name="pallet" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
-                {% for p in pallet_options %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+            <div id="expandedLocationFields" class="mt-4">
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="block">Block</label>
+              <select id="block" name="block" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                {% for item in expanded_block_options %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
               </select>
             </div>
           </div>
@@ -219,8 +234,12 @@
         document.getElementById("ngay_tai_nhap").value = `${yyyy}-${mm}-${dd}`;
         document.getElementById("status").value = "Tái nhập kho";
         document.getElementById("nhu_cau_moi").value = "NC-TAM";
+        const warehouseArea = document.getElementById("warehouse_area");
+        if (warehouseArea) warehouseArea.value = "main";
         modal.classList.remove("hidden");
         modal.classList.add("flex");
+        syncWarehouseFields();
+        syncPalletOptions();
         toggleLocation();
       }
 
@@ -245,6 +264,47 @@
         else el.style.display = "none";
       }
 
+      function syncPalletOptions() {
+        const mapEl = document.getElementById("line-pallet-map");
+        const lineSelect = document.getElementById("line");
+        const palletSelect = document.getElementById("pallet");
+        if (!mapEl || !lineSelect || !palletSelect) return;
+
+        let linePalletMap = {};
+        try {
+          linePalletMap = JSON.parse(mapEl.textContent || "{}");
+        } catch (_err) {
+          linePalletMap = {};
+        }
+
+        const currentLine = lineSelect.value || "01";
+        const pallets = linePalletMap[currentLine] || [];
+        const currentPallet = palletSelect.value;
+
+        palletSelect.innerHTML = "";
+        pallets.forEach((pallet) => {
+          const option = document.createElement("option");
+          option.value = pallet;
+          option.textContent = pallet;
+          if (pallet === currentPallet) option.selected = true;
+          palletSelect.appendChild(option);
+        });
+
+        if (!pallets.includes(currentPallet) && pallets.length > 0) {
+          palletSelect.value = pallets[0];
+        }
+      }
+
+      function syncWarehouseFields() {
+        const area = document.getElementById("warehouse_area")?.value || "main";
+        const mainFields = document.getElementById("mainLocationFields");
+        const expandedFields = document.getElementById("expandedLocationFields");
+        if (!mainFields || !expandedFields) return;
+        const isExpanded = area === "expanded";
+        mainFields.style.display = isExpanded ? "none" : "grid";
+        expandedFields.style.display = isExpanded ? "block" : "none";
+      }
+
       document.addEventListener("DOMContentLoaded", () => {
         document.addEventListener("click", (event) => {
           const button = event.target.closest("[data-open-return-modal]");
@@ -259,6 +319,10 @@
         document.addEventListener("keydown", (event) => {
           if (event.key === "Escape") closeForm();
         });
+        document.getElementById("warehouse_area")?.addEventListener("change", syncWarehouseFields);
+        document.getElementById("line")?.addEventListener("change", syncPalletOptions);
+        syncPalletOptions();
+        syncWarehouseFields();
         toggleLocation();
       });
     </script>

@@ -1,4 +1,6 @@
 from fabric_warehouse.db.models.fabric_roll import FabricRoll  # noqa: F401
+from fabric_warehouse.db.models.gon_receipt import GonReceipt  # noqa: F401
+from fabric_warehouse.db.models.gon_stock_entry import GonStockEntry  # noqa: F401
 from fabric_warehouse.db.models.hanging_tag import HangingTag  # noqa: F401
 from fabric_warehouse.db.models.demand_transfer_log import DemandTransferLog  # noqa: F401
 from fabric_warehouse.db.models.fabric_data import FabricData  # noqa: F401

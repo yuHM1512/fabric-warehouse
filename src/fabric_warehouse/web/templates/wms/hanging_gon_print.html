@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title or "In bảng treo gòn" }}</title>
+    <style>
+      @page {
+        size: A4 landscape;
+        margin: 0;
+      }
+
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #f1f5f9;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        font-family: "Times New Roman", Times, serif;
+      }
+
+      .toolbar {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 9999;
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn {
+        appearance: none;
+        border: 1px solid #0f172a;
+        background: #0f172a;
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .btn.secondary {
+        background: #fff;
+        color: #0f172a;
+      }
+
+      .wrap {
+        padding: 24px 18px;
+      }
+
+      .page {
+        width: 297mm;
+        height: 210mm;
+        margin: 0 auto 14px auto;
+        background: #fff;
+        box-sizing: border-box;
+        padding: 8mm 6mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .row {
+        display: flex;
+        gap: 6mm;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .hang-card {
+        width: 138mm;
+        height: 195mm;
+        background: #fff;
+        box-sizing: border-box;
+        border: 1px solid #222;
+        display: flex;
+      }
+
+      .hang-table {
+        width: 100%;
+        height: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 13px;
+        word-break: break-word;
+      }
+
+      .hang-table th, .hang-table td {
+        border: 1px solid #222;
+        padding: 6px 8px;
+        vertical-align: middle;
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
+
+      .hang-table th {
+        background: #f5f5f5;
+        font-weight: 700;
+        text-align: center;
+        font-size: 17px;
+      }
+
+      .hang-table th.hang-title {
+        font-size: 40px;
+        line-height: 1.0;
+        letter-spacing: 1.5px;
+        padding: 4px 0 2px 0;
+        background: #fff !important;
+      }
+
+      .hang-bold { font-weight: 700; }
+      .hang-center { text-align: center; }
+      .hang-value { font-size: 30px; }
+      .hang-small { font-size: 17px; }
+      .hang-code { font-size: 26px; }
+      .hang-medium-value { font-size: 24px; }
+      .hang-medium-row {
+        height: 28mm;
+      }
+      .hang-medium-row th,
+      .hang-medium-row td {
+        height: 28mm;
+        box-sizing: border-box;
+      }
+      .hang-large-row {
+        height: 48mm;
+      }
+      .hang-large-row th,
+      .hang-large-row td {
+        height: 48mm;
+        box-sizing: border-box;
+      }
+      .hang-fit-box {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .hang-fit-text {
+        display: inline-block;
+        max-width: 100%;
+        line-height: 1;
+        text-align: center;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+      .hang-fit-text-nowrap {
+        white-space: nowrap;
+        word-break: normal;
+        overflow-wrap: normal;
+      }
+      .hang-fit-text-left {
+        text-align: left;
+      }
+      @media print {
+        body { background: #fff; }
+        .wrap { padding: 0; }
+        .toolbar { display: none; }
+        .page { margin: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <button class="btn" onclick="window.print()">In / Lưu PDF</button>
+      <button class="btn secondary" onclick="window.close()">Đóng</button>
+    </div>
+
+    <div class="wrap">
+      {% if not items or items|length == 0 %}
+        <div style="max-width: 900px; margin: 72px auto; padding: 18px; background: #fff; border: 1px solid #cbd5e1; border-radius: 14px;">
+          <div style="font-weight: 700; font-size: 18px;">Không có dữ liệu gòn để in</div>
+          <div style="margin-top: 6px; color: #475569;">Quay lại tab In gòn và chọn bản ghi cần preview.</div>
+        </div>
+      {% endif %}
+
+      {% for i in range(0, items|length, 2) %}
+        <div class="page">
+          <div class="row">
+            {% set t = items[i] %}
+            {% include "wms/_hanging_gon_card.html" %}
+            {% if i + 1 < items|length %}
+              {% set t = items[i + 1] %}
+              {% include "wms/_hanging_gon_card.html" %}
+            {% else %}
+              <div class="hang-card" style="border-color: transparent;"></div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <script>
+      (function () {
+        function fitText(el) {
+          const min = Number.parseFloat(el.dataset.fitMin || "12");
+          const max = Number.parseFloat(el.dataset.fitMax || "30");
+          const box = el.parentElement;
+          if (!box) return;
+          const availableWidth = Math.max(box.clientWidth, 0);
+          const availableHeight = Math.max(box.clientHeight, 0);
+          if (!availableWidth || !availableHeight) return;
+
+          let size = max;
+          el.style.fontSize = `${size}px`;
+          el.style.maxWidth = `${availableWidth}px`;
+
+          while (size > min && (el.scrollWidth > availableWidth || el.scrollHeight > availableHeight)) {
+            size -= 0.5;
+            el.style.fontSize = `${size}px`;
+          }
+
+          if (el.classList.contains("hang-fit-text-nowrap")) {
+            el.style.lineHeight = "1";
+          }
+        }
+
+        function fitAll() {
+          document.querySelectorAll("[data-fit-text]").forEach(fitText);
+        }
+
+        window.addEventListener("load", fitAll);
+        window.addEventListener("beforeprint", fitAll);
+      })();
+    </script>
+  </body>
+</html>

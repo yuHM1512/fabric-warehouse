@@ -30,13 +30,92 @@ def tang_options() -> list[str]:
     return ["A", "B", "C"]
 
 
+def warehouse_area_options() -> list[tuple[str, str]]:
+    return [("main", "Kho chính"), ("expanded", "Kho mở rộng")]
+
+
 def line_options() -> list[str]:
     return [f"{i:02d}" for i in range(1, 5)]
 
 
-def pallet_options() -> list[str]:
-    # Legacy location assignment used 01-12 regardless of line.
-    return [f"{i:02d}" for i in range(1, 13)]
+def expanded_block_options() -> list[str]:
+    return [f"A{i}" for i in range(1, 8)]
+
+
+def pallet_options(*, line: str | None = None) -> list[str]:
+    line_s = (line or "").strip()
+    limit = 12 if not line_s or line_s == "01" else 10
+    return [f"{i:02d}" for i in range(1, limit + 1)]
+
+
+def pallet_options_by_line() -> dict[str, list[str]]:
+    return {line: pallet_options(line=line) for line in line_options()}
+
+
+def is_valid_location_parts(*, tang: str, line: str, pallet: str) -> bool:
+    tang_s = (tang or "").strip()
+    line_s = (line or "").strip()
+    pallet_s = (pallet or "").strip()
+    return tang_s in tang_options() and line_s in line_options() and pallet_s in pallet_options(line=line_s)
+
+
+def is_valid_expanded_block(block: str) -> bool:
+    return (block or "").strip() in expanded_block_options()
+
+
+def build_location_code(
+    *,
+    warehouse_area: str,
+    tang: str | None = None,
+    line: str | None = None,
+    pallet: str | None = None,
+    block: str | None = None,
+) -> str | None:
+    area = (warehouse_area or "").strip()
+    if area == "main":
+        tang_s = (tang or "").strip()
+        line_s = (line or "").strip()
+        pallet_s = (pallet or "").strip()
+        if is_valid_location_parts(tang=tang_s, line=line_s, pallet=pallet_s):
+            return f"{tang_s}.{line_s}.{pallet_s}"
+        return None
+    if area == "expanded":
+        block_s = (block or "").strip()
+        if is_valid_expanded_block(block_s):
+            return f"MR.{block_s}"
+        return None
+    return None
+
+
+def parse_location_code(vi_tri: str | None) -> dict[str, str]:
+    vi_tri_s = (vi_tri or "").strip()
+    if vi_tri_s.startswith("MR."):
+        block = vi_tri_s[3:].strip()
+        return {
+            "warehouse_area": "expanded",
+            "block": block if is_valid_expanded_block(block) else "",
+            "tang": "",
+            "line": "",
+            "pallet": "",
+        }
+
+    parts = vi_tri_s.split(".")
+    if len(parts) == 3 and is_valid_location_parts(tang=parts[0], line=parts[1], pallet=parts[2]):
+        return {
+            "warehouse_area": "main",
+            "block": "",
+            "tang": parts[0],
+            "line": parts[1],
+            "pallet": parts[2],
+        }
+
+    return {
+        "warehouse_area": "main",
+        "block": "",
+        "tang": "",
+        "line": "",
+        "pallet": "",
+    }
 
 
 def list_nhu_cau_options_for_location(db: Session) -> list[str]:
