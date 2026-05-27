@@ -2,13 +2,14 @@
 
 {% block content %}
   <script id="line-pallet-map" type="application/json">{{ line_pallet_map | tojson }}</script>
+
   <section class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
     <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
       <div>
         <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Dieu chuyen</div>
         <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Dieu chuyen vi tri</h2>
         <p class="mt-2 text-sm text-on-surface-variant leading-relaxed">
-          Chon vi tri hien tai, tick cay, sau do chon vi tri moi theo kho chinh hoac kho mo rong.
+          Dieu chuyen vai theo pallet hoac dieu chuyen gon giua cac block A1 den A7.
         </p>
       </div>
       <div class="flex items-center gap-3">
@@ -19,165 +20,380 @@
 
     {% if request.query_params.get('saved') %}
       <div class="mt-8 rounded-2xl bg-secondary-container px-6 py-4 text-sm text-on-surface">
-        <span class="font-bold">Da dieu chuyen vi tri.</span>
+        <span class="font-bold">Da luu dieu chuyen.</span>
       </div>
     {% endif %}
+
+    <div class="mt-8 flex flex-wrap gap-3">
+      <a
+        href="/wms/tools/location-transfer?material=fabric"
+        class="rounded-full px-5 py-3 text-sm font-bold transition-colors {% if material == 'fabric' %}bg-primary text-white{% else %}bg-surface-container-low text-primary hover:bg-white{% endif %}"
+      >
+        Dieu chuyen vai
+      </a>
+      <a
+        href="/wms/tools/location-transfer?material=gon&warehouse_area=expanded&block={{ block or 'A1' }}"
+        class="rounded-full px-5 py-3 text-sm font-bold transition-colors {% if material == 'gon' %}bg-primary text-white{% else %}bg-surface-container-low text-primary hover:bg-white{% endif %}"
+      >
+        Dieu chuyen gon
+      </a>
+    </div>
   </section>
 
-  <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
-    <form method="get" action="/wms/tools/location-transfer" class="grid grid-cols-1 gap-6 md:grid-cols-5 md:items-end">
-      <div>
-        <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="warehouse_area">Kho</label>
-        <select id="warehouse_area" name="warehouse_area" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
-          {% for value, label in warehouse_area_options %}
-            <option value="{{ value }}" {% if warehouse_area == value %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div id="mainSearchFields" class="contents">
+  {% if material == "gon" %}
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+      <form method="get" action="/wms/tools/location-transfer" class="grid grid-cols-1 gap-6 md:grid-cols-4 md:items-end">
+        <input type="hidden" name="material" value="gon" />
+        <input type="hidden" name="warehouse_area" value="expanded" />
         <div>
-          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="tang">Tang</label>
-          <select id="tang" name="tang" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
-            {% for t in tang_options %}
-              <option value="{{ t }}" {% if tang == t %}selected{% endif %}>{{ t }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="line">Line</label>
-          <select id="line" name="line" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
-            {% for l in line_options %}
-              <option value="{{ l }}" {% if line == l %}selected{% endif %}>{{ l }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="pallet">Pallet</label>
-          <select id="pallet" name="pallet" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
-            {% for p in pallet_options %}
-              <option value="{{ p }}" {% if pallet == p %}selected{% endif %}>{{ p }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <div id="expandedSearchFields">
-        <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="block">Block</label>
-        <select id="block" name="block" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
-          {% for item in expanded_block_options %}
-            <option value="{{ item }}" {% if block == item %}selected{% endif %}>{{ item }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="flex items-center gap-3">
-        <button type="submit" class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity">
-          <span class="material-symbols-outlined text-base">search</span>
-          Xem
-        </button>
-        <div class="text-xs text-on-surface-variant">Vi tri hien tai: <span class="font-extrabold font-headline text-on-surface">{{ vi_tri }}</span></div>
-      </div>
-    </form>
-  </section>
-
-  <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
-    <form method="post" action="/wms/tools/location-transfer">
-      <input type="hidden" name="row_count" value="{{ rows|length }}" />
-
-      <div class="px-10 py-8 bg-surface-container-low grid grid-cols-1 gap-6 md:grid-cols-4 md:items-end">
-        <div>
-          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Vi tri moi</div>
-          <label class="mt-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_warehouse_area">Kho</label>
-          <select id="to_warehouse_area" name="to_warehouse_area" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
-            {% for value, label in warehouse_area_options %}
-              <option value="{{ value }}">{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div id="mainTargetFields" class="contents">
-          <div>
-            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_tang">Tang</label>
-            <select id="to_tang" name="to_tang" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
-              {% for t in tang_options %}
-                <option value="{{ t }}">{{ t }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_line">Line</label>
-            <select id="to_line" name="to_line" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
-              {% for l in line_options %}
-                <option value="{{ l }}">{{ l }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_pallet">Pallet</label>
-            <select id="to_pallet" name="to_pallet" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
-              {% for p in pallet_options %}
-                <option value="{{ p }}">{{ p }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-        <div id="expandedTargetFields">
-          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_block">Block</label>
-          <select id="to_block" name="to_block" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="block">Block nguon</label>
+          <select id="block" name="block" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
             {% for item in expanded_block_options %}
-              <option value="{{ item }}">{{ item }}</option>
+              <option value="{{ item }}" {% if block == item %}selected{% endif %}>{{ item }}</option>
             {% endfor %}
           </select>
         </div>
         <div>
-          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="note">Ghi chu</label>
-          <input id="note" name="note" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0" placeholder="(tuy chon)" />
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="gon_type">Loai gon</label>
+          <select id="gon_type" name="gon_type" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
+            <option value="">Tat ca</option>
+            {% for item in gon_type_options %}
+              <option value="{{ item }}" {% if gon_type == item %}selected{% endif %}>{{ item }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="rounded-2xl bg-surface-container-low px-5 py-4">
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Vi tri nguon</div>
+          <div class="mt-2 text-lg font-extrabold font-headline text-primary">{{ vi_tri }}</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button type="submit" class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity">
+            <span class="material-symbols-outlined text-base">search</span>
+            Xem ton
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="mt-10 grid grid-cols-1 gap-10 xl:grid-cols-[1.2fr_0.8fr]">
+      <div class="bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+        <div class="px-10 py-8 bg-surface-container-low flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Ton hien tai</div>
+            <h3 class="mt-2 text-xl font-extrabold font-headline text-on-surface">Block {{ block or "A1" }}</h3>
+          </div>
+          <div class="text-xs text-on-surface-variant">Chon 1 dong ton de tao lenh dieu chuyen sang block khac.</div>
         </div>
 
-        <div class="md:col-span-4 flex flex-wrap items-center gap-3">
-          <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="selectAll(true)">
-            Chon tat ca
-          </button>
-          <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="selectAll(false)">
-            Bo chon
-          </button>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-surface-container-low text-on-surface-variant">
+              <tr class="text-left">
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Loai gon</th>
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">So kien ton</th>
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">So YDS ton</th>
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Vi tri</th>
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Tac vu</th>
+              </tr>
+            </thead>
+            <tbody class="bg-surface-container-lowest">
+              {% for row in gon_rows %}
+                <tr class="hover:bg-surface-container-low transition-colors">
+                  <td class="px-10 py-4 font-semibold">{{ row.gon_type }}</td>
+                  <td class="px-10 py-4 font-semibold">{{ row.so_kien }}</td>
+                  <td class="px-10 py-4 font-semibold">{{ row.so_yds }}</td>
+                  <td class="px-10 py-4 font-extrabold font-headline text-primary">{{ row.vi_tri }}</td>
+                  <td class="px-10 py-4">
+                    <button
+                      type="button"
+                      class="rounded-full bg-surface-container-low px-4 py-2 text-xs font-bold text-primary hover:bg-white transition-colors"
+                      data-gon-pick
+                      data-from-vi-tri="{{ row.vi_tri }}"
+                      data-gon-type="{{ row.gon_type }}"
+                      data-so-kien="{{ row.so_kien }}"
+                      data-so-yds="{{ row.so_yds }}"
+                    >
+                      Chon dong nay
+                    </button>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td class="px-10 py-6 text-on-surface-variant" colspan="5">Block nay chua co ton gon phu hop.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tao lenh dieu chuyen</div>
+        <h3 class="mt-2 text-xl font-extrabold font-headline text-on-surface">Dieu chuyen gon</h3>
+        <p class="mt-2 text-sm text-on-surface-variant leading-relaxed">
+          Gon chi dieu chuyen trong kho mo rong. Chon dong ton ben trai roi nhap so kien va so YDS can chuyen.
+        </p>
+
+        <form method="post" action="/wms/tools/location-transfer" class="mt-8 space-y-5">
+          <input type="hidden" name="material" value="gon" />
+          <input type="hidden" name="from_vi_tri" id="from_vi_tri" value="{{ vi_tri }}" />
+
+          <div class="rounded-2xl bg-surface-container-low px-5 py-4">
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Nguon dang chon</div>
+            <div class="mt-2 text-sm font-semibold text-on-surface" id="selected_source_text">{{ vi_tri }}</div>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="transfer_gon_type">Loai gon</label>
+            <select id="transfer_gon_type" name="gon_type" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" required>
+              <option value="">Chon ton o bang ben trai</option>
+              {% for item in gon_type_options %}
+                <option value="{{ item }}" {% if gon_type == item %}selected{% endif %}>{{ item }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="so_kien">So kien can chuyen</label>
+              <input id="so_kien" name="so_kien" type="number" min="0" step="1" required class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="so_yds">So YDS can chuyen</label>
+              <input id="so_yds" name="so_yds" type="number" min="0" step="0.01" required class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_block">Block nhan</label>
+            <select id="to_block" name="to_block" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" required>
+              {% for item in expanded_block_options %}
+                <option value="{{ item }}" {% if block == item and loop.first %}selected{% endif %}>{{ item }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="note">Ghi chu</label>
+            <input id="note" name="note" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0" placeholder="(tuy chon)" />
+          </div>
+
+          <div class="rounded-2xl bg-surface-container-low px-5 py-4 text-xs text-on-surface-variant">
+            Muc ton tham chieu:
+            <span class="font-bold text-on-surface" id="selected_balance_text">
+              {% if gon_rows %}
+                {{ gon_rows[0].so_kien }} kien / {{ gon_rows[0].so_yds }} YDS
+              {% else %}
+                Chua co ton
+              {% endif %}
+            </span>
+          </div>
+
           <button type="submit" class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity">
             <span class="material-symbols-outlined text-base">swap_horiz</span>
-            Dieu chuyen
+            Luu dieu chuyen gon
           </button>
-          <div class="text-xs text-on-surface-variant">Chi list cay dang luu tai vi tri hien tai.</div>
-        </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+      <div class="px-10 py-8 bg-surface-container-low">
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Lich su</div>
+        <h3 class="mt-2 text-xl font-extrabold font-headline text-on-surface">Lich su dieu chuyen gon</h3>
       </div>
 
       <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
           <thead class="bg-surface-container-low text-on-surface-variant">
             <tr class="text-left">
-              <th class="px-10 py-4 w-10"></th>
-              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Ma cay</th>
-              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Nhu cau</th>
-              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Lot</th>
-              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Vi tri</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Ngay</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Loai gon</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">So kien</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">So YDS</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Tu</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Den</th>
+              <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Ghi chu</th>
             </tr>
           </thead>
           <tbody class="bg-surface-container-lowest">
-            {% for r in rows %}
-              {% set i = loop.index0 %}
+            {% for item in gon_transfer_history %}
               <tr class="hover:bg-surface-container-low transition-colors">
-                <td class="px-10 py-4">
-                  <input class="sel-checkbox h-4 w-4 rounded" type="checkbox" name="sel_{{ i }}" />
-                  <input type="hidden" name="ma_cay_{{ i }}" value="{{ r.ma_cay }}" />
-                </td>
-                <td class="px-10 py-4 font-semibold">{{ r.ma_cay }}</td>
-                <td class="px-10 py-4 font-semibold">{{ r.nhu_cau or "" }}</td>
-                <td class="px-10 py-4 font-semibold">{{ r.lot or "" }}</td>
-                <td class="px-10 py-4 font-extrabold font-headline text-primary">{{ r.vi_tri or "" }}</td>
+                <td class="px-10 py-4 font-semibold">{{ item.created_at.strftime("%d/%m/%Y %H:%M") if item.created_at else "" }}</td>
+                <td class="px-10 py-4 font-semibold">{{ item.gon_type }}</td>
+                <td class="px-10 py-4 font-semibold">{{ item.so_kien }}</td>
+                <td class="px-10 py-4 font-semibold">{{ item.so_yds }}</td>
+                <td class="px-10 py-4 font-semibold">{{ item.from_vi_tri }}</td>
+                <td class="px-10 py-4 font-semibold">{{ item.to_vi_tri }}</td>
+                <td class="px-10 py-4 text-on-surface-variant">{{ item.note or "" }}</td>
               </tr>
             {% else %}
-              <tr><td class="px-10 py-6 text-on-surface-variant" colspan="5">Khong co cay tai vi tri nay.</td></tr>
+              <tr>
+                <td class="px-10 py-6 text-on-surface-variant" colspan="7">Chua co lich su dieu chuyen gon.</td>
+              </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-    </form>
-  </section>
+    </section>
+  {% else %}
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow p-10">
+      <form method="get" action="/wms/tools/location-transfer" class="grid grid-cols-1 gap-6 md:grid-cols-5 md:items-end">
+        <input type="hidden" name="material" value="fabric" />
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="warehouse_area">Kho</label>
+          <select id="warehouse_area" name="warehouse_area" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
+            {% for value, label in warehouse_area_options %}
+              <option value="{{ value }}" {% if warehouse_area == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div id="mainSearchFields" class="contents">
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="tang">Tang</label>
+            <select id="tang" name="tang" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
+              {% for t in tang_options %}
+                <option value="{{ t }}" {% if tang == t %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="line">Line</label>
+            <select id="line" name="line" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
+              {% for l in line_options %}
+                <option value="{{ l }}" {% if line == l %}selected{% endif %}>{{ l }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="pallet">Pallet</label>
+            <select id="pallet" name="pallet" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
+              {% for p in pallet_options %}
+                <option value="{{ p }}" {% if pallet == p %}selected{% endif %}>{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div id="expandedSearchFields">
+          <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="block">Block</label>
+          <select id="block" name="block" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0">
+            {% for item in expanded_block_options %}
+              <option value="{{ item }}" {% if block == item %}selected{% endif %}>{{ item }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="flex items-center gap-3">
+          <button type="submit" class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity">
+            <span class="material-symbols-outlined text-base">search</span>
+            Xem
+          </button>
+          <div class="text-xs text-on-surface-variant">Vi tri hien tai: <span class="font-extrabold font-headline text-on-surface">{{ vi_tri }}</span></div>
+        </div>
+      </form>
+    </section>
+
+    <section class="mt-10 bg-surface-container-lowest rounded-[2rem] cloud-shadow overflow-hidden">
+      <form method="post" action="/wms/tools/location-transfer">
+        <input type="hidden" name="material" value="fabric" />
+        <input type="hidden" name="row_count" value="{{ rows|length }}" />
+
+        <div class="px-10 py-8 bg-surface-container-low grid grid-cols-1 gap-6 md:grid-cols-4 md:items-end">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Vi tri moi</div>
+            <label class="mt-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_warehouse_area">Kho</label>
+            <select id="to_warehouse_area" name="to_warehouse_area" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+              {% for value, label in warehouse_area_options %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div id="mainTargetFields" class="contents">
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_tang">Tang</label>
+              <select id="to_tang" name="to_tang" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                {% for t in tang_options %}
+                  <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_line">Line</label>
+              <select id="to_line" name="to_line" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                {% for l in line_options %}
+                  <option value="{{ l }}">{{ l }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_pallet">Pallet</label>
+              <select id="to_pallet" name="to_pallet" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+                {% for p in pallet_options %}
+                  <option value="{{ p }}">{{ p }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div id="expandedTargetFields">
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="to_block">Block</label>
+            <select id="to_block" name="to_block" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0">
+              {% for item in expanded_block_options %}
+                <option value="{{ item }}">{{ item }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="note">Ghi chu</label>
+            <input id="note" name="note" class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0" placeholder="(tuy chon)" />
+          </div>
+
+          <div class="md:col-span-4 flex flex-wrap items-center gap-3">
+            <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="selectAll(true)">
+              Chon tat ca
+            </button>
+            <button type="button" class="rounded-full bg-surface-container-lowest px-5 py-3 text-sm font-bold text-primary hover:bg-white transition-colors" onclick="selectAll(false)">
+              Bo chon
+            </button>
+            <button type="submit" class="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white soul-gradient cloud-shadow hover:opacity-95 transition-opacity">
+              <span class="material-symbols-outlined text-base">swap_horiz</span>
+              Dieu chuyen
+            </button>
+            <div class="text-xs text-on-surface-variant">Chi list cay dang luu tai vi tri hien tai.</div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-surface-container-low text-on-surface-variant">
+              <tr class="text-left">
+                <th class="px-10 py-4 w-10"></th>
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Ma cay</th>
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Nhu cau</th>
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Lot</th>
+                <th class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest">Vi tri</th>
+              </tr>
+            </thead>
+            <tbody class="bg-surface-container-lowest">
+              {% for r in rows %}
+                {% set i = loop.index0 %}
+                <tr class="hover:bg-surface-container-low transition-colors">
+                  <td class="px-10 py-4">
+                    <input class="sel-checkbox h-4 w-4 rounded" type="checkbox" name="sel_{{ i }}" />
+                    <input type="hidden" name="ma_cay_{{ i }}" value="{{ r.ma_cay }}" />
+                  </td>
+                  <td class="px-10 py-4 font-semibold">{{ r.ma_cay }}</td>
+                  <td class="px-10 py-4 font-semibold">{{ r.nhu_cau or "" }}</td>
+                  <td class="px-10 py-4 font-semibold">{{ r.lot or "" }}</td>
+                  <td class="px-10 py-4 font-extrabold font-headline text-primary">{{ r.vi_tri or "" }}</td>
+                </tr>
+              {% else %}
+                <tr><td class="px-10 py-6 text-on-surface-variant" colspan="5">Khong co cay tai vi tri nay.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </form>
+    </section>
+  {% endif %}
 
   <script>
     function selectAll(flag) {
@@ -233,11 +449,33 @@
       expandedFields.style.display = isExpanded ? "block" : "none";
     }
 
+    function bindGonRowPicker() {
+      const sourceInput = document.getElementById("from_vi_tri");
+      const typeInput = document.getElementById("transfer_gon_type");
+      const sourceText = document.getElementById("selected_source_text");
+      const balanceText = document.getElementById("selected_balance_text");
+      if (!sourceInput || !typeInput || !sourceText || !balanceText) return;
+
+      document.querySelectorAll("[data-gon-pick]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const fromViTri = button.getAttribute("data-from-vi-tri") || "";
+          const gonType = button.getAttribute("data-gon-type") || "";
+          const soKien = button.getAttribute("data-so-kien") || "0";
+          const soYds = button.getAttribute("data-so-yds") || "0";
+          sourceInput.value = fromViTri;
+          typeInput.value = gonType;
+          sourceText.textContent = `${fromViTri} | ${gonType}`;
+          balanceText.textContent = `${soKien} kien / ${soYds} YDS`;
+        });
+      });
+    }
+
     bindLinePalletPair("line", "pallet");
     bindLinePalletPair("to_line", "to_pallet");
     document.getElementById("warehouse_area")?.addEventListener("change", () => syncWarehouseFields("warehouse_area", "mainSearchFields", "expandedSearchFields"));
     document.getElementById("to_warehouse_area")?.addEventListener("change", () => syncWarehouseFields("to_warehouse_area", "mainTargetFields", "expandedTargetFields"));
     syncWarehouseFields("warehouse_area", "mainSearchFields", "expandedSearchFields");
     syncWarehouseFields("to_warehouse_area", "mainTargetFields", "expandedTargetFields");
+    bindGonRowPicker();
   </script>
 {% endblock %}

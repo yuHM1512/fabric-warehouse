@@ -15,12 +15,11 @@
 <div class="mt-6 overflow-x-auto">
   <table class="min-w-full text-sm">
     <thead class="bg-surface-container-low text-on-surface-variant">
-      <tr class="text-left">
+        <tr class="text-left">
         <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Loại gòn</th>
         <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Số kiện</th>
         <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Số YDS</th>
         <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Vị trí</th>
-        <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Nhập lúc</th>
       </tr>
     </thead>
     <tbody class="bg-surface-container-lowest">
@@ -30,10 +29,9 @@
           <td class="px-6 py-4 tabular-nums">{{ row.so_kien }}</td>
           <td class="px-6 py-4 tabular-nums">{{ "%.2f"|format(row.so_yds) }}</td>
           <td class="px-6 py-4 font-extrabold font-headline text-primary">{{ row.vi_tri }}</td>
-          <td class="px-6 py-4">{{ row.created_at | gmt7 if row.created_at else "" }}</td>
         </tr>
       {% else %}
-        <tr><td class="px-6 py-8 text-on-surface-variant" colspan="5">Block này chưa có gòn.</td></tr>
+        <tr><td class="px-6 py-8 text-on-surface-variant" colspan="4">Block này chưa có gòn.</td></tr>
       {% endfor %}
     </tbody>
   </table>

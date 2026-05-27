@@ -46,9 +46,16 @@ from fabric_warehouse.wms.stock_check_service import (
 )
 from fabric_warehouse.wms.gon_stock_service import (
     create_gon_stock_entry,
+    create_gon_issue,
+    create_gon_transfer,
     list_gon_block_rows,
+    list_gon_issue_candidates,
+    list_gon_issue_history,
+    list_gon_issue_location_options,
+    list_gon_issue_type_options,
     list_gon_type_options,
     list_recent_gon_stock_entries,
+    list_gon_transfer_history,
 )
 from fabric_warehouse.wms.location_service import (
     assign_location,
@@ -857,16 +864,24 @@ async def location_save(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/wms/issue", response_class=HTMLResponse)
 def issue_home(request: Request, db: Session = Depends(get_db)):
+    material = (request.query_params.get("material") or "fabric").strip() or "fabric"
+    if material not in {"fabric", "gon"}:
+        material = "fabric"
     nhu_cau = request.query_params.get("nhu_cau")
     lot = request.query_params.get("lot")
     tab = request.query_params.get("tab") or "issue"
+    gon_type = (request.query_params.get("gon_type") or "").strip()
+    gon_vi_tri = (request.query_params.get("gon_vi_tri") or "").strip()
 
-    nhu_cau_options = list_issue_nhu_cau_options(db)
-    lot_options = list_issue_lot_options(db, nhu_cau=nhu_cau) if nhu_cau else []
-    if lot and lot not in lot_options:
+    nhu_cau_options = list_issue_nhu_cau_options(db) if material == "fabric" else []
+    lot_options = list_issue_lot_options(db, nhu_cau=nhu_cau) if (material == "fabric" and nhu_cau) else []
+    if material == "fabric" and lot and lot not in lot_options:
         lot_options = [lot, *lot_options]
 
-    candidates = list_issue_candidates(db, nhu_cau=nhu_cau, lot=lot) if (tab == "issue" and nhu_cau and lot) else []
+    candidates = list_issue_candidates(db, nhu_cau=nhu_cau, lot=lot) if (material == "fabric" and tab == "issue" and nhu_cau and lot) else []
+    gon_type_options = list_gon_issue_type_options(db) if material == "gon" else []
+    gon_vi_tri_options = list_gon_issue_location_options(db, gon_type=gon_type) if (material == "gon" and gon_type) else []
+    gon_candidates = list_gon_issue_candidates(db, gon_type=gon_type or None, vi_tri=gon_vi_tri or None) if (material == "gon" and tab == "issue") else []
 
     # history
     date_from = request.query_params.get("from")
@@ -881,23 +896,31 @@ def issue_home(request: Request, db: Session = Depends(get_db)):
 
     df = parse_date(date_from)
     dt = parse_date(date_to)
-    issues = list_issue_history(db, date_from=df, date_to=dt, nhu_cau=nhu_cau) if tab == "history" else []
+    issues = list_issue_history(db, date_from=df, date_to=dt, nhu_cau=nhu_cau) if (material == "fabric" and tab == "history") else []
     counts = count_issue_lines(db, issue_ids=[i.id for i in issues]) if issues else {}
+    gon_issues = list_gon_issue_history(db, gon_type=gon_type or None, date_from=df, date_to=dt) if (material == "gon" and tab == "history") else []
 
     return templates.TemplateResponse(
         request,
         "wms/issue.html",
         {
             "title": "Xuất kho",
+            "material": material,
             "tab": tab,
             "nhu_cau": nhu_cau,
             "lot": lot,
+            "gon_type": gon_type,
+            "gon_vi_tri": gon_vi_tri,
             "date_from": date_from,
             "date_to": date_to,
             "nhu_cau_options": nhu_cau_options,
             "lot_options": lot_options,
             "candidates": candidates,
+            "gon_type_options": gon_type_options,
+            "gon_vi_tri_options": gon_vi_tri_options,
+            "gon_candidates": gon_candidates,
             "issues": issues,
+            "gon_issues": gon_issues,
             "issue_counts": counts,
         },
     )
@@ -933,7 +956,53 @@ async def issue_save(request: Request, db: Session = Depends(get_db)):
 
     issue_id = create_issue(db, nhu_cau=nhu_cau, lot=lot, ngay_xuat=ngay_xuat, status=status, note=note, ma_cays=ma_cays)
     db.commit()
-    return RedirectResponse(url=f"/wms/issue?nhu_cau={nhu_cau}&lot={lot}&saved=1#issue", status_code=303)
+    return RedirectResponse(url=f"/wms/issue?material=fabric&nhu_cau={nhu_cau}&lot={lot}&saved=1#issue", status_code=303)
+
+
+@router.post("/wms/issue/gon")
+async def gon_issue_save(request: Request, db: Session = Depends(get_db)):
+    form = await request.form()
+    gon_type = (form.get("gon_type") or "").strip()
+    gon_vi_tri = (form.get("gon_vi_tri") or "").strip()
+    ngay_xuat_s = (form.get("ngay_xuat") or "").strip()
+    note = (form.get("note") or "").strip() or None
+
+    def to_float(v: object) -> float | None:
+        if v is None:
+            return None
+        s = str(v).strip().replace(",", "")
+        if not s:
+            return None
+        try:
+            return float(s)
+        except Exception:
+            return None
+
+    so_kien = to_float(form.get("so_kien"))
+    so_yds = to_float(form.get("so_yds"))
+    if not gon_type or not gon_vi_tri or so_kien is None or so_kien <= 0 or so_yds is None or so_yds <= 0 or not ngay_xuat_s:
+        raise HTTPException(status_code=400, detail="Thiếu dữ liệu xuất gòn.")
+    try:
+        ngay_xuat = date.fromisoformat(ngay_xuat_s)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Ngày xuất không hợp lệ.") from e
+
+    try:
+        create_gon_issue(
+            db,
+            gon_type=gon_type,
+            from_vi_tri=gon_vi_tri,
+            so_kien=so_kien,
+            so_yds=so_yds,
+            ngay_xuat=ngay_xuat,
+            note=note,
+        )
+        db.commit()
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return RedirectResponse(url=f"/wms/issue?material=gon&gon_type={gon_type}&gon_vi_tri={gon_vi_tri}&saved=1", status_code=303)
 
 
 @router.get("/wms/stock/returns", response_class=HTMLResponse)
@@ -1151,6 +1220,9 @@ async def tools_demand_transfer_save(request: Request, db: Session = Depends(get
 
 @router.get("/wms/tools/location-transfer", response_class=HTMLResponse)
 def tools_location_transfer(request: Request, db: Session = Depends(get_db)):
+    material = (request.query_params.get("material") or "fabric").strip() or "fabric"
+    if material not in {"fabric", "gon"}:
+        material = "fabric"
     warehouse_area = (request.query_params.get("warehouse_area") or "main").strip() or "main"
     tang = request.query_params.get("tang") or "A"
     line = request.query_params.get("line") or "01"
@@ -1167,18 +1239,27 @@ def tools_location_transfer(request: Request, db: Session = Depends(get_db)):
 
     from fabric_warehouse.db.models.location_assignment import LocationAssignment
 
-    rows = (
-        db.query(LocationAssignment)
-        .filter(LocationAssignment.vi_tri == vi_tri)
-        .filter(LocationAssignment.trang_thai.in_(("Đang lưu", "Dang luu", "Đang luu", "Dang lưu")))
-        .order_by(LocationAssignment.ma_cay.asc())
-        .all()
-    )
+    rows = []
+    gon_type = (request.query_params.get("gon_type") or "").strip()
+    gon_rows = []
+    gon_type_options = []
+    if material == "fabric":
+        rows = (
+            db.query(LocationAssignment)
+            .filter(LocationAssignment.vi_tri == vi_tri)
+            .filter(LocationAssignment.trang_thai.in_(("Đang lưu", "Dang luu", "Đang luu", "Dang lưu")))
+            .order_by(LocationAssignment.ma_cay.asc())
+            .all()
+        )
+    else:
+        gon_rows = list_gon_issue_candidates(db, gon_type=gon_type or None, vi_tri=vi_tri)
+        gon_type_options = sorted({row.gon_type for row in list_gon_issue_candidates(db, vi_tri=vi_tri)})
     return templates.TemplateResponse(
         request,
         "wms/tools_location_transfer.html",
         {
             "title": "Điều chuyển vị trí",
+            "material": material,
             "warehouse_area": parsed["warehouse_area"],
             "tang": parsed["tang"] or tang,
             "line": parsed["line"] or line,
@@ -1186,6 +1267,10 @@ def tools_location_transfer(request: Request, db: Session = Depends(get_db)):
             "block": parsed["block"] or block,
             "vi_tri": vi_tri,
             "rows": rows,
+            "gon_type": gon_type,
+            "gon_rows": gon_rows,
+            "gon_type_options": gon_type_options,
+            "gon_transfer_history": list_gon_transfer_history(db, limit=100) if material == "gon" else [],
             "warehouse_area_options": warehouse_area_options(),
             "tang_options": tang_options(),
             "line_options": line_options(),
@@ -1199,6 +1284,45 @@ def tools_location_transfer(request: Request, db: Session = Depends(get_db)):
 @router.post("/wms/tools/location-transfer")
 async def tools_location_transfer_save(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
+    material = (form.get("material") or "fabric").strip() or "fabric"
+    if material == "gon":
+        gon_type = (form.get("gon_type") or "").strip()
+        from_vi_tri = (form.get("from_vi_tri") or "").strip()
+        to_block = (form.get("to_block") or "").strip()
+        note = (form.get("note") or "").strip() or None
+
+        def to_float(v: object) -> float | None:
+            if v is None:
+                return None
+            s = str(v).strip().replace(",", "")
+            if not s:
+                return None
+            try:
+                return float(s)
+            except Exception:
+                return None
+
+        so_kien = to_float(form.get("so_kien"))
+        so_yds = to_float(form.get("so_yds"))
+        to_vi_tri = build_location_code(warehouse_area="expanded", block=to_block)
+        if not gon_type or not from_vi_tri or not to_vi_tri or so_kien is None or so_kien <= 0 or so_yds is None or so_yds <= 0:
+            raise HTTPException(status_code=400, detail="Thiếu dữ liệu điều chuyển gòn.")
+        try:
+            create_gon_transfer(
+                db,
+                gon_type=gon_type,
+                from_vi_tri=from_vi_tri,
+                to_vi_tri=to_vi_tri,
+                so_kien=so_kien,
+                so_yds=so_yds,
+                note=note,
+            )
+            db.commit()
+        except ValueError as e:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        return RedirectResponse(url=f"/wms/tools/location-transfer?material=gon&warehouse_area=expanded&block={to_block}&saved=1", status_code=303)
+
     to_warehouse_area = (form.get("to_warehouse_area") or "").strip() or "main"
     to_tang = (form.get("to_tang") or "").strip() or None
     to_line = (form.get("to_line") or "").strip() or None
@@ -1230,7 +1354,7 @@ async def tools_location_transfer_save(request: Request, db: Session = Depends(g
 
     transfer_location(db, ma_cays=ma_cays, to_vi_tri=to_vi_tri, note=note)
     db.commit()
-    return RedirectResponse(url="/wms/tools/location-transfer?saved=1", status_code=303)
+    return RedirectResponse(url="/wms/tools/location-transfer?material=fabric&saved=1", status_code=303)
 
 
 @router.get("/wms/tools/norms", response_class=HTMLResponse)
