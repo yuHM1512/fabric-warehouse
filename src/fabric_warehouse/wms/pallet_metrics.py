@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from fabric_warehouse.db.models.fabric_data import FabricData
 from fabric_warehouse.db.models.location_assignment import LocationAssignment
 from fabric_warehouse.db.models.receipt import Receipt, ReceiptLine
+from fabric_warehouse.db.models.return_event import ReturnEvent
 from fabric_warehouse.db.models.stock_check import StockCheck
 
 PALLET_CAPACITY_M3 = 1.5
@@ -135,6 +136,31 @@ def _is_main_pallet_location(vi_tri: str) -> bool:
     return False
 
 
+def _latest_return_map(db: Session, *, ma_cays: list[str]) -> dict[str, tuple[datetime | None, float | None]]:
+    if not ma_cays:
+        return {}
+
+    rows = (
+        db.query(ReturnEvent.ma_cay, ReturnEvent.ngay_tai_nhap, ReturnEvent.yds_du, ReturnEvent.created_at)
+        .filter(ReturnEvent.ma_cay.in_(ma_cays))
+        .filter(ReturnEvent.vi_tri_moi.isnot(None))
+        .order_by(ReturnEvent.ma_cay.asc(), ReturnEvent.ngay_tai_nhap.desc(), ReturnEvent.id.desc())
+        .all()
+    )
+    latest: dict[str, tuple[datetime | None, float | None]] = {}
+    for ma, ngay_tai_nhap, yds_du, created_at in rows:
+        ma_s = str(ma or "").strip()
+        if not ma_s or ma_s in latest:
+            continue
+        returned_at = (
+            datetime.combine(ngay_tai_nhap, datetime.min.time(), tzinfo=APP_TZ)
+            if ngay_tai_nhap is not None
+            else created_at
+        )
+        latest[ma_s] = (returned_at, _as_float(yds_du, 0.0) if yds_du is not None else None)
+    return latest
+
+
 def _compute_pallet_ratio_map(db: Session) -> dict[str, float]:
     assignments = (
         db.query(
@@ -147,6 +173,7 @@ def _compute_pallet_ratio_map(db: Session) -> dict[str, float]:
         .all()
     )
     ma_cays = sorted({a.ma_cay for a in assignments if a.ma_cay})
+    return_map = _latest_return_map(db, ma_cays=ma_cays)
 
     sc_rows = (
         db.query(StockCheck.nhu_cau, StockCheck.lot, StockCheck.ma_cay, StockCheck.actual_yards)
@@ -193,6 +220,9 @@ def _compute_pallet_ratio_map(db: Session) -> dict[str, float]:
         if not vi_tri_s or not _is_main_pallet_location(vi_tri_s):
             continue
         actual = actual_map.get((str(nc), str(lot), str(ma)), 0.0)
+        returned = return_map.get(str(ma))
+        if returned and returned[1] is not None:
+            actual = float(returned[1])
         yds_max = _get_yds_max(norms=norms, ma_art=art_map.get(str(ma)))
         pallet_ratio[vi_tri_s] = pallet_ratio.get(vi_tri_s, 0.0) + (float(actual) / float(yds_max))
 
@@ -223,6 +253,7 @@ def compute_pallet_kpis(db: Session) -> PalletKpis:
     )
     pallets_has_fabric = len({a.vi_tri for a in assignments if a.vi_tri and _is_main_pallet_location(str(a.vi_tri))})
     ma_cays = sorted({a.ma_cay for a in assignments if a.ma_cay})
+    return_map = _latest_return_map(db, ma_cays=ma_cays)
 
     sc_rows = (
         db.query(StockCheck.nhu_cau, StockCheck.lot, StockCheck.ma_cay, StockCheck.actual_yards)
@@ -269,6 +300,9 @@ def compute_pallet_kpis(db: Session) -> PalletKpis:
         if not vi_tri_s or not _is_main_pallet_location(vi_tri_s):
             continue
         actual = actual_map.get((str(nc), str(lot), str(ma)), 0.0)
+        returned = return_map.get(str(ma))
+        if returned and returned[1] is not None:
+            actual = float(returned[1])
         yds_max = _get_yds_max(norms=norms, ma_art=art_map.get(str(ma)))
         pallet_ratio[vi_tri_s] = pallet_ratio.get(vi_tri_s, 0.0) + (float(actual) / float(yds_max))
 
@@ -345,6 +379,7 @@ def list_pallet_roll_rows(db: Session, *, vi_tri: str) -> list[PalletRollRow]:
     ma_cays = [str(ma) for ma, _, _, _, _ in assignments if ma]
     if not ma_cays:
         return []
+    return_map = _latest_return_map(db, ma_cays=ma_cays)
 
     sc_rows = (
         db.query(StockCheck.nhu_cau, StockCheck.lot, StockCheck.ma_cay, StockCheck.actual_yards)
@@ -388,10 +423,13 @@ def list_pallet_roll_rows(db: Session, *, vi_tri: str) -> list[PalletRollRow]:
         ngay_nhap, yards = receipt_map.get(ma_s, (None, None))
 
         yds = actual_map.get((nc_s, lot_s, ma_s))
+        returned = return_map.get(ma_s)
+        if returned and returned[1] is not None:
+            yds = float(returned[1])
         if yds is None or yds == 0.0:
             yds = yards
 
-        confirmed_at = assigned_at or updated_at
+        confirmed_at = (returned[0] if returned else None) or assigned_at or updated_at
         confirmed_str: str | None = None
         days_in_stock: int | None = None
         if confirmed_at is not None:

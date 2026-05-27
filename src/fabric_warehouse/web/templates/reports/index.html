@@ -48,7 +48,7 @@
             số cây / YDS tổng và phần đã kiểm kho (đã nhập).
           </p>
         </div>
-        <div class="flex items-end gap-3">
+        <div class="flex flex-wrap items-end justify-end gap-3">
           <div>
             <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="inboundNhuCau">Nhu cầu</label>
             <select id="inboundNhuCau" class="mt-2 rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0 min-w-[320px]">
@@ -57,6 +57,22 @@
                 <option value="{{ nc }}" {% if selected_nhu_cau == nc %}selected{% endif %}>{{ nc }}</option>
               {% endfor %}
             </select>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 md:pb-[1px]">
+            <a
+              id="inboundExportSelected"
+              href="/reports/inbound/export?mode=selected{% if selected_nhu_cau %}&nhu_cau={{ selected_nhu_cau|urlencode }}{% endif %}"
+              class="inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white transition hover:opacity-90"
+            >
+              Excel theo nhu cầu
+            </a>
+            <a
+              id="inboundExportAll"
+              href="/reports/inbound/export?mode=all"
+              class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white transition hover:bg-emerald-500"
+            >
+              Excel All
+            </a>
           </div>
         </div>
       </div>
@@ -180,6 +196,8 @@
       (function () {
         const sel = document.getElementById("inboundNhuCau");
         if (!sel) return;
+        const exportSelectedLink = document.getElementById("inboundExportSelected");
+        const exportAllLink = document.getElementById("inboundExportAll");
 
         const url = new URL(window.location.href);
         const selectedStatus = url.searchParams.get("status") || "";
@@ -230,6 +248,22 @@
           statusSel.value = selectedStatus;
         }
 
+        function syncExportLinks() {
+          const demandVal = demandInput.value.trim();
+          if (exportSelectedLink) {
+            const nextSelected = new URL("/reports/inbound/export", window.location.origin);
+            nextSelected.searchParams.set("mode", "selected");
+            if (demandVal) nextSelected.searchParams.set("nhu_cau", demandVal);
+            exportSelectedLink.href = nextSelected.pathname + nextSelected.search;
+            exportSelectedLink.classList.toggle("pointer-events-none", !demandVal);
+            exportSelectedLink.classList.toggle("opacity-40", !demandVal);
+            exportSelectedLink.setAttribute("aria-disabled", demandVal ? "false" : "true");
+          }
+          if (exportAllLink) {
+            exportAllLink.href = "/reports/inbound/export?mode=all";
+          }
+        }
+
         function applyFilters() {
           const nextUrl = new URL(window.location.href);
           const demandVal = demandInput.value.trim();
@@ -242,7 +276,9 @@
           window.location.href = nextUrl.toString();
         }
 
+        syncExportLinks();
         if (statusSel) statusSel.addEventListener("change", applyFilters);
+        demandInput.addEventListener("input", syncExportLinks);
         demandInput.addEventListener("change", applyFilters);
         demandInput.addEventListener("keydown", (event) => {
           if (event.key === "Enter") {

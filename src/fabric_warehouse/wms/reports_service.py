@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from io import BytesIO
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
@@ -324,6 +328,15 @@ class InboundDemandGroup:
     def lot_count(self) -> int:
         return len({row.lot for row in self.lots})
 
+
+@dataclass(frozen=True)
+class InboundExportRow:
+    nhu_cau: str
+    lot: str
+    vi_tri: str | None
+    ma_cay: str
+    so_yds: float
+
 def inbound_status_by_nhu_cau(
     db: Session,
     *,
@@ -455,4 +468,159 @@ def list_active_inbound_nhu_cau_options(
 ) -> list[str]:
     groups = inbound_status_by_nhu_cau(db, status=status, limit_lots=limit)
     return [g.nhu_cau for g in groups[:limit]]
+
+
+def list_inbound_export_rows(
+    db: Session,
+    *,
+    nhu_cau: str | None = None,
+) -> list[InboundExportRow]:
+    q = (
+        db.query(
+            ReceiptLine.nhu_cau.label("nhu_cau"),
+            ReceiptLine.lot.label("lot"),
+            LocationAssignment.vi_tri.label("vi_tri"),
+            ReceiptLine.ma_cay.label("ma_cay"),
+            func.coalesce(ReceiptLine.yards, 0).label("so_yds"),
+        )
+        .join(LocationAssignment, LocationAssignment.ma_cay == ReceiptLine.ma_cay)
+        .filter(LocationAssignment.trang_thai == _DANG_LUU)
+    )
+    if nhu_cau:
+        q = q.filter(ReceiptLine.nhu_cau.ilike(f"%{nhu_cau}%"))
+
+    rows = (
+        q.order_by(
+            ReceiptLine.nhu_cau.asc(),
+            ReceiptLine.lot.asc(),
+            LocationAssignment.vi_tri.asc(),
+            ReceiptLine.ma_cay.asc(),
+        ).all()
+    )
+    return [
+        InboundExportRow(
+            nhu_cau=str(r.nhu_cau or "").strip() or "(Khong xac dinh)",
+            lot=str(r.lot or "").strip() or "(Khong xac dinh)",
+            vi_tri=str(r.vi_tri).strip() if r.vi_tri else None,
+            ma_cay=str(r.ma_cay or "").strip(),
+            so_yds=float(r.so_yds or 0),
+        )
+        for r in rows
+    ]
+
+
+def build_inbound_export_excel(
+    db: Session,
+    *,
+    nhu_cau: str | None = None,
+    export_mode: str = "selected",
+) -> bytes:
+    rows = list_inbound_export_rows(db, nhu_cau=nhu_cau if export_mode == "selected" else None)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Inbound"
+    ws.sheet_view.showGridLines = False
+    ws.freeze_panes = "A5"
+
+    title = "BÁO CÁO INBOUND ĐANG LƯU KHO"
+    subtitle = f"Nhu cầu: {nhu_cau}" if export_mode == "selected" and nhu_cau else "Phạm vi: ALL đang lưu kho"
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    ws.merge_cells("A1:E1")
+    ws["A1"] = title
+    ws["A1"].font = Font(size=16, bold=True, color="FFFFFF")
+    ws["A1"].fill = PatternFill("solid", fgColor="1F4E78")
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+
+    ws.merge_cells("A2:E2")
+    ws["A2"] = subtitle
+    ws["A2"].font = Font(size=11, bold=True, color="1F1F1F")
+    ws["A2"].fill = PatternFill("solid", fgColor="D9EAF7")
+    ws["A2"].alignment = Alignment(horizontal="left", vertical="center")
+
+    ws.merge_cells("A3:E3")
+    ws["A3"] = f"Generated at: {generated_at}"
+    ws["A3"].font = Font(size=10, italic=True, color="666666")
+    ws["A3"].alignment = Alignment(horizontal="left", vertical="center")
+
+    headers = ["Nhu cầu", "Lot", "Vị trí", "Mã cây", "Số YDS"]
+    header_row = 4
+    for idx, header in enumerate(headers, start=1):
+        cell = ws.cell(row=header_row, column=idx, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="2F75B5")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    thin = Side(style="thin", color="D9D9D9")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    total_yds = 0.0
+    start_data_row = header_row + 1
+    for offset, item in enumerate(rows):
+        row_idx = start_data_row + offset
+        values = [item.nhu_cau, item.lot, item.vi_tri or "", item.ma_cay, item.so_yds]
+        total_yds += item.so_yds
+        for col_idx, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            cell.border = border
+            if col_idx == 5:
+                cell.number_format = '#,##0.00'
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+            else:
+                cell.alignment = Alignment(horizontal="left", vertical="center")
+        if offset % 2 == 0:
+            for col_idx in range(1, 6):
+                ws.cell(row=row_idx, column=col_idx).fill = PatternFill("solid", fgColor="F7FBFF")
+
+    summary_row = max(start_data_row, start_data_row + len(rows))
+    ws.cell(row=summary_row, column=1, value="Tổng cộng").font = Font(bold=True)
+    ws.cell(row=summary_row, column=1).fill = PatternFill("solid", fgColor="EAF2F8")
+    ws.cell(row=summary_row, column=1).border = border
+    ws.merge_cells(start_row=summary_row, start_column=1, end_row=summary_row, end_column=4)
+    for col_idx in range(1, 5):
+        ws.cell(row=summary_row, column=col_idx).border = border
+        ws.cell(row=summary_row, column=col_idx).fill = PatternFill("solid", fgColor="EAF2F8")
+    total_cell = ws.cell(row=summary_row, column=5, value=total_yds)
+    total_cell.font = Font(bold=True)
+    total_cell.number_format = '#,##0.00'
+    total_cell.alignment = Alignment(horizontal="right", vertical="center")
+    total_cell.fill = PatternFill("solid", fgColor="EAF2F8")
+    total_cell.border = border
+
+    ws.auto_filter.ref = f"A4:E{summary_row}"
+    ws.row_dimensions[1].height = 24
+    ws.row_dimensions[2].height = 20
+    ws.row_dimensions[4].height = 22
+
+    widths = {
+        "A": 24,
+        "B": 18,
+        "C": 16,
+        "D": 22,
+        "E": 14,
+    }
+    for col, width in widths.items():
+        ws.column_dimensions[col].width = width
+
+    for row in ws.iter_rows(min_row=4, max_row=summary_row, min_col=1, max_col=5):
+        for cell in row:
+            cell.border = border
+
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth = 1
+    ws.page_margins.left = 0.25
+    ws.page_margins.right = 0.25
+    ws.page_margins.top = 0.5
+    ws.page_margins.bottom = 0.5
+    ws.print_title_rows = "$1:$4"
+
+    for idx in range(1, 6):
+        ws.cell(row=summary_row, column=idx).border = border
+        ws.column_dimensions[get_column_letter(idx)].bestFit = True
+
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+    return bio.getvalue()
 

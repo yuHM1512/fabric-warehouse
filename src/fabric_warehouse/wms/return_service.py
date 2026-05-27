@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, time
 import re
 import unicodedata
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, aliased
@@ -13,6 +14,8 @@ from fabric_warehouse.db.models.location_assignment import LocationAssignment
 from fabric_warehouse.db.models.receipt import ReceiptLine
 from fabric_warehouse.db.models.return_event import ReturnEvent
 from fabric_warehouse.db.models.stock_check import StockCheck
+
+APP_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
 RETURN_TO_STOCK = "Tái nhập kho"
 RETURN_TO_MOTHER = "Trả Mẹ Nhu"
@@ -186,6 +189,7 @@ def create_return(
     note: str | None,
 ) -> int:
     status = _normalize_return_status(status)
+    returned_at = datetime.combine(ngay_tai_nhap, time(0, 0), tzinfo=APP_TZ)
 
     ev = ReturnEvent(
         issue_line_id=issue_line_id,
@@ -202,6 +206,8 @@ def create_return(
     db.flush()
 
     assign = db.query(LocationAssignment).filter(LocationAssignment.ma_cay == ma_cay).first()
+    from_nhu_cau = assign.nhu_cau if assign else None
+    from_lot = assign.lot if assign else None
     if assign:
         if status == RETURN_TO_STOCK:
             if nhu_cau_moi:
@@ -211,9 +217,52 @@ def create_return(
             if vi_tri_moi:
                 assign.vi_tri = vi_tri_moi
             assign.trang_thai = ACTIVE_STORAGE_STATUS
+            assign.assigned_at = returned_at
+            assign.updated_at = returned_at
         elif status == RETURN_TO_MOTHER:
             assign.trang_thai = RETURN_TO_MOTHER
+            assign.updated_at = returned_at
         db.add(assign)
+
+    if status == RETURN_TO_STOCK:
+        target_nhu_cau = (nhu_cau_moi or from_nhu_cau or "").strip()
+        target_lot = (lot_moi or from_lot or "").strip()
+        stock_check = None
+
+        if target_nhu_cau and target_lot:
+            stock_check = (
+                db.query(StockCheck)
+                .filter(StockCheck.nhu_cau == target_nhu_cau)
+                .filter(StockCheck.lot == target_lot)
+                .filter(StockCheck.ma_cay == ma_cay)
+                .first()
+            )
+
+        if stock_check is None:
+            q = db.query(StockCheck).filter(StockCheck.ma_cay == ma_cay)
+            if from_nhu_cau:
+                q = q.filter(StockCheck.nhu_cau == from_nhu_cau)
+            if from_lot:
+                q = q.filter(StockCheck.lot == from_lot)
+            stock_check = q.order_by(StockCheck.updated_at.desc(), StockCheck.id.desc()).first()
+
+        if stock_check is None and target_nhu_cau and target_lot:
+            stock_check = StockCheck(
+                nhu_cau=target_nhu_cau,
+                lot=target_lot,
+                ma_cay=ma_cay,
+            )
+
+        if stock_check is not None:
+            if target_nhu_cau:
+                stock_check.nhu_cau = target_nhu_cau
+            if target_lot:
+                stock_check.lot = target_lot
+            if yds_du is not None:
+                stock_check.expected_yards = yds_du
+                stock_check.actual_yards = yds_du
+            stock_check.updated_at = returned_at
+            db.add(stock_check)
 
     return ev.id
 
