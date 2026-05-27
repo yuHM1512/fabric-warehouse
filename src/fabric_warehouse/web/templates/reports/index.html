@@ -58,22 +58,6 @@
               {% endfor %}
             </select>
           </div>
-          <div class="flex flex-wrap items-center gap-3 md:pb-[1px]">
-            <a
-              id="inboundExportSelected"
-              href="/reports/inbound/export?mode=selected{% if selected_nhu_cau %}&nhu_cau={{ selected_nhu_cau|urlencode }}{% endif %}"
-              class="inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white transition hover:opacity-90"
-            >
-              Excel theo nhu cầu
-            </a>
-            <a
-              id="inboundExportAll"
-              href="/reports/inbound/export?mode=all"
-              class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white transition hover:bg-emerald-500"
-            >
-              Excel All
-            </a>
-          </div>
         </div>
       </div>
 
@@ -196,8 +180,6 @@
       (function () {
         const sel = document.getElementById("inboundNhuCau");
         if (!sel) return;
-        const exportSelectedLink = document.getElementById("inboundExportSelected");
-        const exportAllLink = document.getElementById("inboundExportAll");
 
         const url = new URL(window.location.href);
         const selectedStatus = url.searchParams.get("status") || "";
@@ -248,22 +230,6 @@
           statusSel.value = selectedStatus;
         }
 
-        function syncExportLinks() {
-          const demandVal = demandInput.value.trim();
-          if (exportSelectedLink) {
-            const nextSelected = new URL("/reports/inbound/export", window.location.origin);
-            nextSelected.searchParams.set("mode", "selected");
-            if (demandVal) nextSelected.searchParams.set("nhu_cau", demandVal);
-            exportSelectedLink.href = nextSelected.pathname + nextSelected.search;
-            exportSelectedLink.classList.toggle("pointer-events-none", !demandVal);
-            exportSelectedLink.classList.toggle("opacity-40", !demandVal);
-            exportSelectedLink.setAttribute("aria-disabled", demandVal ? "false" : "true");
-          }
-          if (exportAllLink) {
-            exportAllLink.href = "/reports/inbound/export?mode=all";
-          }
-        }
-
         function applyFilters() {
           const nextUrl = new URL(window.location.href);
           const demandVal = demandInput.value.trim();
@@ -276,9 +242,7 @@
           window.location.href = nextUrl.toString();
         }
 
-        syncExportLinks();
         if (statusSel) statusSel.addEventListener("change", applyFilters);
-        demandInput.addEventListener("input", syncExportLinks);
         demandInput.addEventListener("change", applyFilters);
         demandInput.addEventListener("keydown", (event) => {
           if (event.key === "Enter") {
@@ -655,6 +619,50 @@
         </div>
       </div>
 
+      <div class="px-8 py-6 border-b border-black/5 bg-surface-container-low/20">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Kết xuất Excel tồn kho</div>
+            <div class="mt-2 text-sm text-on-surface-variant leading-relaxed">
+              Xuất chi tiết cây đang lưu kho theo <span class="font-semibold text-on-surface">Nhu cầu - Lot - Vị trí - Mã cây - Số YDS</span>.
+            </div>
+          </div>
+          <div class="flex flex-wrap items-end gap-3">
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="stockExportNhuCau">Nhu cầu</label>
+              <input
+                id="stockExportNhuCau"
+                list="stock-export-nhu-cau-list"
+                value=""
+                placeholder="Gõ để chọn nhu cầu..."
+                class="mt-2 min-w-[320px] rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
+              />
+              <datalist id="stock-export-nhu-cau-list">
+                {% for v in stock_nhu_cau_options or [] %}
+                  <option value="{{ v }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 md:pb-[1px]">
+              <a
+                id="stockExportSelected"
+                href="/reports/stock/export?mode=selected"
+                class="inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white transition hover:opacity-90"
+              >
+                Excel theo nhu cầu
+              </a>
+              <a
+                id="stockExportAll"
+                href="/reports/stock/export?mode=all"
+                class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white transition hover:bg-emerald-500"
+              >
+                Excel All
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Table -->
       <div class="overflow-x-auto p-4 md:p-6">
         <table class="min-w-full text-sm">
@@ -716,6 +724,31 @@
         </table>
       </div>
     </div>
+
+    <script>
+      (function () {
+        const demandInput = document.getElementById("stockExportNhuCau");
+        const exportSelectedLink = document.getElementById("stockExportSelected");
+        const exportAllLink = document.getElementById("stockExportAll");
+        if (!demandInput || !exportSelectedLink || !exportAllLink) return;
+
+        function syncStockExportLinks() {
+          const demandVal = demandInput.value.trim();
+          const nextSelected = new URL("/reports/stock/export", window.location.origin);
+          nextSelected.searchParams.set("mode", "selected");
+          if (demandVal) nextSelected.searchParams.set("nhu_cau", demandVal);
+          exportSelectedLink.href = nextSelected.pathname + nextSelected.search;
+          exportSelectedLink.classList.toggle("pointer-events-none", !demandVal);
+          exportSelectedLink.classList.toggle("opacity-40", !demandVal);
+          exportSelectedLink.setAttribute("aria-disabled", demandVal ? "false" : "true");
+          exportAllLink.href = "/reports/stock/export?mode=all";
+        }
+
+        demandInput.addEventListener("input", syncStockExportLinks);
+        demandInput.addEventListener("change", syncStockExportLinks);
+        syncStockExportLinks();
+      })();
+    </script>
   {% endif %}
 
 </div>

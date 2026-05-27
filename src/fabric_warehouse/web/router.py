@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from fabric_warehouse.db.session import get_db
 from fabric_warehouse.wms.hanging_pdf import render_hanging_tag_pdf, render_merged_hanging_tag_pdf
 from fabric_warehouse.wms.reports_service import (
-    build_inbound_export_excel,
+    build_stock_export_excel,
     inbound_status_by_nhu_cau,
     list_active_inbound_nhu_cau_options,
     ton_kho_by_age_split,
@@ -1512,6 +1512,19 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
     total_so_cay = sum(r.so_cay for r in rows)
     total_tong_yds = sum(r.tong_yds for r in rows)
     total_da_dinh_danh = sum(r.da_dinh_danh for r in rows)
+    try:
+        stock_nhu_cau_options = [
+            str(r[0])
+            for r in db.query(LocationAssignment.nhu_cau)
+            .filter(LocationAssignment.trang_thai == "Đang lưu")
+            .filter(LocationAssignment.nhu_cau.isnot(None))
+            .distinct()
+            .order_by(LocationAssignment.nhu_cau.asc())
+            .all()
+            if r and r[0]
+        ]
+    except Exception:
+        stock_nhu_cau_options = []
 
     return templates.TemplateResponse(
         request,
@@ -1525,12 +1538,14 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
             "total_so_cay": total_so_cay,
             "total_tong_yds": total_tong_yds,
             "total_da_dinh_danh": total_da_dinh_danh,
+            "stock_nhu_cau_options": stock_nhu_cau_options,
         },
     )
 
 
+@router.get("/reports/stock/export")
 @router.get("/reports/inbound/export")
-def reports_inbound_export(
+def reports_stock_export(
     mode: str = Query(default="selected"),
     nhu_cau: str | None = Query(default=None),
     db: Session = Depends(get_db),
@@ -1543,14 +1558,14 @@ def reports_inbound_export(
     if export_mode == "selected" and not nhu_cau_val:
         raise HTTPException(status_code=400, detail="Vui lòng chọn Nhu cầu để kết xuất file này.")
 
-    excel_bytes = build_inbound_export_excel(
+    excel_bytes = build_stock_export_excel(
         db,
         nhu_cau=nhu_cau_val,
         export_mode=export_mode,
     )
     suffix = "all_dang_luu" if export_mode == "all" else f"nhu_cau_{nhu_cau_val}"
     safe_suffix = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in suffix)
-    filename = f"inbound_{safe_suffix}.xlsx"
+    filename = f"ton_kho_{safe_suffix}.xlsx"
     return StreamingResponse(
         BytesIO(excel_bytes),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

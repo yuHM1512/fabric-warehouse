@@ -330,7 +330,7 @@ class InboundDemandGroup:
 
 
 @dataclass(frozen=True)
-class InboundExportRow:
+class StockExportRow:
     nhu_cau: str
     lot: str
     vi_tri: str | None
@@ -470,11 +470,11 @@ def list_active_inbound_nhu_cau_options(
     return [g.nhu_cau for g in groups[:limit]]
 
 
-def list_inbound_export_rows(
+def list_stock_export_rows(
     db: Session,
     *,
     nhu_cau: str | None = None,
-) -> list[InboundExportRow]:
+) -> list[StockExportRow]:
     q = (
         db.query(
             ReceiptLine.nhu_cau.label("nhu_cau"),
@@ -498,7 +498,7 @@ def list_inbound_export_rows(
         ).all()
     )
     return [
-        InboundExportRow(
+        StockExportRow(
             nhu_cau=str(r.nhu_cau or "").strip() or "(Khong xac dinh)",
             lot=str(r.lot or "").strip() or "(Khong xac dinh)",
             vi_tri=str(r.vi_tri).strip() if r.vi_tri else None,
@@ -509,21 +509,21 @@ def list_inbound_export_rows(
     ]
 
 
-def build_inbound_export_excel(
+def build_stock_export_excel(
     db: Session,
     *,
     nhu_cau: str | None = None,
     export_mode: str = "selected",
 ) -> bytes:
-    rows = list_inbound_export_rows(db, nhu_cau=nhu_cau if export_mode == "selected" else None)
+    rows = list_stock_export_rows(db, nhu_cau=nhu_cau if export_mode == "selected" else None)
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "Inbound"
+    ws.title = "TonKho"
     ws.sheet_view.showGridLines = False
     ws.freeze_panes = "A5"
 
-    title = "BÁO CÁO INBOUND ĐANG LƯU KHO"
+    title = "BÁO CÁO TỒN KHO ĐANG LƯU"
     subtitle = f"Nhu cầu: {nhu_cau}" if export_mode == "selected" and nhu_cau else "Phạm vi: ALL đang lưu kho"
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
