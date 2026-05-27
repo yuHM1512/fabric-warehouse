@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 
 from datetime import date
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
@@ -89,6 +90,7 @@ from fabric_warehouse.wms.return_service import (
     list_return_history,
     list_pending_return_lot_options,
     list_pending_return_nhu_cau_options,
+    list_pending_return_ten_art_options,
 )
 from fabric_warehouse.db.models.issue import IssueLine
 from fabric_warehouse.wms.fabric_norms import list_ma_models, list_norm_rows, search_norms_db
@@ -129,6 +131,21 @@ def _safe_next_url(raw: str | None) -> str:
     if raw.startswith("//"):
         return "/"
     return raw
+
+
+def _selected_nhu_caus(request: Request) -> list[str]:
+    seen: list[str] = []
+    for raw in request.query_params.getlist("nhu_cau"):
+        value = (raw or "").strip()
+        if value and value not in seen:
+            seen.append(value)
+    return seen
+
+
+def _nhu_cau_query_string(values: list[str]) -> str:
+    if not values:
+        return ""
+    return urlencode([("nhu_cau", value) for value in values], doseq=True)
 
 
 @router.get("/rcp/login", response_class=HTMLResponse)
@@ -346,7 +363,7 @@ def receipt_pdf(receipt_id: int, db: Session = Depends(get_db)):
 @router.get("/wms/hanging", response_class=HTMLResponse)
 def hanging_list(request: Request, db: Session = Depends(get_db)):
     error: str | None = None
-    nhu_cau: str | None = request.query_params.get("nhu_cau")
+    selected_nhu_caus = _selected_nhu_caus(request)
     try:
         # Backfill once if table exists but still empty (imports happened before hanging_tags existed).
         existing_any = db.query(HangingTag.id).limit(1).all()
@@ -366,8 +383,8 @@ def hanging_list(request: Request, db: Session = Depends(get_db)):
         ]
 
         q = db.query(HangingTag)
-        if nhu_cau:
-            q = q.filter(HangingTag.nhu_cau == nhu_cau)
+        if selected_nhu_caus:
+            q = q.filter(HangingTag.nhu_cau.in_(selected_nhu_caus))
         tags = q.order_by(HangingTag.id.desc()).limit(500).all()
 
         # Fill missing fields (customer/ngay_xuat) for old tags without overwriting existing values.
@@ -389,7 +406,9 @@ def hanging_list(request: Request, db: Session = Depends(get_db)):
             "tags": tags,
             "gon_items": [],
             "error": error,
-            "nhu_cau": nhu_cau,
+            "nhu_cau": selected_nhu_caus[0] if len(selected_nhu_caus) == 1 else None,
+            "selected_nhu_caus": selected_nhu_caus,
+            "current_nhu_cau_query": _nhu_cau_query_string(selected_nhu_caus),
             "nhu_cau_options": nhu_cau_options,
         },
     )
@@ -413,6 +432,8 @@ def hanging_gon_list(request: Request, db: Session = Depends(get_db)):
             "gon_items": gon_items,
             "error": gon_error,
             "nhu_cau": None,
+            "selected_nhu_caus": [],
+            "current_nhu_cau_query": "",
             "nhu_cau_options": [],
         },
     )
@@ -511,19 +532,20 @@ def hanging_print(
     request: Request,
     db: Session = Depends(get_db),
     ids: list[int] | None = Query(default=None),
-    nhu_cau: str | None = None,
+    nhu_cau: list[str] | None = Query(default=None),
 ):
+    selected_nhu_caus = [v.strip() for v in (nhu_cau or []) if (v or "").strip()]
     if ids:
         tags = db.query(HangingTag).filter(HangingTag.id.in_(ids)).order_by(HangingTag.id.asc()).all()
-    elif nhu_cau:
+    elif selected_nhu_caus:
         tags = (
             db.query(HangingTag)
-            .filter(HangingTag.nhu_cau == nhu_cau)
+            .filter(HangingTag.nhu_cau.in_(selected_nhu_caus))
             .order_by(HangingTag.lot.asc(), HangingTag.id.asc())
             .all()
         )
     else:
-        tags = []
+        tags = db.query(HangingTag).order_by(HangingTag.lot.asc(), HangingTag.id.asc()).all()
 
     return templates.TemplateResponse(
         request,
@@ -537,11 +559,11 @@ def hanging_edit(request: Request, tag_id: int, db: Session = Depends(get_db)):
     tag = db.query(HangingTag).filter(HangingTag.id == tag_id).first()
     if not tag:
         raise HTTPException(status_code=404, detail="Không tìm thấy bảng treo.")
-    nhu_cau = request.query_params.get("nhu_cau")
+    current_nhu_cau_query = _nhu_cau_query_string(_selected_nhu_caus(request))
     return templates.TemplateResponse(
         request,
         "wms/hanging_edit.html",
-        {"title": f"Sửa bảng treo #{tag.id}", "tag": tag, "nhu_cau": nhu_cau},
+        {"title": f"Sửa bảng treo #{tag.id}", "tag": tag, "current_nhu_cau_query": current_nhu_cau_query},
     )
 
 
@@ -550,11 +572,11 @@ def hanging_edit_fragment(request: Request, tag_id: int, db: Session = Depends(g
     tag = db.query(HangingTag).filter(HangingTag.id == tag_id).first()
     if not tag:
         raise HTTPException(status_code=404, detail="Không tìm thấy bảng treo.")
-    nhu_cau = request.query_params.get("nhu_cau")
+    current_nhu_cau_query = _nhu_cau_query_string(_selected_nhu_caus(request))
     return templates.TemplateResponse(
         request,
         "wms/_hanging_edit_fragment.html",
-        {"tag": tag, "nhu_cau": nhu_cau},
+        {"tag": tag, "current_nhu_cau_query": current_nhu_cau_query},
     )
 
 
@@ -616,10 +638,10 @@ def hanging_edit_save(
     db.add(tag)
     db.commit()
 
-    nhu_cau = request.query_params.get("nhu_cau")
+    current_nhu_cau_query = _nhu_cau_query_string(_selected_nhu_caus(request))
     url = "/wms/hanging"
-    if nhu_cau:
-        url = f"/wms/hanging?nhu_cau={nhu_cau}"
+    if current_nhu_cau_query:
+        url = f"/wms/hanging?{current_nhu_cau_query}"
     return RedirectResponse(url=url, status_code=303)
 
 
@@ -1058,6 +1080,7 @@ def returns_home(request: Request, db: Session = Depends(get_db)):
             "filter_loai_vai": loai_vai,
             "nhu_cau_options": list_pending_return_nhu_cau_options(db, limit=2000) if tab == "todo" else [],
             "lot_options": list_pending_return_lot_options(db, limit=2000) if tab == "todo" else [],
+            "loai_vai_options": list_pending_return_ten_art_options(db, limit=2000) if tab == "todo" else [],
             "warehouse_area_options": warehouse_area_options(),
             "tang_options": tang_options(),
             "line_options": line_options(),

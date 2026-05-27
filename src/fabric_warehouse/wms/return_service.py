@@ -175,6 +175,20 @@ def list_pending_return_lot_options(db: Session, *, limit: int = 2000) -> list[s
     return [str(r[0]) for r in rows if r and r[0]]
 
 
+def list_pending_return_ten_art_options(db: Session, *, limit: int = 2000) -> list[str]:
+    q, _, _, ten_art_expr = _pending_return_base_query(db)
+    rows = (
+        q.with_entities(ten_art_expr)
+        .filter(ten_art_expr.isnot(None))
+        .filter(func.coalesce(ten_art_expr, "") != "")
+        .distinct()
+        .order_by(ten_art_expr)
+        .limit(limit)
+        .all()
+    )
+    return [str(r[0]) for r in rows if r and r[0]]
+
+
 def create_return(
     db: Session,
     *,

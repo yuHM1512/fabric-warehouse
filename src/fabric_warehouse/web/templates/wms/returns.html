@@ -60,7 +60,10 @@
           </div>
           <div class="md:col-span-3">
             <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="filterLoaiVai">Loại vải (Tên Art)</label>
-            <input id="filterLoaiVai" name="loai_vai" type="text" value="{{ filter_loai_vai or '' }}" placeholder="Gõ để lọc..." class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+            <input id="filterLoaiVai" name="loai_vai" type="text" list="loaiVaiOptions" value="{{ filter_loai_vai or '' }}" placeholder="Gõ để lọc..." class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:bg-white focus:ring-0" />
+            <datalist id="loaiVaiOptions">
+              {% for item in loai_vai_options %}<option value="{{ item }}"></option>{% endfor %}
+            </datalist>
           </div>
           <div class="md:col-span-2 flex items-center gap-2 md:justify-end">
             <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-white hover:opacity-90 transition-opacity">

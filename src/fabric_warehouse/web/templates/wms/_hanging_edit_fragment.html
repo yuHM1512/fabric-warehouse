@@ -24,7 +24,7 @@
   <form
     data-edit-fragment-form
     method="post"
-    action="/wms/hanging/{{ tag.id }}/edit/fragment{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}"
+    action="/wms/hanging/{{ tag.id }}/edit/fragment{% if current_nhu_cau_query %}?{{ current_nhu_cau_query }}{% endif %}"
   >
     <div class="grid grid-cols-1 gap-6">
       <div>
@@ -72,4 +72,3 @@
     </div>
   </form>
 </div>
-

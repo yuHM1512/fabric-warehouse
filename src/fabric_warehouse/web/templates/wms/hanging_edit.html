@@ -13,13 +13,13 @@
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <a href="/wms/hanging{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Quay lại</a>
+        <a href="/wms/hanging{% if current_nhu_cau_query %}?{{ current_nhu_cau_query }}{% endif %}" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Quay lại</a>
         <a href="/wms/hanging/print?ids={{ tag.id }}" target="_blank" rel="noopener" class="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-80">Preview</a>
       </div>
     </div>
 
     <div class="mt-10 max-w-2xl bg-surface-container-low rounded-[2rem] p-8">
-      <form method="post" action="/wms/hanging/{{ tag.id }}/edit{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}">
+      <form method="post" action="/wms/hanging/{{ tag.id }}/edit{% if current_nhu_cau_query %}?{{ current_nhu_cau_query }}{% endif %}">
         <div class="grid grid-cols-1 gap-6">
           <div>
             <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="customer">Customer</label>
@@ -55,7 +55,7 @@
               Lưu
             </button>
             <a
-              href="/wms/hanging{% if nhu_cau %}?nhu_cau={{ nhu_cau|urlencode }}{% endif %}"
+              href="/wms/hanging{% if current_nhu_cau_query %}?{{ current_nhu_cau_query }}{% endif %}"
               class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-bold text-primary hover:bg-white transition-colors"
             >
               Huỷ

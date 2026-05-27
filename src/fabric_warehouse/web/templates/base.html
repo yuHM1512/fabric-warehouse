@@ -315,10 +315,20 @@
 
               const url = new URL(form.action, window.location.origin);
               const data = new FormData(form);
+              const grouped = new Map();
               for (const [key, value] of data.entries()) {
                 const stringValue = String(value);
                 if (stringValue === "") continue;
-                url.searchParams.set(key, stringValue);
+                if (!grouped.has(key)) grouped.set(key, []);
+                grouped.get(key).push(stringValue);
+              }
+              for (const key of grouped.keys()) {
+                url.searchParams.delete(key);
+              }
+              for (const [key, values] of grouped.entries()) {
+                for (const stringValue of values) {
+                  url.searchParams.append(key, stringValue);
+                }
               }
 
               if (abortController) abortController.abort();
