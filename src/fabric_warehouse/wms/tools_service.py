@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, time, timezone
 
-from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from zoneinfo import ZoneInfo
 
@@ -40,20 +39,19 @@ def _dt_from_date_local(d: date | None) -> datetime | None:
 def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEvent]:
     lot = (lot or "").strip()
     ma_cay = (ma_cay or "").strip()
-    if not lot or not ma_cay:
+    if not ma_cay:
         return []
 
     events: list[TraceEvent] = []
 
-    # Phiếu nhập (receipt line)
-    rl = (
+    rl_query = (
         db.query(ReceiptLine, Receipt)
         .join(Receipt, Receipt.id == ReceiptLine.receipt_id)
-        .filter(ReceiptLine.lot == lot)
         .filter(ReceiptLine.ma_cay == ma_cay)
-        .order_by(ReceiptLine.id.asc())
-        .first()
     )
+    if lot:
+        rl_query = rl_query.filter(ReceiptLine.lot == lot)
+    rl = rl_query.order_by(ReceiptLine.id.asc()).first()
     if rl:
         line, receipt = rl
         at = receipt.created_at or line.created_at
@@ -62,11 +60,10 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
                 TraceEvent(
                     at=at,
                     kind="Phiếu nhập",
-                    summary=f"Receipt #{receipt.id} — Nhu cầu: {line.nhu_cau or ''}, Lot: {line.lot or ''}, YDS: {line.yards or ''}",
+                    summary=f"Receipt #{receipt.id} - Nhu cầu: {line.nhu_cau or ''}, Lot: {line.lot or ''}, YDS: {line.yards or ''}",
                 )
             )
 
-    # Nhập kho = timestamp đầu tiên gán vị trí (xác nhận lưu kho)
     first_loc = (
         db.query(LocationTransferLog)
         .filter(LocationTransferLog.ma_cay == ma_cay)
@@ -90,38 +87,31 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
                 TraceEvent(
                     at=fallback_at,
                     kind="Nhập kho",
-                    summary=f"Xác nhận lưu kho (thiếu log) — {la.vi_tri}",
+                    summary=f"Xác nhận lưu kho (thiếu log) - {la.vi_tri}",
                 )
             )
 
-    # Stock check
-    sc = (
-        db.query(StockCheck)
-        .filter(StockCheck.lot == lot)
-        .filter(StockCheck.ma_cay == ma_cay)
-        .order_by(StockCheck.updated_at.desc())
-        .first()
-    )
+    sc_query = db.query(StockCheck).filter(StockCheck.ma_cay == ma_cay)
+    if lot:
+        sc_query = sc_query.filter(StockCheck.lot == lot)
+    sc = sc_query.order_by(StockCheck.updated_at.desc()).first()
     if sc and sc.updated_at:
         events.append(
             TraceEvent(
                 at=sc.updated_at,
                 kind="Kiểm kho",
-                summary=f"Thực tế: {sc.actual_yards or ''} (phiếu: {sc.expected_yards or ''}) — {sc.note or ''}".strip(),
+                summary=f"Thực tế: {sc.actual_yards or ''} (phiếu: {sc.expected_yards or ''}) - {sc.note or ''}".strip(),
             )
         )
 
-    # Current position is derived from transfer logs; no separate "state" event.
-
-    # Issue (export)
-    il = (
+    il_query = (
         db.query(IssueLine, Issue)
         .join(Issue, Issue.id == IssueLine.issue_id)
         .filter(IssueLine.ma_cay == ma_cay)
-        .filter(Issue.lot == lot)
-        .order_by(Issue.created_at.asc(), Issue.id.asc())
-        .all()
     )
+    if lot:
+        il_query = il_query.filter(Issue.lot == lot)
+    il = il_query.order_by(Issue.created_at.asc(), Issue.id.asc()).all()
     for line, issue in il:
         at = issue.created_at
         if not at:
@@ -130,11 +120,10 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
             TraceEvent(
                 at=at,
                 kind="Xuất kho",
-                summary=f"{issue.status or 'Cấp phát'} — YDS xuất: {line.so_luong_xuat or ''} — Vị trí: {line.vi_tri or ''} (issue #{issue.id})".strip(),
+                summary=f"{issue.status or 'Cấp phát'} - YDS xuất: {line.so_luong_xuat or ''} - Vị trí: {line.vi_tri or ''} (issue #{issue.id})".strip(),
             )
         )
 
-    # Return events (re-import)
     rets = (
         db.query(ReturnEvent)
         .filter(ReturnEvent.ma_cay == ma_cay)
@@ -149,11 +138,10 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
             TraceEvent(
                 at=at,
                 kind="Tái nhập kho",
-                summary=f"{re.status or ''} — YDS dư: {re.yds_du or ''} — NC/Lot mới: {(re.nhu_cau_moi or '')}/{(re.lot_moi or '')} — VT mới: {re.vi_tri_moi or ''}".strip(),
+                summary=f"{re.status or ''} - YDS dư: {re.yds_du or ''} - NC/Lot mới: {(re.nhu_cau_moi or '')}/{(re.lot_moi or '')} - VT mới: {re.vi_tri_moi or ''}".strip(),
             )
         )
 
-    # Demand transfer logs
     dtl = (
         db.query(DemandTransferLog)
         .filter(DemandTransferLog.ma_cay == ma_cay)
@@ -165,11 +153,10 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
             TraceEvent(
                 at=it.created_at,
                 kind="Điều chuyển nhu cầu",
-                summary=f"{it.from_nhu_cau or ''}/{it.from_lot or ''} → {it.to_nhu_cau}/{it.to_lot or ''} — {it.note or ''}".strip(),
+                summary=f"{it.from_nhu_cau or ''}/{it.from_lot or ''} -> {it.to_nhu_cau}/{it.to_lot or ''} - {it.note or ''}".strip(),
             )
         )
 
-    # Location transfer logs
     ltl = (
         db.query(LocationTransferLog)
         .filter(LocationTransferLog.ma_cay == ma_cay)
@@ -183,7 +170,7 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
             TraceEvent(
                 at=it.created_at,
                 kind="Điều chuyển vị trí",
-                summary=f"{it.from_vi_tri or ''} → {it.to_vi_tri} — {it.note or ''}".strip(),
+                summary=f"{it.from_vi_tri or ''} -> {it.to_vi_tri} - {it.note or ''}".strip(),
             )
         )
 
@@ -191,31 +178,21 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
     return events
 
 
-def list_trace_lots(db: Session, *, limit: int = 2000) -> list[str]:
-    rows = (
-        db.query(ReceiptLine.lot)
-        .filter(ReceiptLine.lot.isnot(None))
-        .distinct()
-        .order_by(ReceiptLine.lot.asc())
-        .limit(limit)
-        .all()
-    )
+def list_trace_lots(db: Session, *, ma_cay: str = "", limit: int = 2000) -> list[str]:
+    ma_cay = (ma_cay or "").strip()
+    q = db.query(ReceiptLine.lot).filter(ReceiptLine.lot.isnot(None))
+    if ma_cay:
+        q = q.filter(ReceiptLine.ma_cay == ma_cay)
+    rows = q.distinct().order_by(ReceiptLine.lot.asc()).limit(limit).all()
     return [r[0] for r in rows if r[0]]
 
 
-def list_trace_ma_cays(db: Session, *, lot: str, limit: int = 5000) -> list[str]:
+def list_trace_ma_cays(db: Session, *, lot: str = "", limit: int = 5000) -> list[str]:
     lot = (lot or "").strip()
-    if not lot:
-        return []
-    rows = (
-        db.query(ReceiptLine.ma_cay)
-        .filter(ReceiptLine.lot == lot)
-        .filter(ReceiptLine.ma_cay.isnot(None))
-        .distinct()
-        .order_by(ReceiptLine.ma_cay.asc())
-        .limit(limit)
-        .all()
-    )
+    q = db.query(ReceiptLine.ma_cay).filter(ReceiptLine.ma_cay.isnot(None))
+    if lot:
+        q = q.filter(ReceiptLine.lot == lot)
+    rows = q.distinct().order_by(ReceiptLine.ma_cay.asc()).limit(limit).all()
     return [r[0] for r in rows if r[0]]
 
 
@@ -248,7 +225,6 @@ def transfer_demand(
                 la.lot = to_lot
             db.add(la)
 
-        # Update stock_check key for the roll (best effort: update rows with same ma_cay + from fields)
         q = db.query(StockCheck).filter(StockCheck.ma_cay == ma)
         if from_nhu_cau:
             q = q.filter(StockCheck.nhu_cau == from_nhu_cau)

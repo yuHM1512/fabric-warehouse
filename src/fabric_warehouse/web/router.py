@@ -1168,9 +1168,9 @@ def tools_home(request: Request):
 def tools_trace(request: Request, db: Session = Depends(get_db)):
     lot = request.query_params.get("lot") or ""
     ma_cay = request.query_params.get("ma_cay") or ""
-    lot_options = list_trace_lots(db, limit=2000)
-    ma_cay_options = list_trace_ma_cays(db, lot=lot, limit=5000) if lot else []
-    events = build_trace_timeline(db, lot=lot, ma_cay=ma_cay) if (lot and ma_cay) else []
+    lot_options = list_trace_lots(db, ma_cay=ma_cay, limit=2000)
+    ma_cay_options = list_trace_ma_cays(db, lot=lot, limit=5000)
+    events = build_trace_timeline(db, lot=lot, ma_cay=ma_cay) if ma_cay else []
     return templates.TemplateResponse(
         request,
         "wms/tools_trace.html",

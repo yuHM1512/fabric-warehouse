@@ -114,6 +114,27 @@
         backdrop-filter: blur(24px);
       }
 
+      .app-sidebar {
+        width: 18rem;
+        transition: width 0.2s ease, padding 0.2s ease;
+      }
+
+      .sidebar-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 9999px;
+        color: #475569;
+        transition: background-color 0.2s ease, color 0.2s ease;
+      }
+
+      .sidebar-toggle:hover {
+        background-color: #e2e8f0;
+        color: #1d4ed8;
+      }
+
       /* ── Sidebar nav link styles (reference UI) ── */
       .nav-link {
         display: flex;
@@ -180,14 +201,73 @@
       .kpi-card:hover .kpi-trend-up {
         color: #86efac; /* green-300 */
       }
+
+      body[data-sidebar-collapsed="true"] .app-sidebar {
+        width: 6rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      body[data-sidebar-collapsed="true"] .sidebar-brand {
+        justify-content: center;
+      }
+
+      body[data-sidebar-collapsed="true"] .sidebar-brand a {
+        width: 100%;
+      }
+
+      body[data-sidebar-collapsed="true"] .nav-link span:last-child,
+      body[data-sidebar-collapsed="true"] #app-sidebar nav > div.pt-3.pb-1 {
+        display: none;
+      }
+
+      body[data-sidebar-collapsed="true"] .nav-link,
+      body[data-sidebar-collapsed="true"] .logout-link {
+        justify-content: center;
+      }
+
+      body[data-sidebar-collapsed="true"] .nav-link {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+      }
+
+      body[data-sidebar-collapsed="true"] .nav-link:hover {
+        transform: none;
+      }
+
+      body[data-sidebar-collapsed="true"] .logout-link {
+        font-size: 0;
+      }
+
+      .logout-link .material-symbols-outlined {
+        font-size: 22px;
+      }
+
+      body[data-sidebar-collapsed="true"] .sidebar-toggle .material-symbols-outlined {
+        transform: rotate(180deg);
+      }
     </style>
   </head>
 
   <body class="bg-surface text-on-surface antialiased flex min-h-screen">
     {% set path = request.url.path %}
 
-    <aside class="h-screen w-72 flex-shrink-0 sticky top-0 bg-slate-50 flex flex-col py-4 px-5 space-y-4 shadow-sm overflow-y-auto">
-      <div class="mb-2 flex items-center justify-center">
+    <aside id="app-sidebar" class="app-sidebar h-screen flex-shrink-0 sticky top-0 bg-slate-50 flex flex-col py-4 px-5 space-y-4 shadow-sm overflow-y-auto">
+      <div class="flex items-center justify-between gap-3">
+        <button
+          id="sidebar-toggle"
+          type="button"
+          class="sidebar-toggle flex-shrink-0"
+          aria-controls="app-sidebar"
+          aria-expanded="true"
+          aria-label="Thu gọn menu"
+          title="Thu gọn/mở rộng menu"
+        >
+          <span class="material-symbols-outlined">left_panel_close</span>
+        </button>
+      </div>
+
+      <div class="sidebar-brand mb-2 flex items-center justify-center">
         <a href="/" class="block w-[85%]">
           <img src="/static/Marex.jpg" alt="Marex Project" class="w-full h-auto object-contain mix-blend-multiply" />
         </a>
@@ -205,7 +285,7 @@
         </a>
 
         <div class="pt-3 pb-1">
-          <div class="px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Modules</div>
+          <div class="sidebar-section-label px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Modules</div>
         </div>
 
         <a class="nav-link {% if path.startswith('/wms/receipts') %}active{% endif %}" href="/wms/receipts">
@@ -256,7 +336,7 @@
       <div class="mt-4">
         <a
           href="/rcp/logout"
-          class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-surface-container-low px-5 py-4 text-sm font-extrabold uppercase tracking-widest text-primary hover:bg-surface-container-lowest transition-colors"
+          class="logout-link inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-surface-container-low px-5 py-4 text-sm font-extrabold uppercase tracking-widest text-primary hover:bg-surface-container-lowest transition-colors"
         >
           <span class="material-symbols-outlined">logout</span>
           Đăng xuất
@@ -284,6 +364,37 @@
 
     <script>
       (function () {
+        const SIDEBAR_STORAGE_KEY = "fw.sidebar.collapsed";
+
+        function initSidebarToggle() {
+          const toggle = document.getElementById("sidebar-toggle");
+          const body = document.body;
+          if (!toggle || !body) return;
+
+          function setCollapsed(collapsed) {
+            body.dataset.sidebarCollapsed = collapsed ? "true" : "false";
+            toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+            toggle.setAttribute("aria-label", collapsed ? "Mở rộng menu" : "Thu gọn menu");
+            try {
+              window.localStorage.setItem(SIDEBAR_STORAGE_KEY, collapsed ? "true" : "false");
+            } catch (err) {
+              // Ignore storage failures and keep the toggle usable.
+            }
+          }
+
+          let savedCollapsed = false;
+          try {
+            savedCollapsed = window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+          } catch (err) {
+            savedCollapsed = false;
+          }
+
+          setCollapsed(savedCollapsed);
+          toggle.addEventListener("click", () => {
+            setCollapsed(body.dataset.sidebarCollapsed !== "true");
+          });
+        }
+
         function activateInlineScripts(root) {
           if (!root) return;
           root.querySelectorAll("script").forEach((oldScript) => {
@@ -409,8 +520,12 @@
         });
 
         if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", () => initAjaxFilters(document));
+          document.addEventListener("DOMContentLoaded", () => {
+            initSidebarToggle();
+            initAjaxFilters(document);
+          });
         } else {
+          initSidebarToggle();
           initAjaxFilters(document);
         }
       })();
