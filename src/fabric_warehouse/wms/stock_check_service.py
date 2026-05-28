@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -14,6 +15,8 @@ from fabric_warehouse.db.models.pallet_stock_check_session import PalletStockChe
 from fabric_warehouse.db.models.receipt import ReceiptLine
 from fabric_warehouse.db.models.return_event import ReturnEvent
 from fabric_warehouse.db.models.stock_check import StockCheck
+
+APP_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
 @dataclass(frozen=True)
@@ -71,6 +74,40 @@ class PalletAuditSessionDetail:
     matched_roll_count: int
     extra_roll_count: int
     rows: list[PalletAuditRow]
+
+
+@dataclass(frozen=True)
+class PalletAuditMissingRow:
+    ma_cay: str
+    lot: str | None
+    nhu_cau: str | None
+    system_yards: float | None
+    found_vi_tri: str | None
+    found_session_id: int | None
+    found_at: datetime | None
+
+
+@dataclass(frozen=True)
+class PalletAuditReportRow:
+    session_id: int
+    created_at: datetime | None
+    vi_tri: str
+    app_roll_count: int
+    matched_roll_count: int
+    extra_roll_count: int
+    status: str
+    resolved_missing: list[PalletAuditMissingRow]
+    unresolved_missing: list[PalletAuditMissingRow]
+
+
+@dataclass(frozen=True)
+class PalletAuditDayReport:
+    day: date
+    total_sessions: int
+    total_pallets: int
+    ok_pallets: int
+    issue_pallets: int
+    rows: list[PalletAuditReportRow]
 
 
 def _latest_return_created_at_map(
@@ -555,6 +592,110 @@ def get_pallet_audit_session_detail(db: Session, *, session_id: int) -> PalletAu
     )
 
 
+def build_pallet_audit_day_report(db: Session, *, day: date) -> PalletAuditDayReport:
+    start = datetime.combine(day, time.min, tzinfo=APP_TZ)
+    end = datetime.combine(day, time.max, tzinfo=APP_TZ)
+    sessions = (
+        db.query(PalletStockCheckSession)
+        .filter(PalletStockCheckSession.created_at >= start)
+        .filter(PalletStockCheckSession.created_at <= end)
+        .order_by(PalletStockCheckSession.created_at.asc(), PalletStockCheckSession.id.asc())
+        .all()
+    )
+    if not sessions:
+        return PalletAuditDayReport(
+            day=day,
+            total_sessions=0,
+            total_pallets=0,
+            ok_pallets=0,
+            issue_pallets=0,
+            rows=[],
+        )
+
+    session_ids = [session.id for session in sessions]
+    checks = (
+        db.query(PalletStockCheck)
+        .filter(PalletStockCheck.session_id.in_(session_ids))
+        .order_by(PalletStockCheck.session_id.asc(), PalletStockCheck.ma_cay.asc())
+        .all()
+    )
+    session_by_id = {session.id: session for session in sessions}
+    checks_by_session: dict[int, list[PalletStockCheck]] = {}
+    found_by_ma_cay: dict[str, list[PalletStockCheck]] = {}
+    for check in checks:
+        checks_by_session.setdefault(check.session_id, []).append(check)
+        if not check.expected_in_system and check.present_actual:
+            found_by_ma_cay.setdefault(check.ma_cay, []).append(check)
+
+    out_rows: list[PalletAuditReportRow] = []
+    for session in sessions:
+        session_checks = checks_by_session.get(session.id, [])
+        missing_checks = [
+            check
+            for check in session_checks
+            if check.expected_in_system and not check.present_actual
+        ]
+        resolved: list[PalletAuditMissingRow] = []
+        unresolved: list[PalletAuditMissingRow] = []
+        for check in missing_checks:
+            found_candidates = [
+                found
+                for found in found_by_ma_cay.get(check.ma_cay, [])
+                if found.session_id != session.id
+            ]
+            found = found_candidates[0] if found_candidates else None
+            if found:
+                found_session = session_by_id.get(found.session_id)
+                resolved.append(
+                    PalletAuditMissingRow(
+                        ma_cay=check.ma_cay,
+                        lot=check.lot,
+                        nhu_cau=check.nhu_cau,
+                        system_yards=_to_float(check.system_yards),
+                        found_vi_tri=found.vi_tri,
+                        found_session_id=found.session_id,
+                        found_at=found_session.created_at if found_session else None,
+                    )
+                )
+            else:
+                unresolved.append(
+                    PalletAuditMissingRow(
+                        ma_cay=check.ma_cay,
+                        lot=check.lot,
+                        nhu_cau=check.nhu_cau,
+                        system_yards=_to_float(check.system_yards),
+                        found_vi_tri=None,
+                        found_session_id=None,
+                        found_at=None,
+                    )
+                )
+
+        status = "OK" if not unresolved else "ISSUE"
+        out_rows.append(
+            PalletAuditReportRow(
+                session_id=session.id,
+                created_at=session.created_at,
+                vi_tri=session.vi_tri,
+                app_roll_count=int(session.app_roll_count or 0),
+                matched_roll_count=int(session.matched_roll_count or 0),
+                extra_roll_count=int(session.extra_roll_count or 0),
+                status=status,
+                resolved_missing=resolved,
+                unresolved_missing=unresolved,
+            )
+        )
+
+    ok_count = sum(1 for row in out_rows if row.status == "OK")
+    return PalletAuditDayReport(
+        day=day,
+        total_sessions=len(sessions),
+        total_pallets=len({session.vi_tri for session in sessions}),
+        ok_pallets=ok_count,
+        issue_pallets=len(out_rows) - ok_count,
+        rows=out_rows,
+    )
+
+
 def upsert_stock_checks(
     db: Session,
     *,
@@ -693,7 +834,6 @@ def save_pallet_audit(
                     note="pallet_stock_check_extra",
                 )
             )
-
     if not values:
         return 0
 

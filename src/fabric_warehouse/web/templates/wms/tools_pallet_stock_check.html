@@ -182,7 +182,7 @@
 
         <div class="flex flex-col gap-4 border-t border-black/5 bg-surface-container-low px-8 py-6 md:flex-row md:items-center md:justify-between md:px-10">
           <div class="text-xs text-on-surface-variant">
-            Lưu sẽ tạo một đợt kiểm mới. Báo cáo chi tiết từng đợt có thể xem ở tab báo cáo.
+            Lưu sẽ tạo một đợt kiểm mới. Các cây ngoài có, app không có sẽ đồng thời được cập nhật vị trí hệ thống về pallet đang kiểm.
           </div>
           <button type="submit" class="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-8 py-4 text-sm font-bold uppercase tracking-widest text-white shadow-[0_8px_32px_rgba(0,64,161,0.2)] transition-opacity hover:opacity-95">
             <span class="material-symbols-outlined text-base">save</span>
@@ -197,48 +197,89 @@
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Báo cáo đợt kiểm</div>
-            <h2 class="mt-1 text-3xl font-extrabold font-headline text-on-surface">Lịch sử kiểm pallet</h2>
+            <h2 class="mt-1 text-3xl font-extrabold font-headline text-on-surface">Đối soát pallet theo ngày</h2>
           </div>
-          <div class="text-sm text-on-surface-variant">
-            Mỗi dòng là một lần lưu kiểm. Bấm xem chi tiết để mở popup.
-          </div>
+          <form method="get" action="/wms/tools/pallet-stock-check" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <input type="hidden" name="tab" value="report" />
+            <input type="hidden" name="tang" value="{{ tang }}" />
+            <input type="hidden" name="line" value="{{ line }}" />
+            <input type="hidden" name="pallet" value="{{ pallet }}" />
+            <div>
+              <label class="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="report_day">Ngày kiểm</label>
+              <input id="report_day" name="report_day" type="date" value="{{ report_day.isoformat() }}" class="block rounded-xl border border-black/5 bg-white px-4 py-3 text-sm font-semibold text-on-surface outline-none transition-all focus:border-primary/30" />
+            </div>
+            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-5 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-[0_8px_32px_rgba(0,64,161,0.2)] transition-opacity hover:opacity-95">
+              <span class="material-symbols-outlined text-base">analytics</span>
+              Render report
+            </button>
+          </form>
         </div>
       </div>
 
-      <div class="overflow-x-auto p-4 md:p-6">
+      <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-4 md:p-6">
+        <div class="rounded-2xl bg-surface-container-low px-5 py-4">
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Session</div>
+          <div class="mt-2 text-2xl font-extrabold font-headline text-on-surface">{{ day_report.total_sessions }}</div>
+        </div>
+        <div class="rounded-2xl bg-surface-container-low px-5 py-4">
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Pallet đã kiểm</div>
+          <div class="mt-2 text-2xl font-extrabold font-headline text-on-surface">{{ day_report.total_pallets }}</div>
+        </div>
+        <div class="rounded-2xl bg-secondary-container px-5 py-4">
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">OK</div>
+          <div class="mt-2 text-2xl font-extrabold font-headline text-on-surface">{{ day_report.ok_pallets }}</div>
+        </div>
+        <div class="rounded-2xl bg-error-container px-5 py-4">
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Cần xử lý</div>
+          <div class="mt-2 text-2xl font-extrabold font-headline text-on-surface">{{ day_report.issue_pallets }}</div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto px-4 pb-4 md:px-6 md:pb-6">
         <table class="min-w-full text-sm">
           <thead>
             <tr class="border-b border-black/5 text-left">
               <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Time kiểm</th>
               <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Pallet</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Trạng thái</th>
               <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số cây (Trên App)</th>
               <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Thực tế đúng</th>
-              <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Cây thiếu</th>
+              <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Đã clear</th>
+              <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Còn thiếu</th>
               <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70"></th>
             </tr>
           </thead>
           <tbody>
-            {% for session in sessions %}
+            {% for report_row in day_report.rows %}
               <tr class="border-b border-black/5 transition-colors hover:bg-surface-container-low last:border-0">
-                <td class="px-4 py-3 text-on-surface">{{ session.created_at | gmt7 if session.created_at else "—" }}</td>
-                <td class="px-4 py-3 font-extrabold font-headline text-primary">{{ session.vi_tri }}</td>
-                <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface">{{ session.app_roll_count }}</td>
-                <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface">{{ session.matched_roll_count }} / {{ session.app_roll_count }}</td>
-                <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface">{{ session.extra_roll_count }}</td>
+                <td class="px-4 py-3 text-on-surface">{{ report_row.created_at | gmt7 if report_row.created_at else "—" }}</td>
+                <td class="px-4 py-3 font-extrabold font-headline text-primary">{{ report_row.vi_tri }}</td>
+                <td class="px-4 py-3">
+                  {% if report_row.status == "OK" %}
+                    <span class="rounded-full bg-secondary-container px-3 py-1 text-xs font-bold uppercase tracking-widest text-on-surface">OK</span>
+                  {% else %}
+                    <span class="rounded-full bg-error-container px-3 py-1 text-xs font-bold uppercase tracking-widest text-on-surface">Cần xử lý</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface">{{ report_row.app_roll_count }}</td>
+                <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface">{{ report_row.matched_roll_count }} / {{ report_row.app_roll_count }}</td>
+                <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface">{{ report_row.resolved_missing|length }}</td>
+                <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface">{{ report_row.unresolved_missing|length }}</td>
                 <td class="px-4 py-3 text-right">
                   <button
                     type="button"
-                    data-session-id="{{ session.session_id }}"
-                    class="session-detail-button inline-flex items-center justify-center gap-2 rounded-xl border border-black/5 bg-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-primary transition-colors hover:bg-surface-container-lowest"
+                    data-session-id="{{ report_row.session_id }}"
+                    data-report-day="{{ report_day.isoformat() }}"
+                    class="report-detail-button inline-flex items-center justify-center gap-2 rounded-xl border border-black/5 bg-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-primary transition-colors hover:bg-surface-container-lowest"
                   >
                     <span class="material-symbols-outlined text-base">visibility</span>
-                    Xem chi tiết
+                    Chi tiết
                   </button>
                 </td>
               </tr>
             {% else %}
               <tr>
-                <td colspan="6" class="px-4 py-12 text-center text-base text-on-surface-variant">Chưa có đợt kiểm nào được lưu.</td>
+                <td colspan="8" class="px-4 py-12 text-center text-base text-on-surface-variant">Chưa có đợt kiểm nào trong ngày đã chọn.</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -661,6 +702,117 @@
           titleEl.textContent = "Lỗi tải dữ liệu";
           metaEl.textContent = "";
           bodyEl.innerHTML = `<div class="px-4 py-8 text-red-600">Không tải được chi tiết đợt kiểm.</div>`;
+        });
+      });
+    });
+
+    closeButton.addEventListener("click", closeModal);
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) closeModal();
+    });
+  })();
+
+  (function () {
+    const buttons = document.querySelectorAll(".report-detail-button");
+    const modal = document.getElementById("session-detail-modal");
+    const closeButton = document.getElementById("close-session-detail-modal");
+    const titleEl = document.getElementById("session-detail-title");
+    const metaEl = document.getElementById("session-detail-meta");
+    const bodyEl = document.getElementById("session-detail-body");
+    if (!buttons.length || !modal || !closeButton || !titleEl || !metaEl || !bodyEl) return;
+
+    function closeModal() {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function openModal() {
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function formatTime(value) {
+      if (!value) return "—";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("vi-VN");
+    }
+
+    function rowHtml(item, mode) {
+      const yds = item.system_yards === null || item.system_yards === undefined ? "" : Number(item.system_yards).toFixed(2);
+      const resolution = mode === "resolved"
+        ? `Đã thấy ở ${item.found_vi_tri || ""}${item.found_at ? ` lúc ${formatTime(item.found_at)}` : ""}`
+        : "Không tìm thấy ở các session khác trong ngày. Gợi ý: xuất khỏi kho sau khi xác nhận.";
+      const toneClass = mode === "resolved" ? "text-primary" : "text-red-600";
+      return `
+        <tr class="border-b border-black/5 last:border-0">
+          <td class="px-4 py-3 font-extrabold text-primary">${item.ma_cay || ""}</td>
+          <td class="px-4 py-3">${item.lot || ""}</td>
+          <td class="px-4 py-3">${item.nhu_cau || ""}</td>
+          <td class="px-4 py-3 text-right tabular-nums">${yds}</td>
+          <td class="px-4 py-3 font-semibold ${toneClass}">${resolution}</td>
+        </tr>
+      `;
+    }
+
+    function sectionHtml(title, rows, mode) {
+      if (!rows.length) {
+        return `
+          <section class="rounded-2xl bg-surface-container-low p-5">
+            <h4 class="text-sm font-extrabold uppercase tracking-widest text-on-surface">${title}</h4>
+            <div class="mt-4 text-sm text-on-surface-variant">Không có dữ liệu.</div>
+          </section>
+        `;
+      }
+      return `
+        <section class="rounded-2xl bg-surface-container-low p-5">
+          <h4 class="text-sm font-extrabold uppercase tracking-widest text-on-surface">${title}</h4>
+          <div class="mt-4 overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead>
+                <tr class="border-b border-black/5 text-left">
+                  <th class="px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mã cây</th>
+                  <th class="px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Lot</th>
+                  <th class="px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Nhu cầu</th>
+                  <th class="px-4 py-3 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số YDS</th>
+                  <th class="px-4 py-3 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Kết luận</th>
+                </tr>
+              </thead>
+              <tbody>${rows.map((item) => rowHtml(item, mode)).join("")}</tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    async function loadReportDetail(sessionId, reportDay) {
+      openModal();
+      titleEl.textContent = "Đang tải...";
+      metaEl.textContent = "";
+      bodyEl.innerHTML = `<div class="px-4 py-8 text-on-surface-variant">Đang tải dữ liệu...</div>`;
+      const response = await fetch(`/wms/tools/pallet-stock-check/report/${sessionId}?report_day=${encodeURIComponent(reportDay || "")}`, { headers: { "X-Requested-With": "fetch" } });
+      if (!response.ok) {
+        bodyEl.innerHTML = `<div class="px-4 py-8 text-red-600">Không tải được chi tiết báo cáo.</div>`;
+        return;
+      }
+      const payload = await response.json();
+      titleEl.textContent = `Report pallet ${payload.vi_tri}`;
+      metaEl.textContent = `${formatTime(payload.created_at)} | Đúng ${payload.matched_roll_count}/${payload.app_roll_count} | Đã clear ${(payload.resolved_missing || []).length} | Còn thiếu ${(payload.unresolved_missing || []).length}`;
+      bodyEl.innerHTML = `
+        <div class="space-y-5">
+          ${sectionHtml("Cây thiếu đã tìm thấy ở session khác", payload.resolved_missing || [], "resolved")}
+          ${sectionHtml("Cây còn thiếu chưa clear", payload.unresolved_missing || [], "unresolved")}
+        </div>
+      `;
+    }
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        loadReportDetail(button.dataset.sessionId, button.dataset.reportDay).catch(() => {
+          openModal();
+          titleEl.textContent = "Lỗi tải dữ liệu";
+          metaEl.textContent = "";
+          bodyEl.innerHTML = `<div class="px-4 py-8 text-red-600">Không tải được chi tiết báo cáo.</div>`;
         });
       });
     });

@@ -41,6 +41,7 @@ from fabric_warehouse.wms.receipts_service import (
 )
 from fabric_warehouse.db.models.hanging_tag import HangingTag
 from fabric_warehouse.wms.stock_check_service import (
+    build_pallet_audit_day_report,
     get_pallet_audit_session_detail,
     get_pallet_audit_rows,
     get_roll_rows,
@@ -1178,6 +1179,11 @@ def tools_pallet_stock_check(request: Request, db: Session = Depends(get_db)):
     tang = (request.query_params.get("tang") or "A").strip() or "A"
     line = (request.query_params.get("line") or "01").strip() or "01"
     pallet = (request.query_params.get("pallet") or "01").strip() or "01"
+    report_day_raw = (request.query_params.get("report_day") or "").strip()
+    try:
+        report_day = date.fromisoformat(report_day_raw) if report_day_raw else date.today()
+    except Exception:
+        report_day = date.today()
     vi_tri = build_location_code(warehouse_area="main", tang=tang, line=line, pallet=pallet) or "A.01.01"
     parsed = parse_location_code(vi_tri)
     rows = get_pallet_audit_rows(db, vi_tri=vi_tri)
@@ -1190,6 +1196,7 @@ def tools_pallet_stock_check(request: Request, db: Session = Depends(get_db)):
         for lot, count in sorted(lot_summary_map.items(), key=lambda item: item[0])
     ]
     sessions = list_pallet_audit_sessions(db, limit=120)
+    day_report = build_pallet_audit_day_report(db, day=report_day)
     return templates.TemplateResponse(
         request,
         "wms/tools_pallet_stock_check.html",
@@ -1204,6 +1211,8 @@ def tools_pallet_stock_check(request: Request, db: Session = Depends(get_db)):
             "total_roll_count": len(rows),
             "lot_summaries": lot_summaries,
             "sessions": sessions,
+            "report_day": report_day,
+            "day_report": day_report,
             "tang_options": tang_options(),
             "line_options": line_options(),
             "pallet_options": pallet_options(),
@@ -1281,6 +1290,53 @@ def tools_pallet_stock_check_session_detail(session_id: int, db: Session = Depen
                     "updated_at": row.updated_at.isoformat() if row.updated_at else None,
                 }
                 for row in detail.rows
+            ],
+        }
+    )
+
+
+@router.get("/wms/tools/pallet-stock-check/report/{session_id}")
+def tools_pallet_stock_check_report_detail(
+    session_id: int,
+    report_day: date | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    report = build_pallet_audit_day_report(db, day=report_day or date.today())
+    row = next((item for item in report.rows if item.session_id == session_id), None)
+    if not row:
+        raise HTTPException(status_code=404, detail="Không tìm thấy báo cáo đợt kiểm.")
+    return JSONResponse(
+        {
+            "session_id": row.session_id,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "vi_tri": row.vi_tri,
+            "app_roll_count": row.app_roll_count,
+            "matched_roll_count": row.matched_roll_count,
+            "extra_roll_count": row.extra_roll_count,
+            "status": row.status,
+            "resolved_missing": [
+                {
+                    "ma_cay": item.ma_cay,
+                    "lot": item.lot,
+                    "nhu_cau": item.nhu_cau,
+                    "system_yards": item.system_yards,
+                    "found_vi_tri": item.found_vi_tri,
+                    "found_session_id": item.found_session_id,
+                    "found_at": item.found_at.isoformat() if item.found_at else None,
+                }
+                for item in row.resolved_missing
+            ],
+            "unresolved_missing": [
+                {
+                    "ma_cay": item.ma_cay,
+                    "lot": item.lot,
+                    "nhu_cau": item.nhu_cau,
+                    "system_yards": item.system_yards,
+                    "found_vi_tri": item.found_vi_tri,
+                    "found_session_id": item.found_session_id,
+                    "found_at": item.found_at.isoformat() if item.found_at else None,
+                }
+                for item in row.unresolved_missing
             ],
         }
     )
