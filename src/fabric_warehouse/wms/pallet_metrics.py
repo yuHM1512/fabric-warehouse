@@ -144,7 +144,7 @@ def _latest_return_map(db: Session, *, ma_cays: list[str]) -> dict[str, tuple[da
         db.query(ReturnEvent.ma_cay, ReturnEvent.ngay_tai_nhap, ReturnEvent.yds_du, ReturnEvent.created_at)
         .filter(ReturnEvent.ma_cay.in_(ma_cays))
         .filter(ReturnEvent.vi_tri_moi.isnot(None))
-        .order_by(ReturnEvent.ma_cay.asc(), ReturnEvent.ngay_tai_nhap.desc(), ReturnEvent.id.desc())
+        .order_by(ReturnEvent.ma_cay.asc(), ReturnEvent.created_at.desc(), ReturnEvent.id.desc())
         .all()
     )
     latest: dict[str, tuple[datetime | None, float | None]] = {}
@@ -153,9 +153,12 @@ def _latest_return_map(db: Session, *, ma_cays: list[str]) -> dict[str, tuple[da
         if not ma_s or ma_s in latest:
             continue
         returned_at = (
-            datetime.combine(ngay_tai_nhap, datetime.min.time(), tzinfo=APP_TZ)
-            if ngay_tai_nhap is not None
-            else created_at
+            created_at
+            or (
+                datetime.combine(ngay_tai_nhap, datetime.min.time(), tzinfo=APP_TZ)
+                if ngay_tai_nhap is not None
+                else None
+            )
         )
         latest[ma_s] = (returned_at, _as_float(yds_du, 0.0) if yds_du is not None else None)
     return latest

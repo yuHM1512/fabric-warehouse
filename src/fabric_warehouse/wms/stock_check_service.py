@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from fabric_warehouse.db.models.receipt import ReceiptLine
+from fabric_warehouse.db.models.return_event import ReturnEvent
 from fabric_warehouse.db.models.stock_check import StockCheck
 
 
@@ -18,6 +19,30 @@ class StockCheckRow:
     actual_yards: float | None
     note: str | None
     updated_at: datetime | None
+
+
+def _latest_return_created_at_map(
+    db: Session,
+    *,
+    ma_cays: list[str],
+) -> dict[str, datetime]:
+    if not ma_cays:
+        return {}
+
+    rows = (
+        db.query(ReturnEvent.ma_cay, ReturnEvent.created_at)
+        .filter(ReturnEvent.ma_cay.in_(ma_cays))
+        .filter(ReturnEvent.created_at.isnot(None))
+        .order_by(ReturnEvent.ma_cay.asc(), ReturnEvent.created_at.desc(), ReturnEvent.id.desc())
+        .all()
+    )
+    out: dict[str, datetime] = {}
+    for ma_cay, created_at in rows:
+        ma = str(ma_cay or "").strip()
+        if not ma or ma in out or created_at is None:
+            continue
+        out[ma] = created_at
+    return out
 
 
 def list_nhu_cau_options(db: Session) -> list[str]:
@@ -216,17 +241,22 @@ def get_roll_rows(db: Session, *, nhu_cau: str, lot: str) -> list[StockCheckRow]
         .all()
     )
     check_by_ma_cay = {c.ma_cay: c for c in checks}
+    return_created_at_by_ma_cay = _latest_return_created_at_map(db, ma_cays=list(expected_by_ma_cay.keys()))
 
     out: list[StockCheckRow] = []
     for ma_cay, expected in expected_by_ma_cay.items():
         c = check_by_ma_cay.get(ma_cay)
+        updated_at = c.updated_at if c else None
+        returned_at = return_created_at_by_ma_cay.get(ma_cay)
+        if returned_at and (updated_at is None or returned_at > updated_at):
+            updated_at = returned_at
         out.append(
             StockCheckRow(
                 ma_cay=ma_cay,
                 expected_yards=expected,
                 actual_yards=float(c.actual_yards) if (c and c.actual_yards is not None) else None,
                 note=c.note if c else None,
-                updated_at=c.updated_at if c else None,
+                updated_at=updated_at,
             )
         )
     return out

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime, timezone
 import re
 import unicodedata
 from zoneinfo import ZoneInfo
@@ -203,7 +203,7 @@ def create_return(
     note: str | None,
 ) -> int:
     status = _normalize_return_status(status)
-    returned_at = datetime.combine(ngay_tai_nhap, time(0, 0), tzinfo=APP_TZ)
+    returned_at = datetime.now(timezone.utc)
 
     ev = ReturnEvent(
         issue_line_id=issue_line_id,

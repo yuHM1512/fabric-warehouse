@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from fabric_warehouse.db.models.hanging_tag import HangingTag
 from fabric_warehouse.db.models.location_assignment import LocationAssignment
 from fabric_warehouse.db.models.receipt import ReceiptLine
+from fabric_warehouse.db.models.return_event import ReturnEvent
 from fabric_warehouse.db.models.stock_check import StockCheck
 
 _DANG_LUU = "Đang lưu"
@@ -62,6 +63,30 @@ class StockAgeRow:
 
 def _yds(sc: type) -> object:
     return func.coalesce(sc.actual_yards, sc.expected_yards)
+
+
+def _latest_return_created_at_map(
+    db: Session,
+    *,
+    ma_cays: list[str],
+) -> dict[str, datetime]:
+    if not ma_cays:
+        return {}
+
+    rows = (
+        db.query(ReturnEvent.ma_cay, ReturnEvent.created_at)
+        .filter(ReturnEvent.ma_cay.in_(ma_cays))
+        .filter(ReturnEvent.created_at.isnot(None))
+        .order_by(ReturnEvent.ma_cay.asc(), ReturnEvent.created_at.desc(), ReturnEvent.id.desc())
+        .all()
+    )
+    out: dict[str, datetime] = {}
+    for ma_cay, created_at in rows:
+        ma = str(ma_cay or "").strip()
+        if not ma or ma in out or created_at is None:
+            continue
+        out[ma] = created_at
+    return out
 
 
 def ton_kho_by_nhu_cau(db: Session) -> list[TonKhoRow]:
@@ -233,6 +258,8 @@ def ton_kho_by_age_split(
         q = q.order_by(LocationAssignment.assigned_at.desc().nulls_last(), LocationAssignment.updated_at.desc())
 
     pairs = q.limit(limit).all()
+    ma_cays = [str(la.ma_cay or "").strip() for la, _ in pairs if getattr(la, "ma_cay", None)]
+    return_created_at_by_ma_cay = _latest_return_created_at_map(db, ma_cays=ma_cays)
 
     under_rolls = 0
     over_rolls = 0
@@ -254,6 +281,9 @@ def ton_kho_by_age_split(
 
         assigned_at = getattr(la, "assigned_at", None)
         updated_at = getattr(la, "updated_at", None) or (getattr(sc, "updated_at", None) if sc else None)
+        returned_at = return_created_at_by_ma_cay.get(ma_cay)
+        if returned_at and (updated_at is None or returned_at > updated_at):
+            updated_at = returned_at
 
         age_days: int | None = None
         bucket = "unknown"

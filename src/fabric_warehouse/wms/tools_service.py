@@ -127,11 +127,11 @@ def build_trace_timeline(db: Session, *, lot: str, ma_cay: str) -> list[TraceEve
     rets = (
         db.query(ReturnEvent)
         .filter(ReturnEvent.ma_cay == ma_cay)
-        .order_by(ReturnEvent.ngay_tai_nhap.asc(), ReturnEvent.id.asc())
+        .order_by(ReturnEvent.created_at.asc(), ReturnEvent.id.asc())
         .all()
     )
     for re in rets:
-        at = _dt_from_date_local(re.ngay_tai_nhap) or re.created_at
+        at = re.created_at or _dt_from_date_local(re.ngay_tai_nhap)
         if not at:
             continue
         events.append(
