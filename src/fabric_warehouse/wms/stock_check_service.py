@@ -91,6 +91,30 @@ def _latest_return_created_at_map(
     return out
 
 
+def _latest_return_yards_map(
+    db: Session,
+    *,
+    ma_cays: list[str],
+) -> dict[str, float | None]:
+    if not ma_cays:
+        return {}
+
+    rows = (
+        db.query(ReturnEvent.ma_cay, ReturnEvent.yds_du, ReturnEvent.created_at)
+        .filter(ReturnEvent.ma_cay.in_(ma_cays))
+        .filter(ReturnEvent.vi_tri_moi.isnot(None))
+        .order_by(ReturnEvent.ma_cay.asc(), ReturnEvent.created_at.desc(), ReturnEvent.id.desc())
+        .all()
+    )
+    out: dict[str, float | None] = {}
+    for ma_cay, yds_du, _created_at in rows:
+        ma = str(ma_cay or "").strip()
+        if not ma or ma in out:
+            continue
+        out[ma] = _to_float(yds_du)
+    return out
+
+
 def _to_float(v: object) -> float | None:
     if v is None:
         return None
@@ -98,6 +122,35 @@ def _to_float(v: object) -> float | None:
         return float(v)
     except Exception:
         return None
+
+
+def _effective_system_yards_map(
+    db: Session,
+    *,
+    ma_cays: list[str],
+) -> dict[str, float | None]:
+    cleaned = [str(ma or "").strip() for ma in ma_cays if str(ma or "").strip()]
+    cleaned = list(dict.fromkeys(cleaned))
+    if not cleaned:
+        return {}
+
+    receipt_rows = (
+        db.query(ReceiptLine.ma_cay, ReceiptLine.yards)
+        .filter(ReceiptLine.ma_cay.in_(cleaned))
+        .all()
+    )
+    out: dict[str, float | None] = {}
+    for ma_cay, yards in receipt_rows:
+        ma = str(ma_cay or "").strip()
+        if not ma or ma in out:
+            continue
+        out[ma] = _to_float(yards)
+
+    return_yards_map = _latest_return_yards_map(db, ma_cays=cleaned)
+    for ma_cay, yds_du in return_yards_map.items():
+        if yds_du is not None:
+            out[ma_cay] = yds_du
+    return out
 
 
 def list_nhu_cau_options(db: Session) -> list[str]:
@@ -322,33 +375,25 @@ def get_pallet_audit_rows(db: Session, *, vi_tri: str) -> list[PalletAuditRow]:
     if not vi_tri_s:
         return []
 
-    receipt_yards_sq = (
-        db.query(
-            ReceiptLine.ma_cay.label("ma_cay"),
-            func.max(ReceiptLine.yards).label("system_yards"),
-        )
-        .filter(ReceiptLine.ma_cay.isnot(None))
-        .group_by(ReceiptLine.ma_cay)
-        .subquery()
-    )
-
     existing_rows = (
         db.query(
             LocationAssignment.ma_cay,
             LocationAssignment.nhu_cau,
             LocationAssignment.lot,
-            receipt_yards_sq.c.system_yards,
             LocationAssignment.vi_tri,
         )
-        .outerjoin(receipt_yards_sq, receipt_yards_sq.c.ma_cay == LocationAssignment.ma_cay)
         .filter(LocationAssignment.vi_tri == vi_tri_s)
         .filter(LocationAssignment.trang_thai.in_(("Đang lưu", "Dang luu", "Đang luu", "Dang lưu")))
         .order_by(LocationAssignment.ma_cay.asc())
         .all()
     )
+    system_yards_map = _effective_system_yards_map(
+        db,
+        ma_cays=[str(ma_cay) for ma_cay, _nhu_cau, _lot, _vi_tri in existing_rows if ma_cay],
+    )
 
     rows: list[PalletAuditRow] = []
-    for ma_cay, nhu_cau, lot, system_yards, current_vi_tri in existing_rows:
+    for ma_cay, nhu_cau, lot, current_vi_tri in existing_rows:
         ma = str(ma_cay or "").strip()
         if not ma:
             continue
@@ -357,7 +402,7 @@ def get_pallet_audit_rows(db: Session, *, vi_tri: str) -> list[PalletAuditRow]:
                 ma_cay=ma,
                 nhu_cau=str(nhu_cau) if nhu_cau else None,
                 lot=str(lot) if lot else None,
-                system_yards=_to_float(system_yards),
+                system_yards=system_yards_map.get(ma),
                 present_actual=False,
                 expected_in_system=True,
                 vi_tri_he_thong=str(current_vi_tri) if current_vi_tri else None,
@@ -381,41 +426,33 @@ def search_pallet_audit_rolls(
     if len(q_s) < 2:
         return []
 
-    receipt_yards_sq = (
-        db.query(
-            ReceiptLine.ma_cay.label("ma_cay"),
-            func.max(ReceiptLine.yards).label("system_yards"),
-        )
-        .filter(ReceiptLine.ma_cay.isnot(None))
-        .group_by(ReceiptLine.ma_cay)
-        .subquery()
-    )
-
     rows = (
         db.query(
             LocationAssignment.ma_cay,
             LocationAssignment.nhu_cau,
             LocationAssignment.lot,
-            receipt_yards_sq.c.system_yards,
             LocationAssignment.vi_tri,
         )
-        .outerjoin(receipt_yards_sq, receipt_yards_sq.c.ma_cay == LocationAssignment.ma_cay)
         .filter(LocationAssignment.trang_thai.in_(("Đang lưu", "Dang luu", "Đang luu", "Dang lưu")))
         .filter(LocationAssignment.vi_tri != vi_tri_s)
-        .filter(LocationAssignment.ma_cay.ilike(f"{q_s}%"))
+        .filter(LocationAssignment.ma_cay.ilike(f"%{q_s}%"))
         .order_by(LocationAssignment.ma_cay.asc())
         .limit(limit)
         .all()
+    )
+    system_yards_map = _effective_system_yards_map(
+        db,
+        ma_cays=[str(ma_cay) for ma_cay, _nhu_cau, _lot, _vi_tri in rows if ma_cay],
     )
     return [
         PalletAuditSuggestion(
             ma_cay=str(ma_cay),
             nhu_cau=str(nhu_cau) if nhu_cau else None,
             lot=str(lot) if lot else None,
-            system_yards=_to_float(system_yards),
+            system_yards=system_yards_map.get(str(ma_cay)),
             vi_tri=str(current_vi_tri) if current_vi_tri else None,
         )
-        for ma_cay, nhu_cau, lot, system_yards, current_vi_tri in rows
+        for ma_cay, nhu_cau, lot, current_vi_tri in rows
         if ma_cay
     ]
 
@@ -552,17 +589,7 @@ def save_pallet_audit(
     if not all_ma_cays:
         return 0
 
-    receipt_yards_rows = (
-        db.query(ReceiptLine.ma_cay, ReceiptLine.yards)
-        .filter(ReceiptLine.ma_cay.in_(all_ma_cays))
-        .all()
-    )
-    system_yards_map: dict[str, float | None] = {}
-    for ma_cay, yards in receipt_yards_rows:
-        ma = str(ma_cay or "").strip()
-        if not ma or ma in system_yards_map:
-            continue
-        system_yards_map[ma] = _to_float(yards)
+    system_yards_map = _effective_system_yards_map(db, ma_cays=all_ma_cays)
 
     values: list[dict] = []
     matched_roll_count = 0

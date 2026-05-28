@@ -225,13 +225,13 @@
 </div>
 
 <template id="extra-row-template">
-  <div class="extra-row rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
+  <div class="extra-row overflow-visible rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))_auto] lg:items-start">
-      <div class="relative">
+      <div class="relative overflow-visible">
         <label class="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Mã cây (+)</label>
         <input type="text" data-role="search" autocomplete="off" placeholder="Gõ mã cây..." class="block w-full rounded-xl border border-black/5 bg-white px-4 py-3 text-sm font-semibold text-on-surface outline-none transition-all focus:border-primary/30" />
         <input type="hidden" data-role="value" />
-        <div data-role="suggestions" class="absolute z-20 mt-2 hidden w-full overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_16px_48px_rgba(25,28,29,0.12)]"></div>
+        <div data-role="suggestions" class="absolute left-0 z-30 mt-2 hidden min-w-[26rem] max-w-[min(42rem,calc(100vw-3rem))] overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_16px_48px_rgba(25,28,29,0.12)]"></div>
       </div>
       <div>
         <label class="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Lot</label>
