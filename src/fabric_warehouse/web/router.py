@@ -41,10 +41,15 @@ from fabric_warehouse.wms.receipts_service import (
 )
 from fabric_warehouse.db.models.hanging_tag import HangingTag
 from fabric_warehouse.wms.stock_check_service import (
+    get_pallet_audit_session_detail,
+    get_pallet_audit_rows,
     get_roll_rows,
     list_incomplete_lot_summaries,
     list_lot_options,
     list_nhu_cau_options,
+    list_pallet_audit_sessions,
+    save_pallet_audit,
+    search_pallet_audit_rolls,
     upsert_stock_checks,
 )
 from fabric_warehouse.wms.gon_stock_service import (
@@ -1162,6 +1167,134 @@ def tools_home(request: Request):
         "wms/tools_home.html",
         {"title": "Tính năng khác"},
     )
+
+
+@router.get("/wms/tools/pallet-stock-check", response_class=HTMLResponse)
+def tools_pallet_stock_check(request: Request, db: Session = Depends(get_db)):
+    tab = (request.query_params.get("tab") or "audit").strip() or "audit"
+    if tab not in {"audit", "report"}:
+        tab = "audit"
+    tang = (request.query_params.get("tang") or "A").strip() or "A"
+    line = (request.query_params.get("line") or "01").strip() or "01"
+    pallet = (request.query_params.get("pallet") or "01").strip() or "01"
+    vi_tri = build_location_code(warehouse_area="main", tang=tang, line=line, pallet=pallet) or "A.01.01"
+    parsed = parse_location_code(vi_tri)
+    rows = get_pallet_audit_rows(db, vi_tri=vi_tri)
+    sessions = list_pallet_audit_sessions(db, limit=120)
+    return templates.TemplateResponse(
+        request,
+        "wms/tools_pallet_stock_check.html",
+        {
+            "title": "Kiểm tồn kho theo pallet",
+            "tab": tab,
+            "vi_tri": vi_tri,
+            "tang": parsed["tang"] or tang,
+            "line": parsed["line"] or line,
+            "pallet": parsed["pallet"] or pallet,
+            "rows": rows,
+            "sessions": sessions,
+            "tang_options": tang_options(),
+            "line_options": line_options(),
+            "pallet_options": pallet_options(),
+            "line_pallet_map": pallet_options_by_line(),
+        },
+    )
+
+
+@router.get("/wms/tools/pallet-stock-check/search")
+def tools_pallet_stock_check_search(
+    q: str = Query(default=""),
+    vi_tri: str = Query(default=""),
+    db: Session = Depends(get_db),
+):
+    rows = search_pallet_audit_rolls(db, q=q, vi_tri=vi_tri, limit=12)
+    return JSONResponse(
+        {
+            "items": [
+                {
+                    "ma_cay": row.ma_cay,
+                    "nhu_cau": row.nhu_cau,
+                    "lot": row.lot,
+                    "system_yards": row.system_yards,
+                    "vi_tri": row.vi_tri,
+                }
+                for row in rows
+            ]
+        }
+    )
+
+
+@router.get("/wms/tools/pallet-stock-check/sessions/{session_id}")
+def tools_pallet_stock_check_session_detail(session_id: int, db: Session = Depends(get_db)):
+    detail = get_pallet_audit_session_detail(db, session_id=session_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đợt kiểm.")
+    return JSONResponse(
+        {
+            "session_id": detail.session_id,
+            "created_at": detail.created_at.isoformat() if detail.created_at else None,
+            "vi_tri": detail.vi_tri,
+            "app_roll_count": detail.app_roll_count,
+            "matched_roll_count": detail.matched_roll_count,
+            "extra_roll_count": detail.extra_roll_count,
+            "rows": [
+                {
+                    "ma_cay": row.ma_cay,
+                    "nhu_cau": row.nhu_cau,
+                    "lot": row.lot,
+                    "system_yards": row.system_yards,
+                    "present_actual": row.present_actual,
+                    "expected_in_system": row.expected_in_system,
+                    "vi_tri_he_thong": row.vi_tri_he_thong,
+                    "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+                }
+                for row in detail.rows
+            ],
+        }
+    )
+
+
+@router.post("/wms/tools/pallet-stock-check")
+async def tools_pallet_stock_check_save(request: Request, db: Session = Depends(get_db)):
+    form = await request.form()
+    tang = (form.get("tang") or "A").strip() or "A"
+    line = (form.get("line") or "01").strip() or "01"
+    pallet = (form.get("pallet") or "01").strip() or "01"
+    vi_tri = build_location_code(warehouse_area="main", tang=tang, line=line, pallet=pallet)
+    if not vi_tri:
+        raise HTTPException(status_code=400, detail="Pallet không hợp lệ.")
+
+    try:
+        row_count = int(form.get("row_count") or 0)
+    except Exception:
+        row_count = 0
+    try:
+        extra_count = int(form.get("extra_count") or 0)
+    except Exception:
+        extra_count = 0
+
+    present_ma_cays: list[str] = []
+    for i in range(row_count):
+        if form.get(f"present_{i}") not in ("on", "true", "1", "yes"):
+            continue
+        ma_cay = (form.get(f"ma_cay_{i}") or "").strip()
+        if ma_cay:
+            present_ma_cays.append(ma_cay)
+
+    extra_ma_cays: list[str] = []
+    for i in range(extra_count):
+        ma_cay = (form.get(f"extra_ma_cay_{i}") or "").strip()
+        if ma_cay:
+            extra_ma_cays.append(ma_cay)
+
+    save_pallet_audit(
+        db,
+        vi_tri=vi_tri,
+        present_ma_cays=present_ma_cays,
+        extra_ma_cays=extra_ma_cays,
+    )
+    db.commit()
+    return RedirectResponse(url=f"/wms/tools/pallet-stock-check?tang={tang}&line={line}&pallet={pallet}&saved=1", status_code=303)
 
 
 @router.get("/wms/tools/trace", response_class=HTMLResponse)

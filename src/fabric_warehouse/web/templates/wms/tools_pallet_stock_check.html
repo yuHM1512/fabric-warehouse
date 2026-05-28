@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script id="line-pallet-map" type="application/json">{{ line_pallet_map | tojson }}</script>
+<div class="space-y-10 pb-16">
+  <section class="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-primary to-primary-container p-10 text-white md:p-16" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+    <div class="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-[-100px] left-[-50px] h-80 w-80 rounded-full bg-black/10 blur-3xl pointer-events-none"></div>
+    <div class="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+      <div class="max-w-2xl">
+        <div class="mb-4 text-[12px] font-bold uppercase tracking-widest text-white/70">Pallet Audit</div>
+        <h1 class="text-[40px] font-headline font-extrabold leading-tight tracking-[-0.02em] md:text-[56px]">Kiểm tồn kho<br/>theo pallet</h1>
+        <p class="mt-6 text-lg leading-[1.6] text-white/90">
+          Chọn pallet để kiểm thực tế, đồng thời lưu lại từng đợt kiểm làm báo cáo đối chiếu sau này.
+        </p>
+      </div>
+      <a href="/wms/tools" class="self-start rounded-xl border border-white/10 bg-white/20 px-8 py-4 text-xs font-bold uppercase tracking-wide shadow-[0_8px_32px_rgba(31,38,135,0.1)] backdrop-blur-md transition-all hover:bg-white/30 md:self-auto">
+        Quay lại Tools
+      </a>
+    </div>
+  </section>
+
+  {% if request.query_params.get('saved') %}
+    <div class="flex items-center justify-between rounded-2xl bg-secondary-container px-6 py-4 text-sm text-on-surface cloud-shadow">
+      <div><span class="font-bold">Đã lưu đợt kiểm</span> cho pallet <span class="font-extrabold">{{ vi_tri }}</span>.</div>
+      <button onclick="this.parentElement.remove()" class="text-on-surface-variant hover:text-on-surface">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+    </div>
+  {% endif %}
+
+  <section class="rounded-[2rem] bg-surface-container-lowest p-8 md:p-10" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+    <div class="mb-8 flex flex-wrap gap-3 text-sm">
+      <a
+        class="rounded-full px-6 py-3 font-bold transition-colors {% if tab == 'audit' %}text-white soul-gradient cloud-shadow{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+        href="/wms/tools/pallet-stock-check?tab=audit&tang={{ tang|urlencode }}&line={{ line|urlencode }}&pallet={{ pallet|urlencode }}"
+      >
+        Kiểm tồn
+      </a>
+      <a
+        class="rounded-full px-6 py-3 font-bold transition-colors {% if tab == 'report' %}text-white soul-gradient cloud-shadow{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+        href="/wms/tools/pallet-stock-check?tab=report&tang={{ tang|urlencode }}&line={{ line|urlencode }}&pallet={{ pallet|urlencode }}"
+      >
+        Báo cáo đợt kiểm
+      </a>
+    </div>
+
+    <form method="get" action="/wms/tools/pallet-stock-check" class="grid grid-cols-1 gap-6 md:grid-cols-5 md:items-end">
+      <input type="hidden" name="tab" value="{{ tab }}" />
+      <div>
+        <label class="mb-3 block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="tang">Tầng</label>
+        <select id="tang" name="tang" class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface outline-none transition-all focus:border-primary/30 focus:bg-surface-container-lowest">
+          {% for item in tang_options %}
+            <option value="{{ item }}" {% if tang == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-3 block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="line">Line</label>
+        <select id="line" name="line" class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface outline-none transition-all focus:border-primary/30 focus:bg-surface-container-lowest">
+          {% for item in line_options %}
+            <option value="{{ item }}" {% if line == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-3 block text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="pallet">Pallet</label>
+        <select id="pallet" name="pallet" class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface outline-none transition-all focus:border-primary/30 focus:bg-surface-container-lowest">
+          {% for item in pallet_options %}
+            <option value="{{ item }}" {% if pallet == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="md:col-span-2">
+        <button type="submit" class="inline-flex min-w-[160px] items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-6 py-4 text-sm font-bold uppercase tracking-widest text-white shadow-[0_8px_32px_rgba(0,64,161,0.2)] transition-opacity hover:opacity-95">
+          <span class="material-symbols-outlined text-base">search</span>
+          {% if tab == 'report' %}Lọc báo cáo{% else %}Xem pallet{% endif %}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  {% if tab == 'audit' %}
+    <section class="overflow-hidden rounded-[2rem] bg-surface-container-lowest" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+      <form method="post" action="/wms/tools/pallet-stock-check" id="pallet-audit-form">
+        <input type="hidden" name="tang" value="{{ tang }}" />
+        <input type="hidden" name="line" value="{{ line }}" />
+        <input type="hidden" name="pallet" value="{{ pallet }}" />
+        <input type="hidden" name="row_count" value="{{ rows|length }}" />
+        <input type="hidden" id="extra_count" name="extra_count" value="0" />
+
+        <div class="border-b border-black/5 bg-surface-container-low px-8 py-8 md:px-10">
+          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Pallet đang kiểm</div>
+              <h2 class="mt-1 text-3xl font-extrabold font-headline text-primary">{{ vi_tri }}</h2>
+            </div>
+            <div class="text-sm text-on-surface-variant">
+              Tick cây có thực tế. Nếu thiếu thì để trống. Nếu ngoài có mà app không có thì thêm ở phần dưới.
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto p-4 md:p-6">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="border-b border-black/5 text-left">
+                <th class="px-4 py-4 w-28 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Thực tế</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mã cây</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Lot</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Nhu cầu</th>
+                <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số YDS</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Loại dòng</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set ns = namespace(i=0) %}
+              {% for row in rows %}
+                <tr class="border-b border-black/5 transition-colors hover:bg-surface-container-low last:border-0">
+                  <td class="px-4 py-3">
+                    <label class="inline-flex cursor-pointer items-center gap-2">
+                      <input type="checkbox" name="present_{{ ns.i }}" class="h-5 w-5 rounded border-black/20 text-primary focus:ring-primary/50" />
+                      <span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Có</span>
+                    </label>
+                    <input type="hidden" name="ma_cay_{{ ns.i }}" value="{{ row.ma_cay }}" />
+                  </td>
+                  <td class="px-4 py-3 font-extrabold font-headline text-primary">{{ row.ma_cay }}</td>
+                  <td class="px-4 py-3 font-semibold text-on-surface">{{ row.lot or "" }}</td>
+                  <td class="px-4 py-3 font-semibold text-on-surface">{{ row.nhu_cau or "" }}</td>
+                  <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface">{{ "%.2f"|format(row.system_yards) if row.system_yards is not none else "" }}</td>
+                  <td class="px-4 py-3 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Hệ thống</td>
+                </tr>
+                {% set ns.i = ns.i + 1 %}
+              {% else %}
+                <tr>
+                  <td colspan="6" class="px-4 py-12 text-center text-base text-on-surface-variant">Pallet này chưa có cây nào đang lưu trên hệ thống.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="border-t border-black/5 bg-surface-container-low px-8 py-8 md:px-10">
+          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Cây thiếu</div>
+              <h3 class="mt-1 text-2xl font-extrabold font-headline text-on-surface">Thêm mã cây ngoài có, app không có</h3>
+              <p class="mt-2 text-sm text-on-surface-variant">Mỗi dấu <span class="font-bold text-on-surface">+</span> là một cây. Gõ để tìm mã cây đang còn trong kho rồi chọn từ gợi ý.</p>
+            </div>
+            <button type="button" id="add-extra-row" class="inline-flex items-center justify-center gap-2 rounded-xl border border-black/5 bg-white px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary transition-colors hover:bg-surface-container-lowest">
+              <span class="material-symbols-outlined text-base">add</span>
+              Thêm +
+            </button>
+          </div>
+
+          <div id="extra-rows" class="mt-6 space-y-4"></div>
+        </div>
+
+        <div class="flex flex-col gap-4 border-t border-black/5 bg-surface-container-low px-8 py-6 md:flex-row md:items-center md:justify-between md:px-10">
+          <div class="text-xs text-on-surface-variant">
+            Lưu sẽ tạo một đợt kiểm mới. Báo cáo chi tiết từng đợt có thể xem ở tab báo cáo.
+          </div>
+          <button type="submit" class="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-8 py-4 text-sm font-bold uppercase tracking-widest text-white shadow-[0_8px_32px_rgba(0,64,161,0.2)] transition-opacity hover:opacity-95">
+            <span class="material-symbols-outlined text-base">save</span>
+            Lưu kiểm tồn
+          </button>
+        </div>
+      </form>
+    </section>
+  {% else %}
+    <section class="overflow-hidden rounded-[2rem] bg-surface-container-lowest" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+      <div class="border-b border-black/5 bg-surface-container-low px-8 py-8 md:px-10">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Báo cáo đợt kiểm</div>
+            <h2 class="mt-1 text-3xl font-extrabold font-headline text-on-surface">Lịch sử kiểm pallet</h2>
+          </div>
+          <div class="text-sm text-on-surface-variant">
+            Mỗi dòng là một lần lưu kiểm. Bấm xem chi tiết để mở popup.
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto p-4 md:p-6">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="border-b border-black/5 text-left">
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Time kiểm</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Pallet</th>
+              <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số cây (Trên App)</th>
+              <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Thực tế đúng</th>
+              <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Cây thiếu</th>
+              <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for session in sessions %}
+              <tr class="border-b border-black/5 transition-colors hover:bg-surface-container-low last:border-0">
+                <td class="px-4 py-3 text-on-surface">{{ session.created_at | gmt7 if session.created_at else "—" }}</td>
+                <td class="px-4 py-3 font-extrabold font-headline text-primary">{{ session.vi_tri }}</td>
+                <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface">{{ session.app_roll_count }}</td>
+                <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface">{{ session.matched_roll_count }} / {{ session.app_roll_count }}</td>
+                <td class="px-4 py-3 text-right tabular-nums font-semibold text-on-surface">{{ session.extra_roll_count }}</td>
+                <td class="px-4 py-3 text-right">
+                  <button
+                    type="button"
+                    data-session-id="{{ session.session_id }}"
+                    class="session-detail-button inline-flex items-center justify-center gap-2 rounded-xl border border-black/5 bg-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-primary transition-colors hover:bg-surface-container-lowest"
+                  >
+                    <span class="material-symbols-outlined text-base">visibility</span>
+                    Xem chi tiết
+                  </button>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="6" class="px-4 py-12 text-center text-base text-on-surface-variant">Chưa có đợt kiểm nào được lưu.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+</div>
+
+<template id="extra-row-template">
+  <div class="extra-row rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))_auto] lg:items-start">
+      <div class="relative">
+        <label class="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Mã cây (+)</label>
+        <input type="text" data-role="search" autocomplete="off" placeholder="Gõ mã cây..." class="block w-full rounded-xl border border-black/5 bg-white px-4 py-3 text-sm font-semibold text-on-surface outline-none transition-all focus:border-primary/30" />
+        <input type="hidden" data-role="value" />
+        <div data-role="suggestions" class="absolute z-20 mt-2 hidden w-full overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_16px_48px_rgba(25,28,29,0.12)]"></div>
+      </div>
+      <div>
+        <label class="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Lot</label>
+        <input type="text" data-role="lot" readonly class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface-variant" />
+      </div>
+      <div>
+        <label class="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Nhu cầu</label>
+        <input type="text" data-role="nhu_cau" readonly class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface-variant" />
+      </div>
+      <div>
+        <label class="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Số YDS</label>
+        <input type="text" data-role="yds" readonly class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface-variant" />
+      </div>
+      <div>
+        <label class="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Vị trí hệ thống</label>
+        <input type="text" data-role="vi_tri" readonly class="block w-full rounded-xl border border-black/5 bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface-variant" />
+      </div>
+      <div class="flex items-end">
+        <button type="button" data-role="remove" class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-black/5 bg-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-red-600 transition-colors hover:bg-red-50">
+          <span class="material-symbols-outlined text-base">delete</span>
+          Xóa
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<div id="session-detail-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
+  <div class="max-h-[85vh] w-full max-w-6xl overflow-hidden rounded-[2rem] bg-surface-container-lowest shadow-[0_20px_80px_rgba(25,28,29,0.18)]">
+    <div class="flex items-start justify-between gap-4 border-b border-black/5 bg-surface-container-low px-8 py-6">
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Chi tiết đợt kiểm</div>
+        <h3 id="session-detail-title" class="mt-1 text-2xl font-extrabold font-headline text-on-surface">Đang tải...</h3>
+        <p id="session-detail-meta" class="mt-2 text-sm text-on-surface-variant"></p>
+      </div>
+      <button type="button" id="close-session-detail-modal" class="rounded-xl border border-black/5 bg-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-on-surface transition-colors hover:bg-surface-container-lowest">
+        Đóng
+      </button>
+    </div>
+    <div class="max-h-[65vh] overflow-auto p-4 md:p-6">
+      <div id="session-detail-body" class="text-sm text-on-surface-variant">Đang tải dữ liệu...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const lineSelect = document.getElementById("line");
+    const palletSelect = document.getElementById("pallet");
+    const mapEl = document.getElementById("line-pallet-map");
+    if (!lineSelect || !palletSelect || !mapEl) return;
+
+    let linePalletMap = {};
+    try {
+      linePalletMap = JSON.parse(mapEl.textContent || "{}");
+    } catch (_err) {
+      linePalletMap = {};
+    }
+
+    function syncPalletOptions() {
+      const pallets = linePalletMap[lineSelect.value || "01"] || [];
+      const current = palletSelect.value;
+      palletSelect.innerHTML = "";
+      pallets.forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        if (value === current) option.selected = true;
+        palletSelect.appendChild(option);
+      });
+      if (!pallets.includes(current) && pallets.length > 0) {
+        palletSelect.value = pallets[0];
+      }
+    }
+
+    lineSelect.addEventListener("change", syncPalletOptions);
+    syncPalletOptions();
+  })();
+
+  (function () {
+    const form = document.getElementById("pallet-audit-form");
+    const extraRowsEl = document.getElementById("extra-rows");
+    const extraCountInput = document.getElementById("extra_count");
+    const addExtraButton = document.getElementById("add-extra-row");
+    const rowTemplate = document.getElementById("extra-row-template");
+    if (!form || !extraRowsEl || !extraCountInput || !addExtraButton || !rowTemplate) return;
+
+    function suggestionMarkup(item) {
+      const details = [item.lot || "", item.nhu_cau || "", item.vi_tri || ""].filter(Boolean).join(" | ");
+      const yds = item.system_yards === null || item.system_yards === undefined ? "" : `${Number(item.system_yards).toFixed(2)} YDS`;
+      return `
+        <button type="button" class="flex w-full flex-col gap-1 border-b border-black/5 px-4 py-3 text-left transition-colors hover:bg-surface-container-low last:border-0" data-role="option" data-ma-cay="${item.ma_cay}" data-lot="${item.lot || ""}" data-nhu-cau="${item.nhu_cau || ""}" data-yds="${yds}" data-vi-tri="${item.vi_tri || ""}">
+          <span class="font-extrabold text-primary">${item.ma_cay}</span>
+          <span class="text-xs text-on-surface-variant">${details || "Không có thông tin bổ sung"}</span>
+        </button>
+      `;
+    }
+
+    function selectedMaCays() {
+      const values = new Set();
+      extraRowsEl.querySelectorAll("input[data-role='value']").forEach((input) => {
+        if (input.value) values.add(input.value.trim());
+      });
+      return values;
+    }
+
+    function reindexExtraRows() {
+      const rows = Array.from(extraRowsEl.querySelectorAll(".extra-row"));
+      rows.forEach((row, index) => {
+        const valueInput = row.querySelector("input[data-role='value']");
+        if (valueInput) valueInput.name = `extra_ma_cay_${index}`;
+      });
+      extraCountInput.value = String(rows.length);
+    }
+
+    function attachExtraRow(row) {
+      const searchInput = row.querySelector("input[data-role='search']");
+      const valueInput = row.querySelector("input[data-role='value']");
+      const lotInput = row.querySelector("input[data-role='lot']");
+      const nhuCauInput = row.querySelector("input[data-role='nhu_cau']");
+      const ydsInput = row.querySelector("input[data-role='yds']");
+      const viTriInput = row.querySelector("input[data-role='vi_tri']");
+      const suggestionsEl = row.querySelector("[data-role='suggestions']");
+      const removeButton = row.querySelector("[data-role='remove']");
+      if (!searchInput || !valueInput || !lotInput || !nhuCauInput || !ydsInput || !viTriInput || !suggestionsEl || !removeButton) return;
+
+      let activeRequest = 0;
+
+      function clearSelection() {
+        valueInput.value = "";
+        lotInput.value = "";
+        nhuCauInput.value = "";
+        ydsInput.value = "";
+        viTriInput.value = "";
+      }
+
+      function applySelection(item) {
+        valueInput.value = item.ma_cay || "";
+        searchInput.value = item.ma_cay || "";
+        lotInput.value = item.lot || "";
+        nhuCauInput.value = item.nhu_cau || "";
+        ydsInput.value = item.yds || "";
+        viTriInput.value = item.vi_tri || "";
+        suggestionsEl.innerHTML = "";
+        suggestionsEl.classList.add("hidden");
+      }
+
+      async function fetchSuggestions(term) {
+        const q = term.trim();
+        if (q.length < 2) {
+          suggestionsEl.innerHTML = "";
+          suggestionsEl.classList.add("hidden");
+          return;
+        }
+        const requestId = ++activeRequest;
+        const url = `/wms/tools/pallet-stock-check/search?q=${encodeURIComponent(q)}&vi_tri=${encodeURIComponent("{{ vi_tri }}")}`;
+        const response = await fetch(url, { headers: { "X-Requested-With": "fetch" } });
+        if (!response.ok || requestId !== activeRequest) return;
+        const payload = await response.json();
+        const used = selectedMaCays();
+        const items = (payload.items || []).filter((item) => !used.has(item.ma_cay) || item.ma_cay === valueInput.value);
+        if (!items.length) {
+          suggestionsEl.innerHTML = `<div class="px-4 py-3 text-sm text-on-surface-variant">Không có mã cây phù hợp.</div>`;
+          suggestionsEl.classList.remove("hidden");
+          return;
+        }
+        suggestionsEl.innerHTML = items.map(suggestionMarkup).join("");
+        suggestionsEl.classList.remove("hidden");
+        suggestionsEl.querySelectorAll("[data-role='option']").forEach((button) => {
+          button.addEventListener("click", () => {
+            applySelection({
+              ma_cay: button.dataset.maCay || "",
+              lot: button.dataset.lot || "",
+              nhu_cau: button.dataset.nhuCau || "",
+              yds: button.dataset.yds || "",
+              vi_tri: button.dataset.viTri || "",
+            });
+          });
+        });
+      }
+
+      let debounceTimer = null;
+      searchInput.addEventListener("input", () => {
+        clearSelection();
+        if (debounceTimer) window.clearTimeout(debounceTimer);
+        debounceTimer = window.setTimeout(() => {
+          fetchSuggestions(searchInput.value).catch(() => {
+            suggestionsEl.innerHTML = `<div class="px-4 py-3 text-sm text-red-600">Không tải được gợi ý.</div>`;
+            suggestionsEl.classList.remove("hidden");
+          });
+        }, 180);
+      });
+
+      searchInput.addEventListener("focus", () => {
+        if (searchInput.value.trim().length >= 2 && !valueInput.value) {
+          fetchSuggestions(searchInput.value).catch(() => {});
+        }
+      });
+
+      searchInput.addEventListener("blur", () => {
+        window.setTimeout(() => suggestionsEl.classList.add("hidden"), 150);
+      });
+
+      removeButton.addEventListener("click", () => {
+        row.remove();
+        reindexExtraRows();
+      });
+    }
+
+    function addExtraRow() {
+      const fragment = rowTemplate.content.cloneNode(true);
+      const row = fragment.querySelector(".extra-row");
+      if (!row) return;
+      extraRowsEl.appendChild(row);
+      attachExtraRow(row);
+      reindexExtraRows();
+    }
+
+    addExtraButton.addEventListener("click", addExtraRow);
+    reindexExtraRows();
+  })();
+
+  (function () {
+    const buttons = document.querySelectorAll(".session-detail-button");
+    const modal = document.getElementById("session-detail-modal");
+    const closeButton = document.getElementById("close-session-detail-modal");
+    const titleEl = document.getElementById("session-detail-title");
+    const metaEl = document.getElementById("session-detail-meta");
+    const bodyEl = document.getElementById("session-detail-body");
+    if (!buttons.length || !modal || !closeButton || !titleEl || !metaEl || !bodyEl) return;
+
+    function closeModal() {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function openModal() {
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function formatTime(value) {
+      if (!value) return "—";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("vi-VN");
+    }
+
+    function renderRows(rows) {
+      if (!rows.length) {
+        return `<div class="px-4 py-8 text-center text-on-surface-variant">Không có dữ liệu chi tiết.</div>`;
+      }
+      const html = rows.map((row) => {
+        const kind = row.expected_in_system ? "Trên App" : "Ngoài có / App không có";
+        const status = row.present_actual ? "Có thực tế" : "Thiếu thực tế";
+        const yds = row.system_yards === null || row.system_yards === undefined ? "" : Number(row.system_yards).toFixed(2);
+        return `
+          <tr class="border-b border-black/5 last:border-0">
+            <td class="px-4 py-3 font-extrabold text-primary">${row.ma_cay || ""}</td>
+            <td class="px-4 py-3">${row.lot || ""}</td>
+            <td class="px-4 py-3">${row.nhu_cau || ""}</td>
+            <td class="px-4 py-3 text-right tabular-nums">${yds}</td>
+            <td class="px-4 py-3 text-xs font-bold uppercase tracking-widest">${kind}</td>
+            <td class="px-4 py-3 text-xs font-bold uppercase tracking-widest">${status}</td>
+          </tr>
+        `;
+      }).join("");
+      return `
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="border-b border-black/5 text-left">
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mã cây</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Lot</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Nhu cầu</th>
+              <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số YDS</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Nguồn dòng</th>
+              <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Kết quả</th>
+            </tr>
+          </thead>
+          <tbody>${html}</tbody>
+        </table>
+      `;
+    }
+
+    async function loadSessionDetail(sessionId) {
+      openModal();
+      titleEl.textContent = "Đang tải...";
+      metaEl.textContent = "";
+      bodyEl.innerHTML = `<div class="px-4 py-8 text-on-surface-variant">Đang tải dữ liệu...</div>`;
+      const response = await fetch(`/wms/tools/pallet-stock-check/sessions/${sessionId}`, { headers: { "X-Requested-With": "fetch" } });
+      if (!response.ok) {
+        bodyEl.innerHTML = `<div class="px-4 py-8 text-red-600">Không tải được chi tiết đợt kiểm.</div>`;
+        return;
+      }
+      const payload = await response.json();
+      titleEl.textContent = `Pallet ${payload.vi_tri}`;
+      metaEl.textContent = `${formatTime(payload.created_at)} | Đúng ${payload.matched_roll_count}/${payload.app_roll_count} | Cây thiếu ${payload.extra_roll_count}`;
+      bodyEl.innerHTML = renderRows(payload.rows || []);
+    }
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        loadSessionDetail(button.dataset.sessionId).catch(() => {
+          openModal();
+          titleEl.textContent = "Lỗi tải dữ liệu";
+          metaEl.textContent = "";
+          bodyEl.innerHTML = `<div class="px-4 py-8 text-red-600">Không tải được chi tiết đợt kiểm.</div>`;
+        });
+      });
+    });
+
+    closeButton.addEventListener("click", closeModal);
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) closeModal();
+    });
+  })();
+</script>
+{% endblock %}
