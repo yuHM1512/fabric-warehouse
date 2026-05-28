@@ -1184,6 +1184,9 @@ def tools_pallet_stock_check(request: Request, db: Session = Depends(get_db)):
         report_day = date.fromisoformat(report_day_raw) if report_day_raw else date.today()
     except Exception:
         report_day = date.today()
+    report_status = (request.query_params.get("report_status") or "all").strip().lower()
+    if report_status not in {"all", "issue"}:
+        report_status = "all"
     vi_tri = build_location_code(warehouse_area="main", tang=tang, line=line, pallet=pallet) or "A.01.01"
     parsed = parse_location_code(vi_tri)
     rows = get_pallet_audit_rows(db, vi_tri=vi_tri)
@@ -1197,6 +1200,11 @@ def tools_pallet_stock_check(request: Request, db: Session = Depends(get_db)):
     ]
     sessions = list_pallet_audit_sessions(db, limit=120)
     day_report = build_pallet_audit_day_report(db, day=report_day)
+    report_rows = [
+        row
+        for row in day_report.rows
+        if report_status == "all" or row.status == "ISSUE"
+    ]
     return templates.TemplateResponse(
         request,
         "wms/tools_pallet_stock_check.html",
@@ -1212,7 +1220,9 @@ def tools_pallet_stock_check(request: Request, db: Session = Depends(get_db)):
             "lot_summaries": lot_summaries,
             "sessions": sessions,
             "report_day": report_day,
+            "report_status": report_status,
             "day_report": day_report,
+            "report_rows": report_rows,
             "tang_options": tang_options(),
             "line_options": line_options(),
             "pallet_options": pallet_options(),

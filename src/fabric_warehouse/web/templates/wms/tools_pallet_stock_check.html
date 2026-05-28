@@ -204,6 +204,7 @@
             <input type="hidden" name="tang" value="{{ tang }}" />
             <input type="hidden" name="line" value="{{ line }}" />
             <input type="hidden" name="pallet" value="{{ pallet }}" />
+            <input type="hidden" name="report_status" value="{{ report_status }}" />
             <div>
               <label class="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="report_day">Ngày kiểm</label>
               <input id="report_day" name="report_day" type="date" value="{{ report_day.isoformat() }}" class="block rounded-xl border border-black/5 bg-white px-4 py-3 text-sm font-semibold text-on-surface outline-none transition-all focus:border-primary/30" />
@@ -214,6 +215,21 @@
             </button>
           </form>
         </div>
+      </div>
+
+      <div class="flex flex-wrap gap-3 px-4 pt-4 md:px-6 md:pt-6">
+        <a
+          class="rounded-full px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors {% if report_status == 'all' %}text-white soul-gradient cloud-shadow{% else %}bg-surface-container-low text-primary hover:bg-surface-container-lowest{% endif %}"
+          href="/wms/tools/pallet-stock-check?tab=report&report_day={{ report_day.isoformat() }}&report_status=all&tang={{ tang|urlencode }}&line={{ line|urlencode }}&pallet={{ pallet|urlencode }}"
+        >
+          Tất cả
+        </a>
+        <a
+          class="rounded-full px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors {% if report_status == 'issue' %}text-white soul-gradient cloud-shadow{% else %}bg-error-container text-on-surface hover:opacity-90{% endif %}"
+          href="/wms/tools/pallet-stock-check?tab=report&report_day={{ report_day.isoformat() }}&report_status=issue&tang={{ tang|urlencode }}&line={{ line|urlencode }}&pallet={{ pallet|urlencode }}"
+        >
+          Cần xử lý
+        </a>
       </div>
 
       <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-4 md:p-6">
@@ -250,7 +266,7 @@
             </tr>
           </thead>
           <tbody>
-            {% for report_row in day_report.rows %}
+            {% for report_row in report_rows %}
               <tr class="border-b border-black/5 transition-colors hover:bg-surface-container-low last:border-0">
                 <td class="px-4 py-3 text-on-surface">{{ report_row.created_at | gmt7 if report_row.created_at else "—" }}</td>
                 <td class="px-4 py-3 font-extrabold font-headline text-primary">{{ report_row.vi_tri }}</td>
@@ -279,7 +295,13 @@
               </tr>
             {% else %}
               <tr>
-                <td colspan="8" class="px-4 py-12 text-center text-base text-on-surface-variant">Chưa có đợt kiểm nào trong ngày đã chọn.</td>
+                <td colspan="8" class="px-4 py-12 text-center text-base text-on-surface-variant">
+                  {% if report_status == 'issue' %}
+                    Không có pallet nào cần xử lý trong ngày đã chọn.
+                  {% else %}
+                    Chưa có đợt kiểm nào trong ngày đã chọn.
+                  {% endif %}
+                </td>
               </tr>
             {% endfor %}
           </tbody>
