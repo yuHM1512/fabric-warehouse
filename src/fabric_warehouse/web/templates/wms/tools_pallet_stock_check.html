@@ -90,10 +90,34 @@
         <input type="hidden" id="extra_count" name="extra_count" value="0" />
 
         <div class="border-b border-black/5 bg-surface-container-low px-8 py-8 md:px-10">
-          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
               <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Pallet đang kiểm</div>
               <h2 class="mt-1 text-3xl font-extrabold font-headline text-primary">{{ vi_tri }}</h2>
+              <div class="mt-4 space-y-2 text-sm text-on-surface">
+                <div class="font-semibold">
+                  Tổng số cây:
+                  <span class="font-extrabold text-primary">{{ total_roll_count }}</span>
+                  {% if lot_summaries %}
+                    <span class="text-on-surface-variant">
+                      (
+                      {% for item in lot_summaries %}
+                        {{ item.lot }}{% if not loop.last %} + {% endif %}
+                      {% endfor %}
+                      )
+                    </span>
+                  {% endif %}
+                </div>
+                {% if lot_summaries %}
+                  <div class="flex flex-wrap gap-2 pt-1">
+                    {% for item in lot_summaries %}
+                      <div class="rounded-full bg-white px-4 py-2 text-xs font-bold uppercase tracking-widest text-on-surface shadow-[0_4px_16px_rgba(25,28,29,0.06)]">
+                        {{ item.lot }}: {{ item.count }} cây
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
             </div>
             <div class="text-sm text-on-surface-variant">
               Tick cây có thực tế. Nếu thiếu thì để trống. Nếu ngoài có mà app không có thì thêm ở phần dưới.

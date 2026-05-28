@@ -1181,6 +1181,14 @@ def tools_pallet_stock_check(request: Request, db: Session = Depends(get_db)):
     vi_tri = build_location_code(warehouse_area="main", tang=tang, line=line, pallet=pallet) or "A.01.01"
     parsed = parse_location_code(vi_tri)
     rows = get_pallet_audit_rows(db, vi_tri=vi_tri)
+    lot_summary_map: dict[str, int] = {}
+    for row in rows:
+        lot_key = (row.lot or "").strip() or "Không có Lot"
+        lot_summary_map[lot_key] = lot_summary_map.get(lot_key, 0) + 1
+    lot_summaries = [
+        {"lot": lot, "count": count}
+        for lot, count in sorted(lot_summary_map.items(), key=lambda item: item[0])
+    ]
     sessions = list_pallet_audit_sessions(db, limit=120)
     return templates.TemplateResponse(
         request,
@@ -1193,6 +1201,8 @@ def tools_pallet_stock_check(request: Request, db: Session = Depends(get_db)):
             "line": parsed["line"] or line,
             "pallet": parsed["pallet"] or pallet,
             "rows": rows,
+            "total_roll_count": len(rows),
+            "lot_summaries": lot_summaries,
             "sessions": sessions,
             "tang_options": tang_options(),
             "line_options": line_options(),
