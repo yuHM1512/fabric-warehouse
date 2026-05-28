@@ -47,6 +47,12 @@ class PalletAuditSuggestion:
 
 
 @dataclass(frozen=True)
+class PalletAuditLotSuggestion:
+    lot: str
+    roll_count: int
+
+
+@dataclass(frozen=True)
 class PalletAuditSessionSummary:
     session_id: int
     created_at: datetime | None
@@ -419,11 +425,13 @@ def search_pallet_audit_rolls(
     *,
     q: str,
     vi_tri: str,
+    lot: str | None = None,
     limit: int = 12,
 ) -> list[PalletAuditSuggestion]:
     q_s = (q or "").strip()
     vi_tri_s = (vi_tri or "").strip()
-    if len(q_s) < 2:
+    lot_s = (lot or "").strip()
+    if not q_s and not lot_s:
         return []
 
     rows = (
@@ -435,7 +443,8 @@ def search_pallet_audit_rolls(
         )
         .filter(LocationAssignment.trang_thai.in_(("Đang lưu", "Dang luu", "Đang luu", "Dang lưu")))
         .filter(LocationAssignment.vi_tri != vi_tri_s)
-        .filter(LocationAssignment.ma_cay.ilike(f"%{q_s}%"))
+        .filter(LocationAssignment.lot == lot_s if lot_s else True)
+        .filter(LocationAssignment.ma_cay.ilike(f"%{q_s}%") if q_s else True)
         .order_by(LocationAssignment.ma_cay.asc())
         .limit(limit)
         .all()
@@ -454,6 +463,40 @@ def search_pallet_audit_rolls(
         )
         for ma_cay, nhu_cau, lot, current_vi_tri in rows
         if ma_cay
+    ]
+
+
+def search_pallet_audit_lots(
+    db: Session,
+    *,
+    q: str,
+    vi_tri: str,
+    limit: int = 12,
+) -> list[PalletAuditLotSuggestion]:
+    q_s = (q or "").strip()
+    vi_tri_s = (vi_tri or "").strip()
+    if len(q_s) < 1:
+        return []
+
+    rows = (
+        db.query(
+            LocationAssignment.lot,
+            func.count(func.distinct(LocationAssignment.ma_cay)).label("roll_count"),
+        )
+        .filter(LocationAssignment.trang_thai.in_(("Đang lưu", "Dang luu", "Đang luu", "Dang lưu")))
+        .filter(LocationAssignment.vi_tri != vi_tri_s)
+        .filter(LocationAssignment.lot.isnot(None))
+        .filter(func.btrim(LocationAssignment.lot) != "")
+        .filter(LocationAssignment.lot.ilike(f"%{q_s}%"))
+        .group_by(LocationAssignment.lot)
+        .order_by(LocationAssignment.lot.asc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        PalletAuditLotSuggestion(lot=str(lot), roll_count=int(roll_count or 0))
+        for lot, roll_count in rows
+        if lot
     ]
 
 

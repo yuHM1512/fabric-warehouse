@@ -49,6 +49,7 @@ from fabric_warehouse.wms.stock_check_service import (
     list_nhu_cau_options,
     list_pallet_audit_sessions,
     save_pallet_audit,
+    search_pallet_audit_lots,
     search_pallet_audit_rolls,
     upsert_stock_checks,
 )
@@ -1205,9 +1206,10 @@ def tools_pallet_stock_check(request: Request, db: Session = Depends(get_db)):
 def tools_pallet_stock_check_search(
     q: str = Query(default=""),
     vi_tri: str = Query(default=""),
+    lot: str = Query(default=""),
     db: Session = Depends(get_db),
 ):
-    rows = search_pallet_audit_rolls(db, q=q, vi_tri=vi_tri, limit=12)
+    rows = search_pallet_audit_rolls(db, q=q, vi_tri=vi_tri, lot=lot, limit=12)
     return JSONResponse(
         {
             "items": [
@@ -1217,6 +1219,26 @@ def tools_pallet_stock_check_search(
                     "lot": row.lot,
                     "system_yards": row.system_yards,
                     "vi_tri": row.vi_tri,
+                }
+                for row in rows
+            ]
+        }
+    )
+
+
+@router.get("/wms/tools/pallet-stock-check/search-lots")
+def tools_pallet_stock_check_search_lots(
+    q: str = Query(default=""),
+    vi_tri: str = Query(default=""),
+    db: Session = Depends(get_db),
+):
+    rows = search_pallet_audit_lots(db, q=q, vi_tri=vi_tri, limit=12)
+    return JSONResponse(
+        {
+            "items": [
+                {
+                    "lot": row.lot,
+                    "roll_count": row.roll_count,
                 }
                 for row in rows
             ]

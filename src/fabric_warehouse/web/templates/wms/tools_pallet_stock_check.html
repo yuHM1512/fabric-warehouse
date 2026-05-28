@@ -226,7 +226,13 @@
 
 <template id="extra-row-template">
   <div class="extra-row overflow-visible rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))_auto] lg:items-start">
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto] lg:items-start">
+      <div class="relative overflow-visible">
+        <label class="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Lot (tùy chọn)</label>
+        <input type="text" data-role="lot-search" autocomplete="off" placeholder="Gõ Lot..." class="block w-full rounded-xl border border-black/5 bg-white px-4 py-3 text-sm font-semibold text-on-surface outline-none transition-all focus:border-primary/30" />
+        <input type="hidden" data-role="lot-value" />
+        <div data-role="lot-suggestions" class="absolute left-0 z-30 mt-2 hidden min-w-[22rem] max-w-[min(36rem,calc(100vw-3rem))] overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_16px_48px_rgba(25,28,29,0.12)]"></div>
+      </div>
       <div class="relative overflow-visible">
         <label class="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Mã cây (+)</label>
         <input type="text" data-role="search" autocomplete="off" placeholder="Gõ mã cây..." class="block w-full rounded-xl border border-black/5 bg-white px-4 py-3 text-sm font-semibold text-on-surface outline-none transition-all focus:border-primary/30" />
@@ -330,6 +336,15 @@
       `;
     }
 
+    function lotSuggestionMarkup(item) {
+      return `
+        <button type="button" class="flex w-full flex-col gap-1 border-b border-black/5 px-4 py-3 text-left transition-colors hover:bg-surface-container-low last:border-0" data-role="lot-option" data-lot="${item.lot}">
+          <span class="font-extrabold text-primary">${item.lot}</span>
+          <span class="text-xs text-on-surface-variant">${item.roll_count} cây đang lưu trong kho</span>
+        </button>
+      `;
+    }
+
     function selectedMaCays() {
       const values = new Set();
       extraRowsEl.querySelectorAll("input[data-role='value']").forEach((input) => {
@@ -348,6 +363,9 @@
     }
 
     function attachExtraRow(row) {
+      const lotSearchInput = row.querySelector("input[data-role='lot-search']");
+      const lotValueInput = row.querySelector("input[data-role='lot-value']");
+      const lotSuggestionsEl = row.querySelector("[data-role='lot-suggestions']");
       const searchInput = row.querySelector("input[data-role='search']");
       const valueInput = row.querySelector("input[data-role='value']");
       const lotInput = row.querySelector("input[data-role='lot']");
@@ -356,13 +374,18 @@
       const viTriInput = row.querySelector("input[data-role='vi_tri']");
       const suggestionsEl = row.querySelector("[data-role='suggestions']");
       const removeButton = row.querySelector("[data-role='remove']");
-      if (!searchInput || !valueInput || !lotInput || !nhuCauInput || !ydsInput || !viTriInput || !suggestionsEl || !removeButton) return;
+      if (!lotSearchInput || !lotValueInput || !lotSuggestionsEl || !searchInput || !valueInput || !lotInput || !nhuCauInput || !ydsInput || !viTriInput || !suggestionsEl || !removeButton) return;
 
       let activeRequest = 0;
+      let activeLotRequest = 0;
 
-      function clearSelection() {
+      function clearSelection({ keepLot = false } = {}) {
         valueInput.value = "";
-        lotInput.value = "";
+        if (!keepLot) {
+          lotInput.value = "";
+          lotValueInput.value = "";
+          lotSearchInput.value = "";
+        }
         nhuCauInput.value = "";
         ydsInput.value = "";
         viTriInput.value = "";
@@ -372,6 +395,10 @@
         valueInput.value = item.ma_cay || "";
         searchInput.value = item.ma_cay || "";
         lotInput.value = item.lot || "";
+        lotValueInput.value = item.lot || "";
+        if (item.lot) {
+          lotSearchInput.value = item.lot;
+        }
         nhuCauInput.value = item.nhu_cau || "";
         ydsInput.value = item.yds || "";
         viTriInput.value = item.vi_tri || "";
@@ -379,15 +406,57 @@
         suggestionsEl.classList.add("hidden");
       }
 
+      function applyLotSelection(lot) {
+        lotValueInput.value = lot || "";
+        lotSearchInput.value = lot || "";
+        lotInput.value = lot || "";
+        valueInput.value = "";
+        searchInput.value = "";
+        nhuCauInput.value = "";
+        ydsInput.value = "";
+        viTriInput.value = "";
+        lotSuggestionsEl.innerHTML = "";
+        lotSuggestionsEl.classList.add("hidden");
+        fetchSuggestions("").catch(() => {});
+      }
+
+      async function fetchLotSuggestions(term) {
+        const q = term.trim();
+        if (q.length < 1) {
+          lotSuggestionsEl.innerHTML = "";
+          lotSuggestionsEl.classList.add("hidden");
+          return;
+        }
+        const requestId = ++activeLotRequest;
+        const url = `/wms/tools/pallet-stock-check/search-lots?q=${encodeURIComponent(q)}&vi_tri=${encodeURIComponent("{{ vi_tri }}")}`;
+        const response = await fetch(url, { headers: { "X-Requested-With": "fetch" } });
+        if (!response.ok || requestId !== activeLotRequest) return;
+        const payload = await response.json();
+        const items = payload.items || [];
+        if (!items.length) {
+          lotSuggestionsEl.innerHTML = `<div class="px-4 py-3 text-sm text-on-surface-variant">Không có Lot phù hợp.</div>`;
+          lotSuggestionsEl.classList.remove("hidden");
+          return;
+        }
+        lotSuggestionsEl.innerHTML = items.map(lotSuggestionMarkup).join("");
+        lotSuggestionsEl.classList.remove("hidden");
+        lotSuggestionsEl.querySelectorAll("[data-role='lot-option']").forEach((button) => {
+          button.addEventListener("click", () => {
+            applyLotSelection(button.dataset.lot || "");
+          });
+        });
+      }
+
       async function fetchSuggestions(term) {
         const q = term.trim();
-        if (q.length < 2) {
+        const lot = (lotValueInput.value || lotSearchInput.value || "").trim();
+        if (!q && !lot) {
           suggestionsEl.innerHTML = "";
           suggestionsEl.classList.add("hidden");
           return;
         }
         const requestId = ++activeRequest;
-        const url = `/wms/tools/pallet-stock-check/search?q=${encodeURIComponent(q)}&vi_tri=${encodeURIComponent("{{ vi_tri }}")}`;
+        const url = `/wms/tools/pallet-stock-check/search?q=${encodeURIComponent(q)}&vi_tri=${encodeURIComponent("{{ vi_tri }}")}&lot=${encodeURIComponent(lot)}`;
         const response = await fetch(url, { headers: { "X-Requested-With": "fetch" } });
         if (!response.ok || requestId !== activeRequest) return;
         const payload = await response.json();
@@ -413,9 +482,37 @@
         });
       }
 
+      let lotDebounceTimer = null;
+      lotSearchInput.addEventListener("input", () => {
+        lotValueInput.value = "";
+        lotInput.value = "";
+        valueInput.value = "";
+        searchInput.value = "";
+        nhuCauInput.value = "";
+        ydsInput.value = "";
+        viTriInput.value = "";
+        if (lotDebounceTimer) window.clearTimeout(lotDebounceTimer);
+        lotDebounceTimer = window.setTimeout(() => {
+          fetchLotSuggestions(lotSearchInput.value).catch(() => {
+            lotSuggestionsEl.innerHTML = `<div class="px-4 py-3 text-sm text-red-600">Không tải được gợi ý Lot.</div>`;
+            lotSuggestionsEl.classList.remove("hidden");
+          });
+        }, 180);
+      });
+
+      lotSearchInput.addEventListener("focus", () => {
+        if (lotSearchInput.value.trim().length >= 1 && !lotValueInput.value) {
+          fetchLotSuggestions(lotSearchInput.value).catch(() => {});
+        }
+      });
+
+      lotSearchInput.addEventListener("blur", () => {
+        window.setTimeout(() => lotSuggestionsEl.classList.add("hidden"), 150);
+      });
+
       let debounceTimer = null;
       searchInput.addEventListener("input", () => {
-        clearSelection();
+        clearSelection({ keepLot: true });
         if (debounceTimer) window.clearTimeout(debounceTimer);
         debounceTimer = window.setTimeout(() => {
           fetchSuggestions(searchInput.value).catch(() => {
@@ -426,7 +523,8 @@
       });
 
       searchInput.addEventListener("focus", () => {
-        if (searchInput.value.trim().length >= 2 && !valueInput.value) {
+        const lot = (lotValueInput.value || lotSearchInput.value || "").trim();
+        if ((searchInput.value.trim().length >= 1 || lot) && !valueInput.value) {
           fetchSuggestions(searchInput.value).catch(() => {});
         }
       });
