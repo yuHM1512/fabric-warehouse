@@ -12,6 +12,8 @@
           <h1 class="text-[40px] md:text-[56px] font-headline font-extrabold leading-tight tracking-[-0.02em]">
             {% if tab == "gon" %}
               In<br />Bảng Treo Gòn
+            {% elif tab == "pallets" %}
+              In<br />Theo Pallet
             {% else %}
               Dữ Liệu<br />Bảng Treo
             {% endif %}
@@ -19,6 +21,8 @@
           <p class="mt-6 text-lg text-white/90 leading-[1.6]">
             {% if tab == "gon" %}
               Dùng dữ liệu gòn đã khai báo ở <span class="font-bold text-white uppercase tracking-widest text-sm bg-white/20 px-2 py-1 rounded">/wms/receipts/gon</span> để render mẫu in tạm thời riêng cho gòn.
+            {% elif tab == "pallets" %}
+              Tạo bảng treo thực tế theo từng <span class="font-bold text-white uppercase tracking-widest text-sm bg-white/20 px-2 py-1 rounded">Pallet</span> đang chứa hàng trong kho.
             {% else %}
               Mỗi bảng treo tương ứng một <span class="font-bold text-white uppercase tracking-widest text-sm bg-white/20 px-2 py-1 rounded">Lot</span> nhập khẩu. Phục vụ việc in ấn thẻ bài trên cây vải trước khi đưa lên kệ.
             {% endif %}
@@ -43,6 +47,9 @@
         </a>
         <a href="/wms/hanging/gon" class="{% if tab == 'gon' %}bg-primary text-white{% else %}bg-surface-container-low text-on-surface-variant hover:text-primary{% endif %} rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors">
           In gòn
+        </a>
+        <a href="/wms/hanging/pallets" class="{% if tab == 'pallets' %}bg-primary text-white{% else %}bg-surface-container-low text-on-surface-variant hover:text-primary{% endif %} rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors">
+          Theo pallet thực tế
         </a>
       </div>
     </section>
@@ -274,6 +281,121 @@
           if (!btn) return;
           openGonEditModal(btn.dataset.itemId, btn.dataset.ngayNhap);
         });
+      </script>
+    {% elif tab == "pallets" %}
+      {% if error %}
+        <div class="rounded-2xl bg-error-container px-6 py-4 text-sm text-on-error-container cloud-shadow">
+          <div class="font-extrabold font-headline">Chưa tải được dữ liệu pallet</div>
+          <div class="mt-1 text-xs">
+            Hãy kiểm tra migration và bảng vị trí: <code class="font-mono font-bold">location_assignments</code>
+          </div>
+        </div>
+      {% endif %}
+
+      <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10 relative overflow-visible" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+        <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between relative z-10">
+          <div class="max-w-3xl">
+            <h3 class="text-[20px] font-extrabold font-headline mb-3">Bảng treo thực tế theo pallet</h3>
+            <p class="text-sm text-on-surface-variant leading-6">
+              Dữ liệu lấy từ danh sách cây đang lưu tại vị trí hiện tại trong kho. Mỗi pallet được gộp Lot, nhu cầu và loại vải để in một bảng treo bổ sung.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors" onclick="selectAllPallets(true)">
+              Chọn hết
+            </button>
+            <button type="button" class="rounded-xl bg-transparent border border-black/5 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-low transition-colors" onclick="selectAllPallets(false)">
+              Bỏ chọn
+            </button>
+            <button type="button" class="rounded-xl bg-primary/10 border border-primary/10 px-5 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary/20 transition-colors" onclick="printSelectedPallets()">
+              In (đã chọn)
+            </button>
+            <a class="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white bg-gradient-to-br from-primary to-primary-container shadow-[0_8px_32px_rgba(0,64,161,0.2)] hover:opacity-95 transition-opacity uppercase tracking-widest" href="/wms/hanging/pallets/print" target="_blank" rel="noopener">
+              <span class="material-symbols-outlined text-base">print</span>
+              In toàn bộ
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.05);">
+        <div class="px-8 md:px-10 py-8 border-b border-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h2 class="text-[28px] font-extrabold font-headline text-on-surface tracking-tight">Danh sách pallet thực tế</h2>
+          <div class="bg-surface-container-low px-4 py-2 rounded-lg text-xs font-bold text-on-surface-variant uppercase tracking-widest">
+            {{ pallet_items|length }} pallet đang chứa hàng
+          </div>
+        </div>
+
+        <div class="overflow-x-auto p-4 md:p-6">
+          <table class="min-w-full text-xs">
+            <thead>
+              <tr class="text-left border-b border-black/5">
+                <th class="px-4 py-4 w-10"></th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Pallet</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số cây</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Lot</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Nhu cầu</th>
+                <th class="px-4 py-4 text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Loại vải</th>
+                <th class="px-4 py-4 text-right text-[12px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in pallet_items %}
+                <tr class="group hover:bg-surface-container-low transition-colors border-b border-black/5 last:border-0 rounded-xl">
+                  <td class="px-4 py-3">
+                    <input class="pallet-checkbox h-5 w-5 rounded border-black/20 text-primary focus:ring-primary/50" type="checkbox" value="{{ row.vi_tri }}" />
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="font-extrabold font-headline text-lg text-primary">{{ row.vi_tri }}</div>
+                    <div class="mt-1 text-[11px] font-semibold text-on-surface-variant">Lot: {{ row.lots|join(", ") if row.lots else "—" }}</div>
+                  </td>
+                  <td class="px-4 py-3 font-bold text-on-surface text-sm">{{ row.roll_count }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm">{{ row.lots|join(", ") if row.lots else "—" }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm">{{ row.nhu_caus|join(", ") if row.nhu_caus else "—" }}</td>
+                  <td class="px-4 py-3 text-on-surface-variant text-sm">{{ row.loai_vais|join(", ") if row.loai_vais else "—" }}</td>
+                  <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <a
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-surface hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors border border-black/5 hover:border-primary/20"
+                      href="/wms/hanging/pallets/print?vi_tri={{ row.vi_tri|urlencode }}"
+                      target="_blank"
+                      rel="noopener"
+                      title="Preview"
+                      aria-label="Preview"
+                    >
+                      <span class="material-symbols-outlined text-[18px]">visibility</span>
+                    </a>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td class="px-4 py-16 text-center text-on-surface-variant text-base" colspan="7">Chưa có pallet nào đang lưu hàng theo dữ liệu vị trí hiện tại.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <script>
+        function selectAllPallets(flag) {
+          document.querySelectorAll(".pallet-checkbox").forEach((el) => {
+            el.checked = !!flag;
+          });
+        }
+
+        function printSelectedPallets() {
+          const viTris = Array.from(document.querySelectorAll(".pallet-checkbox"))
+            .filter((el) => el.checked)
+            .map((el) => el.value);
+
+          if (!viTris.length) {
+            alert("Chưa chọn pallet nào.");
+            return;
+          }
+
+          const params = viTris.map((viTri) => `vi_tri=${encodeURIComponent(viTri)}`).join("&");
+          window.open(`/wms/hanging/pallets/print?${params}`, "_blank", "noopener");
+        }
       </script>
     {% else %}
       {% if error %}

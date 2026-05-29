@@ -1,13 +1,27 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
+from types import SimpleNamespace
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from fabric_warehouse.db.models.hanging_tag import HangingTag
+from fabric_warehouse.db.models.location_assignment import LocationAssignment
 from fabric_warehouse.db.models.receipt import Receipt, ReceiptLine
 from fabric_warehouse.wms.receipts_service import _extract_ma_hang, _format_code
+
+STORED_STATUSES = ("Đang lưu", "Dang luu", "Đang luu", "Dang lưu")
+
+
+@dataclass(frozen=True)
+class PalletHangingRow:
+    vi_tri: str
+    roll_count: int
+    lots: list[str]
+    nhu_caus: list[str]
+    loai_vais: list[str]
 
 
 def _parse_ngay_xuat(raw: dict) -> object | None:
@@ -163,3 +177,124 @@ def fill_missing_hanging_fields(db: Session, *, tag_ids: list[int]) -> int:
             changed += 1
 
     return changed
+
+
+def _uniq(values: Iterable[object]) -> list[str]:
+    seen: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if text and text not in seen:
+            seen.append(text)
+    return seen
+
+
+def _uniq_join(values: Iterable[object], sep: str = " / ") -> str:
+    return sep.join(_uniq(values))
+
+
+def _first_nonempty(values: Iterable[object], default: str = "") -> str:
+    for value in values:
+        text = str(value or "").strip()
+        if text:
+            return text
+    return default
+
+
+def _pallet_assignments(db: Session, *, vi_tris: list[str] | None = None) -> list[LocationAssignment]:
+    q = (
+        db.query(LocationAssignment)
+        .filter(LocationAssignment.trang_thai.in_(STORED_STATUSES))
+        .filter(LocationAssignment.vi_tri.isnot(None))
+    )
+    if vi_tris:
+        q = q.filter(LocationAssignment.vi_tri.in_(vi_tris))
+    return q.order_by(LocationAssignment.vi_tri.asc(), LocationAssignment.lot.asc(), LocationAssignment.ma_cay.asc()).all()
+
+
+def _hanging_tags_for_assignments(db: Session, assignments: list[LocationAssignment]) -> dict[tuple[str, str], HangingTag]:
+    keys = sorted({(a.nhu_cau, a.lot) for a in assignments if a.nhu_cau and a.lot})
+    if not keys:
+        return {}
+
+    nhu_caus = sorted({nc for nc, _lot in keys})
+    lots = sorted({lot for _nc, lot in keys})
+    tags = (
+        db.query(HangingTag)
+        .filter(HangingTag.nhu_cau.in_(nhu_caus))
+        .filter(HangingTag.lot.in_(lots))
+        .order_by(HangingTag.id.asc())
+        .all()
+    )
+    out: dict[tuple[str, str], HangingTag] = {}
+    wanted = set(keys)
+    for tag in tags:
+        key = (tag.nhu_cau or "", tag.lot or "")
+        if key not in wanted or key in out:
+            continue
+        out[key] = tag
+    return out
+
+
+def list_pallet_hanging_rows(db: Session) -> list[PalletHangingRow]:
+    assignments = _pallet_assignments(db)
+    if not assignments:
+        return []
+    tag_by_key = _hanging_tags_for_assignments(db, assignments)
+
+    grouped: dict[str, list[LocationAssignment]] = {}
+    for assignment in assignments:
+        vi_tri = (assignment.vi_tri or "").strip()
+        if not vi_tri:
+            continue
+        grouped.setdefault(vi_tri, []).append(assignment)
+
+    rows: list[PalletHangingRow] = []
+    for vi_tri, items in grouped.items():
+        tags = [tag_by_key[(a.nhu_cau, a.lot)] for a in items if (a.nhu_cau, a.lot) in tag_by_key]
+        rows.append(
+            PalletHangingRow(
+                vi_tri=vi_tri,
+                roll_count=len(items),
+                lots=_uniq(a.lot for a in items),
+                nhu_caus=_uniq(a.nhu_cau for a in items),
+                loai_vais=_uniq(tag.loai_vai for tag in tags),
+            )
+        )
+    return rows
+
+
+def build_pallet_hanging_tags(db: Session, *, vi_tris: list[str] | None = None) -> list[SimpleNamespace]:
+    assignments = _pallet_assignments(db, vi_tris=vi_tris)
+    if not assignments:
+        return []
+    tag_by_key = _hanging_tags_for_assignments(db, assignments)
+
+    grouped: dict[str, list[LocationAssignment]] = {}
+    for assignment in assignments:
+        vi_tri = (assignment.vi_tri or "").strip()
+        if not vi_tri:
+            continue
+        grouped.setdefault(vi_tri, []).append(assignment)
+
+    out: list[SimpleNamespace] = []
+    for vi_tri, items in grouped.items():
+        tags = [tag_by_key[(a.nhu_cau, a.lot)] for a in items if (a.nhu_cau, a.lot) in tag_by_key]
+        lots = _uniq(a.lot for a in items)
+        out.append(
+            SimpleNamespace(
+                khach_hang=_first_nonempty((tag.khach_hang for tag in tags), default="DECATHLON"),
+                nha_cung_cap=_uniq_join(tag.nha_cung_cap for tag in tags),
+                customer=_uniq_join(tag.customer for tag in tags),
+                ngay_nhap_hang=min((tag.ngay_nhap_hang for tag in tags if tag.ngay_nhap_hang), default=None),
+                ma_hang=vi_tri,
+                nhu_cau=_uniq_join(a.nhu_cau for a in items),
+                loai_vai=_uniq_join(tag.loai_vai for tag in tags),
+                ma_art=_uniq_join(tag.ma_art for tag in tags),
+                mau_vai=_uniq_join(tag.mau_vai for tag in tags),
+                ma_mau=_uniq_join(tag.ma_mau for tag in tags),
+                lot=lots[0] if len(lots) == 1 else "",
+                lot_lines=lots,
+                ket_qua_kiem_tra="OK",
+            )
+        )
+    return out

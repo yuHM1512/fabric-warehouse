@@ -25,7 +25,12 @@ from fabric_warehouse.wms.reports_service import (
     ton_kho_by_mau_vai,
     ton_kho_by_nhu_cau,
 )
-from fabric_warehouse.wms.hanging_service import backfill_hanging_tags, fill_missing_hanging_fields
+from fabric_warehouse.wms.hanging_service import (
+    backfill_hanging_tags,
+    build_pallet_hanging_tags,
+    fill_missing_hanging_fields,
+    list_pallet_hanging_rows,
+)
 from fabric_warehouse.wms.gon_receipts_service import (
     create_gon_receipt,
     list_gon_receipts,
@@ -412,6 +417,7 @@ def hanging_list(request: Request, db: Session = Depends(get_db)):
             "tab": "regular",
             "tags": tags,
             "gon_items": [],
+            "pallet_items": [],
             "error": error,
             "nhu_cau": selected_nhu_caus[0] if len(selected_nhu_caus) == 1 else None,
             "selected_nhu_caus": selected_nhu_caus,
@@ -437,7 +443,34 @@ def hanging_gon_list(request: Request, db: Session = Depends(get_db)):
             "tab": "gon",
             "tags": [],
             "gon_items": gon_items,
+            "pallet_items": [],
             "error": gon_error,
+            "nhu_cau": None,
+            "selected_nhu_caus": [],
+            "current_nhu_cau_query": "",
+            "nhu_cau_options": [],
+        },
+    )
+
+
+@router.get("/wms/hanging/pallets", response_class=HTMLResponse)
+def hanging_pallet_list(request: Request, db: Session = Depends(get_db)):
+    error: str | None = None
+    try:
+        pallet_items = list_pallet_hanging_rows(db)
+    except ProgrammingError as e:
+        pallet_items = []
+        error = str(e.orig) if getattr(e, "orig", None) else str(e)
+    return templates.TemplateResponse(
+        request,
+        "wms/hanging_list.html",
+        {
+            "title": "Bảng treo theo pallet",
+            "tab": "pallets",
+            "tags": [],
+            "gon_items": [],
+            "pallet_items": pallet_items,
+            "error": error,
             "nhu_cau": None,
             "selected_nhu_caus": [],
             "current_nhu_cau_query": "",
@@ -464,6 +497,24 @@ def hanging_gon_print(
         request,
         "wms/hanging_gon_print.html",
         {"title": "In bảng treo gòn", "items": items},
+    )
+
+
+@router.get("/wms/hanging/pallets/print", response_class=HTMLResponse)
+def hanging_pallet_print(
+    request: Request,
+    db: Session = Depends(get_db),
+    vi_tri: list[str] | None = Query(default=None),
+):
+    selected_vi_tris = [v.strip() for v in (vi_tri or []) if (v or "").strip()]
+    try:
+        tags = build_pallet_hanging_tags(db, vi_tris=selected_vi_tris or None)
+    except ProgrammingError:
+        tags = []
+    return templates.TemplateResponse(
+        request,
+        "wms/hanging_print.html",
+        {"title": "In bảng treo theo pallet", "tags": tags},
     )
 
 
