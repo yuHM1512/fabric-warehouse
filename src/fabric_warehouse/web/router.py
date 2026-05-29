@@ -1953,10 +1953,26 @@ def reports_stock_export(
 @router.get("/wms/pallets/{vi_tri}/fragment", response_class=HTMLResponse)
 def pallet_rolls_fragment(request: Request, vi_tri: str, db: Session = Depends(get_db)):
     rows = list_pallet_roll_rows(db, vi_tri=vi_tri)
+    lot_summary_map: dict[str, dict[str, object]] = {}
+    for row in rows:
+        lot_key = str(row.lot or "Không xác định").strip() or "Không xác định"
+        item = lot_summary_map.get(lot_key)
+        if item is None:
+            item = {
+                "lot": lot_key,
+                "so_cay": 0,
+                "tong_yds": 0.0,
+            }
+            lot_summary_map[lot_key] = item
+        item["so_cay"] = int(item["so_cay"]) + 1
+        item["tong_yds"] = float(item["tong_yds"]) + float(row.yds or 0)
+
+    lot_summaries = list(lot_summary_map.values())
+    lot_summaries.sort(key=lambda item: str(item["lot"]))
     return templates.TemplateResponse(
         request,
         "wms/_pallet_rolls_fragment.html",
-        {"vi_tri": vi_tri, "rows": rows},
+        {"vi_tri": vi_tri, "rows": rows, "lot_summaries": lot_summaries},
     )
 
 

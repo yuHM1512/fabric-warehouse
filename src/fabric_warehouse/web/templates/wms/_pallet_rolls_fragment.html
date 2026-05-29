@@ -13,6 +13,22 @@
   </button>
 </div>
 
+{% if lot_summaries %}
+  <div class="mt-6">
+    <div class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tổng hợp theo lot</div>
+    <div class="flex flex-wrap gap-3">
+      {% for item in lot_summaries %}
+        <div class="min-w-[180px] rounded-2xl border border-black/5 bg-surface-container-low px-4 py-3">
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Lot</div>
+          <div class="mt-1 text-base font-extrabold font-headline text-on-surface">{{ item.lot }}</div>
+          <div class="mt-2 text-sm text-on-surface-variant">{{ item.so_cay }} cây</div>
+          <div class="mt-1 text-sm font-semibold text-primary">{{ "%.1f"|format(item.tong_yds) }} YDS</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
+
 <div class="mt-6 max-h-[calc(100vh-16rem)] overflow-auto rounded-2xl border border-black/5">
   <table class="min-w-full text-sm">
     <thead class="bg-surface-container-low text-on-surface-variant">
