@@ -22,6 +22,7 @@ from fabric_warehouse.wms.reports_service import (
     ton_kho_by_age_split,
     ton_kho_by_loai_vai,
     ton_kho_by_lot,
+    ton_kho_lot_detail_by_nhu_cau,
     ton_kho_by_mau_vai,
     ton_kho_by_nhu_cau,
 )
@@ -1813,7 +1814,10 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
     if tab not in handlers:
         tab = "nhu_cau"
 
+    stock_filter_nhu_cau = (request.query_params.get("nhu_cau") or "").strip()
     rows = handlers[tab](db)
+    if tab == "nhu_cau" and stock_filter_nhu_cau:
+        rows = [row for row in rows if row.nhom == stock_filter_nhu_cau]
     total_so_cay = sum(r.so_cay for r in rows)
     total_tong_yds = sum(r.tong_yds for r in rows)
     total_da_dinh_danh = sum(r.da_dinh_danh for r in rows)
@@ -1844,7 +1848,37 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
             "total_tong_yds": total_tong_yds,
             "total_da_dinh_danh": total_da_dinh_danh,
             "stock_nhu_cau_options": stock_nhu_cau_options,
+            "stock_filter_nhu_cau": stock_filter_nhu_cau,
         },
+    )
+
+
+@router.get("/reports/stock/nhu-cau-detail")
+def reports_stock_nhu_cau_detail(
+    nhu_cau: str = Query(default=""),
+    db: Session = Depends(get_db),
+):
+    nhu_cau_val = (nhu_cau or "").strip()
+    if not nhu_cau_val:
+        raise HTTPException(status_code=400, detail="Thiếu Nhu cầu.")
+
+    rows = ton_kho_lot_detail_by_nhu_cau(db, nhu_cau=nhu_cau_val)
+    return JSONResponse(
+        {
+            "ok": True,
+            "nhu_cau": nhu_cau_val,
+            "total_lots": len(rows),
+            "total_rolls": sum(row.so_cay for row in rows),
+            "total_yds": sum(row.tong_yds for row in rows),
+            "rows": [
+                {
+                    "lot": row.lot,
+                    "so_cay": row.so_cay,
+                    "tong_yds": row.tong_yds,
+                }
+                for row in rows
+            ],
+        }
     )
 
 

@@ -663,6 +663,37 @@
         </div>
       </div>
 
+      {% if tab == "nhu_cau" %}
+        <div class="px-8 py-6 border-b border-black/5 bg-surface-container-lowest">
+          <form method="get" action="/reports" class="flex flex-col gap-3 md:flex-row md:items-end">
+            <input type="hidden" name="tab" value="nhu_cau" />
+            <div class="min-w-[320px]">
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="stockFilterNhuCau">Lọc Nhu cầu</label>
+              <input
+                id="stockFilterNhuCau"
+                name="nhu_cau"
+                list="stock-filter-nhu-cau-list"
+                value="{{ stock_filter_nhu_cau or '' }}"
+                placeholder="Gõ để search và chọn nhu cầu..."
+                autocomplete="off"
+                class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0"
+              />
+              <datalist id="stock-filter-nhu-cau-list">
+                {% for v in stock_nhu_cau_options or [] %}
+                  <option value="{{ v }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+            <button type="submit" class="rounded-2xl bg-primary px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white transition hover:opacity-90">
+              Áp dụng
+            </button>
+            <a href="/reports?tab=nhu_cau" class="rounded-2xl border border-black/5 bg-surface-container-lowest px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-primary transition hover:bg-surface-container-low">
+              Reset
+            </a>
+          </form>
+        </div>
+      {% endif %}
+
       <!-- Table -->
       <div class="overflow-x-auto p-4 md:p-6">
         <table class="min-w-full text-sm">
@@ -678,6 +709,9 @@
               <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số cây</th>
               <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Tổng YDS</th>
               <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Đã định danh</th>
+              {% if tab == "nhu_cau" %}
+                <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Chi tiết</th>
+              {% endif %}
             </tr>
           </thead>
           <tbody>
@@ -704,6 +738,17 @@
                     {% endif %}
                   </span>
                 </td>
+                {% if tab == "nhu_cau" %}
+                  <td class="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      class="js-demand-detail inline-flex items-center justify-center rounded-xl bg-primary/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.16em] text-primary transition hover:bg-primary/20"
+                      data-nhu-cau="{{ row.nhom }}"
+                    >
+                      Chi tiết
+                    </button>
+                  </td>
+                {% endif %}
               </tr>
             {% else %}
               <tr>
@@ -718,10 +763,32 @@
                 <td class="px-4 py-3 text-right text-on-surface">{{ total_so_cay }}</td>
                 <td class="px-4 py-3 text-right text-on-surface">{{ "%.2f"|format(total_tong_yds) }}</td>
                 <td class="px-4 py-3 text-right text-on-surface">{{ total_da_dinh_danh }}</td>
+                {% if tab == "nhu_cau" %}
+                  <td class="px-4 py-3"></td>
+                {% endif %}
               </tr>
             </tfoot>
           {% endif %}
         </table>
+      </div>
+    </div>
+
+    <div id="demandDetailModal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-black/30" data-close-demand-detail></div>
+      <div class="relative mx-auto max-w-4xl px-6 py-10">
+        <div class="rounded-[2rem] bg-surface-container-lowest p-8 cloud-shadow">
+          <div class="flex items-start justify-between gap-6">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Chi tiết tồn theo Nhu cầu</div>
+              <h3 id="demandDetailTitle" class="mt-2 text-2xl font-extrabold font-headline text-on-surface"></h3>
+              <div id="demandDetailSummary" class="mt-2 text-sm text-on-surface-variant"></div>
+            </div>
+            <button type="button" data-close-demand-detail class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant hover:text-primary">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div id="demandDetailBody" class="mt-6 max-h-[60vh] overflow-y-auto"></div>
+        </div>
       </div>
     </div>
 
@@ -747,6 +814,85 @@
         demandInput.addEventListener("input", syncStockExportLinks);
         demandInput.addEventListener("change", syncStockExportLinks);
         syncStockExportLinks();
+      })();
+
+      (function () {
+        const modal = document.getElementById("demandDetailModal");
+        const title = document.getElementById("demandDetailTitle");
+        const summary = document.getElementById("demandDetailSummary");
+        const body = document.getElementById("demandDetailBody");
+        if (!modal || !title || !summary || !body) return;
+
+        function closeModal() {
+          modal.classList.add("hidden");
+          title.textContent = "";
+          summary.textContent = "";
+          body.innerHTML = "";
+        }
+
+        function formatNumber(value) {
+          return Number(value || 0).toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+        }
+
+        function escapeHtml(value) {
+          return String(value || "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+        }
+
+        async function openDetail(nhuCau) {
+          modal.classList.remove("hidden");
+          title.textContent = nhuCau;
+          summary.textContent = "Đang tải...";
+          body.innerHTML = "";
+
+          try {
+            const url = new URL("/reports/stock/nhu-cau-detail", window.location.origin);
+            url.searchParams.set("nhu_cau", nhuCau);
+            const res = await fetch(url.pathname + url.search, { headers: { "X-Requested-With": "fetch" } });
+            const payload = await res.json();
+            if (!res.ok || !payload.ok) throw new Error(payload.detail || "Không tải được chi tiết.");
+
+            summary.textContent = `${payload.total_lots} Lot | ${payload.total_rolls} cây | ${formatNumber(payload.total_yds)} YDS`;
+            body.innerHTML = `
+              <table class="min-w-full text-sm">
+                <thead>
+                  <tr class="border-b border-black/5 text-left">
+                    <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Lot</th>
+                    <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số cây</th>
+                    <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Tổng YDS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${payload.rows.map((row) => `
+                    <tr class="border-b border-black/5 last:border-0">
+                      <td class="px-4 py-3 font-semibold text-on-surface">${escapeHtml(row.lot)}</td>
+                      <td class="px-4 py-3 text-right font-bold text-on-surface">${row.so_cay || 0}</td>
+                      <td class="px-4 py-3 text-right text-on-surface-variant">${formatNumber(row.tong_yds)}</td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            `;
+          } catch (err) {
+            summary.textContent = "";
+            body.innerHTML = `<div class="rounded-2xl bg-error-container px-5 py-4 text-sm text-on-error-container">${String(err || "Lỗi tải dữ liệu.")}</div>`;
+          }
+        }
+
+        document.addEventListener("click", (event) => {
+          if (event.target.closest("[data-close-demand-detail]")) {
+            closeModal();
+            return;
+          }
+          const btn = event.target.closest(".js-demand-detail");
+          if (!btn) return;
+          const nhuCau = btn.dataset.nhuCau || "";
+          if (nhuCau) openDetail(nhuCau);
+        });
       })();
     </script>
   {% endif %}

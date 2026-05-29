@@ -29,6 +29,14 @@ class TonKhoRow:
     da_dinh_danh: int
 
 
+@dataclass
+class TonKhoNhuCauLotDetailRow:
+    nhu_cau: str
+    lot: str
+    so_cay: int
+    tong_yds: float
+
+
 @dataclass(frozen=True)
 class AgeSplitKpis:
     under_rolls: int
@@ -110,6 +118,36 @@ def ton_kho_by_nhu_cau(db: Session) -> list[TonKhoRow]:
             so_cay=r.so_cay,
             tong_yds=float(r.tong_yds or 0),
             da_dinh_danh=r.da_dinh_danh,
+        )
+        for r in rows
+    ]
+
+
+def ton_kho_lot_detail_by_nhu_cau(db: Session, *, nhu_cau: str) -> list[TonKhoNhuCauLotDetailRow]:
+    nhu_cau_s = (nhu_cau or "").strip()
+    if not nhu_cau_s:
+        return []
+
+    rows = (
+        db.query(
+            LocationAssignment.nhu_cau.label("nhu_cau"),
+            LocationAssignment.lot.label("lot"),
+            func.count(LocationAssignment.ma_cay).label("so_cay"),
+            func.coalesce(func.sum(_yds(StockCheck)), 0).label("tong_yds"),
+        )
+        .outerjoin(StockCheck, StockCheck.ma_cay == LocationAssignment.ma_cay)
+        .filter(LocationAssignment.trang_thai == _DANG_LUU)
+        .filter(LocationAssignment.nhu_cau == nhu_cau_s)
+        .group_by(LocationAssignment.nhu_cau, LocationAssignment.lot)
+        .order_by(LocationAssignment.lot.asc())
+        .all()
+    )
+    return [
+        TonKhoNhuCauLotDetailRow(
+            nhu_cau=str(r.nhu_cau or "").strip(),
+            lot=str(r.lot or "(Không xác định)").strip(),
+            so_cay=int(r.so_cay or 0),
+            tong_yds=float(r.tong_yds or 0),
         )
         for r in rows
     ]
