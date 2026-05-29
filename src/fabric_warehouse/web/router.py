@@ -1815,23 +1815,15 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
         tab = "nhu_cau"
 
     stock_filter_nhu_cau = (request.query_params.get("nhu_cau") or "").strip()
-    rows = handlers[tab](db)
+    nhu_cau_rows = ton_kho_by_nhu_cau(db)
+    rows = nhu_cau_rows if tab == "nhu_cau" else handlers[tab](db)
     if tab == "nhu_cau" and stock_filter_nhu_cau:
         rows = [row for row in rows if row.nhom == stock_filter_nhu_cau]
     total_so_cay = sum(r.so_cay for r in rows)
     total_tong_yds = sum(r.tong_yds for r in rows)
     total_da_dinh_danh = sum(r.da_dinh_danh for r in rows)
     try:
-        stock_nhu_cau_options = [
-            str(r[0])
-            for r in db.query(LocationAssignment.nhu_cau)
-            .filter(LocationAssignment.trang_thai == "Đang lưu")
-            .filter(LocationAssignment.nhu_cau.isnot(None))
-            .distinct()
-            .order_by(LocationAssignment.nhu_cau.asc())
-            .all()
-            if r and r[0]
-        ]
+        stock_nhu_cau_options = [row.nhom for row in nhu_cau_rows if row.nhom]
     except Exception:
         stock_nhu_cau_options = []
 
@@ -1862,7 +1854,37 @@ def reports_stock_nhu_cau_detail(
     if not nhu_cau_val:
         raise HTTPException(status_code=400, detail="Thiếu Nhu cầu.")
 
+    from sqlalchemy import func
+
+    from fabric_warehouse.db.models.location_assignment import LocationAssignment
+    from fabric_warehouse.db.models.stock_check import StockCheck
+
     rows = ton_kho_lot_detail_by_nhu_cau(db, nhu_cau=nhu_cau_val)
+    pallet_rows = (
+        db.query(
+            LocationAssignment.lot.label("lot"),
+            LocationAssignment.vi_tri.label("vi_tri"),
+            func.count(LocationAssignment.ma_cay).label("so_cay"),
+            func.coalesce(func.sum(func.coalesce(StockCheck.actual_yards, StockCheck.expected_yards)), 0).label("tong_yds"),
+        )
+        .outerjoin(StockCheck, StockCheck.ma_cay == LocationAssignment.ma_cay)
+        .filter(LocationAssignment.trang_thai.in_(("Đang lưu", "Dang luu", "Đang luu", "Dang lưu")))
+        .filter(LocationAssignment.nhu_cau == nhu_cau_val)
+        .group_by(LocationAssignment.lot, LocationAssignment.vi_tri)
+        .order_by(LocationAssignment.lot.asc(), LocationAssignment.vi_tri.asc())
+        .all()
+    )
+    pallets_by_lot: dict[str, list[dict[str, object]]] = {}
+    for item in pallet_rows:
+        lot_key = str(item.lot or "(Không xác định)").strip()
+        pallets_by_lot.setdefault(lot_key, []).append(
+            {
+                "vi_tri": str(item.vi_tri or "(Chưa gắn pallet)").strip(),
+                "so_cay": int(item.so_cay or 0),
+                "tong_yds": float(item.tong_yds or 0),
+            }
+        )
+
     return JSONResponse(
         {
             "ok": True,
@@ -1875,11 +1897,27 @@ def reports_stock_nhu_cau_detail(
                     "lot": row.lot,
                     "so_cay": row.so_cay,
                     "tong_yds": row.tong_yds,
+                    "pallets": pallets_by_lot.get(str(row.lot or "").strip(), []),
                 }
                 for row in rows
             ],
         }
     )
+
+
+@router.get("/reports/stock/search-nhu-cau")
+def reports_stock_search_nhu_cau(
+    q: str = Query(default=""),
+    limit: int = Query(default=30, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    term = (q or "").strip()
+    items = [
+        row.nhom
+        for row in ton_kho_by_nhu_cau(db)
+        if row.nhom and (not term or term.lower() in row.nhom.lower())
+    ][:limit]
+    return JSONResponse({"ok": True, "items": items})
 
 
 @router.get("/reports/stock/export")

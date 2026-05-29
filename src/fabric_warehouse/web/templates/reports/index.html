@@ -628,20 +628,15 @@
             </div>
           </div>
           <div class="flex flex-wrap items-end gap-3">
-            <div>
+            <div class="relative">
               <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="stockExportNhuCau">Nhu cầu</label>
               <input
                 id="stockExportNhuCau"
-                list="stock-export-nhu-cau-list"
                 value=""
                 placeholder="Gõ để chọn nhu cầu..."
                 class="mt-2 min-w-[320px] rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:ring-0"
               />
-              <datalist id="stock-export-nhu-cau-list">
-                {% for v in stock_nhu_cau_options or [] %}
-                  <option value="{{ v }}"></option>
-                {% endfor %}
-              </datalist>
+              <div id="stockExportNhuCauDropdown" class="absolute left-0 right-0 top-[calc(100%+8px)] z-30 hidden max-h-72 overflow-y-auto rounded-2xl border border-black/5 bg-surface-container-lowest cloud-shadow"></div>
             </div>
             <div class="flex flex-wrap items-center gap-3 md:pb-[1px]">
               <a
@@ -667,22 +662,17 @@
         <div class="px-8 py-6 border-b border-black/5 bg-surface-container-lowest">
           <form method="get" action="/reports" class="flex flex-col gap-3 md:flex-row md:items-end">
             <input type="hidden" name="tab" value="nhu_cau" />
-            <div class="min-w-[320px]">
+            <div class="relative min-w-[320px]">
               <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="stockFilterNhuCau">Lọc Nhu cầu</label>
               <input
                 id="stockFilterNhuCau"
                 name="nhu_cau"
-                list="stock-filter-nhu-cau-list"
                 value="{{ stock_filter_nhu_cau or '' }}"
                 placeholder="Gõ để search và chọn nhu cầu..."
                 autocomplete="off"
                 class="mt-2 w-full rounded-2xl border-0 bg-surface-container-low px-4 py-3 text-sm focus:bg-white focus:ring-0"
               />
-              <datalist id="stock-filter-nhu-cau-list">
-                {% for v in stock_nhu_cau_options or [] %}
-                  <option value="{{ v }}"></option>
-                {% endfor %}
-              </datalist>
+              <div id="stockFilterNhuCauDropdown" class="absolute left-0 right-0 top-[calc(100%+8px)] z-30 hidden max-h-72 overflow-y-auto rounded-2xl border border-black/5 bg-surface-container-lowest cloud-shadow"></div>
             </div>
             <button type="submit" class="rounded-2xl bg-primary px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white transition hover:opacity-90">
               Áp dụng
@@ -817,6 +807,68 @@
       })();
 
       (function () {
+        const allDemandOptions = {{ (stock_nhu_cau_options or [])|tojson }};
+
+        function optionMarkup(value) {
+          return `
+            <button type="button" class="flex w-full items-center border-b border-black/5 px-4 py-3 text-left text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low last:border-0" data-role="option" data-value="${value}">
+              ${value}
+            </button>
+          `;
+        }
+
+        function bindDemandLookup(inputId, dropdownId) {
+          const input = document.getElementById(inputId);
+          const dropdown = document.getElementById(dropdownId);
+          if (!input || !dropdown) return;
+
+          function closeDropdown() {
+            dropdown.classList.add("hidden");
+            dropdown.innerHTML = "";
+          }
+
+          function renderOptions(items) {
+            if (!items.length) {
+              dropdown.innerHTML = `<div class="px-4 py-3 text-sm text-on-surface-variant">Không có Nhu cầu phù hợp.</div>`;
+              dropdown.classList.remove("hidden");
+              return;
+            }
+            dropdown.innerHTML = items.map((item) => optionMarkup(item)).join("");
+            dropdown.classList.remove("hidden");
+            dropdown.querySelectorAll("[data-role='option']").forEach((button) => {
+              button.addEventListener("click", () => {
+                input.value = button.dataset.value || "";
+                input.dispatchEvent(new Event("change", { bubbles: true }));
+                closeDropdown();
+              });
+            });
+          }
+
+          function localFilter(term) {
+            const q = term.trim().toLowerCase();
+            const items = q
+              ? allDemandOptions.filter((item) => String(item || "").toLowerCase().includes(q))
+              : allDemandOptions.slice();
+            renderOptions(items.slice(0, 30));
+          }
+
+          input.addEventListener("focus", () => {
+            localFilter(input.value);
+          });
+          input.addEventListener("input", () => {
+            localFilter(input.value);
+          });
+          document.addEventListener("click", (event) => {
+            if (event.target === input || dropdown.contains(event.target)) return;
+            closeDropdown();
+          });
+        }
+
+        bindDemandLookup("stockExportNhuCau", "stockExportNhuCauDropdown");
+        bindDemandLookup("stockFilterNhuCau", "stockFilterNhuCauDropdown");
+      })();
+
+      (function () {
         const modal = document.getElementById("demandDetailModal");
         const title = document.getElementById("demandDetailTitle");
         const summary = document.getElementById("demandDetailSummary");
@@ -864,14 +916,29 @@
                     <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Lot</th>
                     <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số cây</th>
                     <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Tổng YDS</th>
+                    <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Pallet chứa hàng</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${payload.rows.map((row) => `
-                    <tr class="border-b border-black/5 last:border-0">
+                    <tr class="border-b border-black/5 last:border-0 align-top">
                       <td class="px-4 py-3 font-semibold text-on-surface">${escapeHtml(row.lot)}</td>
                       <td class="px-4 py-3 text-right font-bold text-on-surface">${row.so_cay || 0}</td>
                       <td class="px-4 py-3 text-right text-on-surface-variant">${formatNumber(row.tong_yds)}</td>
+                      <td class="px-4 py-3 text-on-surface-variant">
+                        ${(row.pallets || []).length
+                          ? `
+                            <div class="space-y-2">
+                              ${(row.pallets || []).map((pallet) => `
+                                <div class="rounded-2xl bg-surface-container-low px-3 py-2">
+                                  <div class="font-extrabold text-on-surface">${escapeHtml(pallet.vi_tri)}</div>
+                                  <div class="mt-1 text-xs">${pallet.so_cay || 0} cây | ${formatNumber(pallet.tong_yds)} YDS</div>
+                                </div>
+                              `).join("")}
+                            </div>
+                          `
+                          : `<span class="text-xs">Không có pallet</span>`}
+                      </td>
                     </tr>
                   `).join("")}
                 </tbody>
