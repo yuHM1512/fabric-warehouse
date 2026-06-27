@@ -7,7 +7,6 @@ Create Date: 2026-06-25 22:00:00
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -40,7 +39,6 @@ def upgrade() -> None:
         sa.Column("ten_vai", sa.String(length=255), nullable=True),
         sa.Column("system_roll_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("system_quantity", sa.Numeric(12, 2), nullable=True),
-        sa.Column("pallet_snapshot", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'[]'::jsonb")),
         sa.Column("actual_quantity", sa.Numeric(12, 2), nullable=True),
         sa.Column("note", sa.String(length=500), nullable=True),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),

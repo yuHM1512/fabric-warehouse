@@ -8,6 +8,7 @@ Create Date: 2026-06-26 09:40:00
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
@@ -18,6 +19,11 @@ depends_on = None
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    column_names = {col["name"] for col in inspector.get_columns("inventory_count_rows")}
+    if "pallet_snapshot" in column_names:
+        return
     op.add_column(
         "inventory_count_rows",
         sa.Column(
@@ -30,4 +36,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    column_names = {col["name"] for col in inspector.get_columns("inventory_count_rows")}
+    if "pallet_snapshot" not in column_names:
+        return
     op.drop_column("inventory_count_rows", "pallet_snapshot")
