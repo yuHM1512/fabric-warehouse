@@ -38,6 +38,12 @@ from fabric_warehouse.wms.gon_receipts_service import (
     list_gon_receipts_by_ids,
     update_gon_receipt_date,
 )
+from fabric_warehouse.wms.inventory_count_service import (
+    create_inventory_count_session,
+    get_inventory_count_session_detail,
+    list_inventory_count_sessions,
+    update_inventory_count_rows,
+)
 from fabric_warehouse.wms.pdf import render_receipt_pdf
 from fabric_warehouse.wms.receipts_service import (
     get_receipt,
@@ -1827,6 +1833,7 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
     except Exception:
         stock_nhu_cau_options = []
 
+    inventory_sessions = list_inventory_count_sessions(db, limit=12)
     return templates.TemplateResponse(
         request,
         "reports/index.html",
@@ -1841,8 +1848,100 @@ def reports_home(request: Request, db: Session = Depends(get_db)):
             "total_da_dinh_danh": total_da_dinh_danh,
             "stock_nhu_cau_options": stock_nhu_cau_options,
             "stock_filter_nhu_cau": stock_filter_nhu_cau,
+            "inventory_sessions": inventory_sessions,
+            "inventory_session_date": date.today().isoformat(),
         },
     )
+
+
+@router.post("/reports/stock-checks")
+async def reports_stock_check_create(request: Request, db: Session = Depends(get_db)):
+    form = await request.form()
+    session_date_raw = (form.get("session_date") or "").strip()
+    if not session_date_raw:
+        raise HTTPException(status_code=400, detail="Thiếu ngày kiểm kê.")
+    try:
+        session_date = date.fromisoformat(session_date_raw)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Ngày kiểm kê không hợp lệ.") from exc
+
+    session_row = create_inventory_count_session(db, session_date=session_date)
+    db.commit()
+    return RedirectResponse(url=f"/reports/stock-checks/{session_row.id}", status_code=303)
+
+
+@router.get("/reports/stock-checks/{session_id}", response_class=HTMLResponse)
+def reports_stock_check_detail(
+    request: Request,
+    session_id: int,
+    db: Session = Depends(get_db),
+):
+    ma_hang = (request.query_params.get("ma_hang") or "").strip()
+    detail = get_inventory_count_session_detail(db, session_id=session_id, ma_hang=ma_hang or None)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đợt kiểm kê.")
+    return templates.TemplateResponse(
+        request,
+        "reports/stock_check_session.html",
+        {
+            "title": f"Đợt kiểm kê #{detail.session_id}",
+            "detail": detail,
+            "selected_ma_hang": ma_hang,
+            "saved": request.query_params.get("saved") == "1",
+        },
+    )
+
+
+@router.post("/reports/stock-checks/{session_id}")
+async def reports_stock_check_detail_save(
+    request: Request,
+    session_id: int,
+    db: Session = Depends(get_db),
+):
+    detail = get_inventory_count_session_detail(db, session_id=session_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đợt kiểm kê.")
+
+    form = await request.form()
+    try:
+        row_count = int(form.get("row_count") or 0)
+    except Exception:
+        row_count = 0
+
+    def to_float(value: object) -> float | None:
+        if value is None:
+            return None
+        raw = str(value).strip().replace(",", "")
+        if not raw:
+            return None
+        try:
+            return float(raw)
+        except Exception:
+            return None
+
+    items: list[dict[str, object]] = []
+    for i in range(row_count):
+        row_id_raw = form.get(f"row_id_{i}")
+        if not row_id_raw:
+            continue
+        actual_quantity = to_float(form.get(f"actual_quantity_{i}"))
+        note = (form.get(f"note_{i}") or "").strip() or None
+        items.append(
+            {
+                "row_id": int(str(row_id_raw)),
+                "actual_quantity": actual_quantity,
+                "note": note,
+            }
+        )
+
+    update_inventory_count_rows(db, session_id=session_id, items=items)
+    db.commit()
+
+    next_url = f"/reports/stock-checks/{session_id}?saved=1"
+    selected_ma_hang = (form.get("selected_ma_hang") or "").strip()
+    if selected_ma_hang:
+        next_url += f"&ma_hang={selected_ma_hang}"
+    return RedirectResponse(url=next_url, status_code=303)
 
 
 @router.get("/reports/stock/nhu-cau-detail")

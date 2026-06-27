@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-8 pb-16">
+  <section class="relative bg-gradient-to-br from-primary to-primary-container rounded-[2rem] overflow-hidden p-10 md:p-16 text-white min-h-[240px] flex flex-col justify-end" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
+    <div class="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+    <div class="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+      <div>
+        <div class="text-[12px] font-bold uppercase tracking-widest text-white/70">Kiểm kê tồn kho</div>
+        <h1 class="mt-3 text-[36px] md:text-[48px] font-headline font-extrabold tracking-[-0.02em]">Đợt kiểm kê #{{ detail.session_id }}</h1>
+        <p class="mt-3 max-w-2xl text-sm leading-relaxed text-white/85">
+          Mỗi <span class="font-bold">Mã hàng</span> hiển thị 1 dòng, bấm chi tiết để xổ xuống từng
+          <span class="font-bold">Loại vải / Tên vải / Pallet</span> và nhập tick kiểm kê theo từng dòng loại vải.
+        </p>
+      </div>
+      <a href="/reports" class="inline-flex items-center gap-2 self-start rounded-xl border border-white/10 bg-white/20 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-white/30 md:self-auto">
+        <span class="material-symbols-outlined text-sm">arrow_back</span>
+        Về báo cáo
+      </a>
+    </div>
+  </section>
+
+  {% if saved %}
+    <div class="rounded-2xl bg-secondary-container px-6 py-4 text-sm text-on-surface cloud-shadow flex items-center justify-between">
+      <div><span class="font-bold">Đã lưu</span> số liệu kiểm kê cho đợt #{{ detail.session_id }}.</div>
+      <button type="button" onclick="this.parentElement.remove()" class="text-on-surface-variant hover:text-on-surface">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+    </div>
+  {% endif %}
+
+  <section class="bg-surface-container-lowest rounded-[2rem] p-8 md:p-10" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+      <div class="rounded-[1.5rem] bg-surface-container-low p-6">
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Tiến độ nhập kiểm</div>
+        <div class="mt-3 text-3xl font-extrabold font-headline text-on-surface">{{ detail.counted_row_count }} / {{ detail.row_count }}</div>
+        <div class="mt-2 text-sm text-on-surface-variant">Dòng loại vải đã nhập thực tế hoặc ghi chú.</div>
+      </div>
+      <form method="get" action="/reports/stock-checks/{{ detail.session_id }}" class="rounded-[1.5rem] bg-surface-container-low p-6">
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Lọc theo Mã hàng</div>
+        <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-end">
+          <div class="min-w-0 flex-1">
+            <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" for="ma_hang">Mã hàng</label>
+            <input
+              id="ma_hang"
+              name="ma_hang"
+              list="ma_hang_options"
+              value="{{ selected_ma_hang or '' }}"
+              autocomplete="off"
+              placeholder="Gõ để lọc..."
+              class="mt-2 w-full rounded-2xl border-0 bg-surface-container-lowest px-4 py-3 text-sm focus:bg-white focus:ring-0"
+            />
+            <datalist id="ma_hang_options">
+              {% for item in detail.ma_hang_options %}
+                <option value="{{ item }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+          <button type="submit" class="rounded-2xl bg-primary px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white transition hover:opacity-90">Áp dụng</button>
+          <a href="/reports/stock-checks/{{ detail.session_id }}" class="rounded-2xl border border-black/5 bg-surface-container-lowest px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-primary transition hover:bg-surface-container-low">Reset</a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="bg-surface-container-lowest rounded-[2rem] overflow-hidden" style="box-shadow: 0px 20px 40px rgba(25,28,29,0.05);">
+    <form method="post" action="/reports/stock-checks/{{ detail.session_id }}">
+      <input type="hidden" name="row_count" value="{{ detail.groups | sum(attribute='fabric_count') }}" />
+      <input type="hidden" name="selected_ma_hang" value="{{ selected_ma_hang or '' }}" />
+
+      <div class="px-8 py-6 border-b border-black/5 bg-surface-container-low flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">Danh sách kiểm kê</div>
+          <h2 class="mt-2 text-2xl font-extrabold font-headline text-on-surface">Mỗi mã hàng 1 dòng, xổ xuống chi tiết pallet</h2>
+        </div>
+        <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white transition hover:opacity-90">
+          <span class="material-symbols-outlined text-base">save</span>
+          Lưu kiểm kê
+        </button>
+      </div>
+
+      <div class="overflow-x-auto p-4 md:p-6">
+        <table class="min-w-full text-sm" id="inventoryAccordion">
+          <thead>
+            <tr class="border-b border-black/5 text-left">
+              <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Mã hàng</th>
+              <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số loại vải</th>
+              <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Số cây HT</th>
+              <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">SL hệ thống</th>
+              <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Đã nhập</th>
+              <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/70">Chi tiết</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set ns = namespace(row_index=0) %}
+            {% for group in detail.groups %}
+              {% set acc_id = "inventory_group_" ~ loop.index %}
+              <tr class="border-b border-black/5 hover:bg-surface-container-low transition-colors">
+                <td class="px-4 py-4 font-extrabold text-on-surface">{{ group.ma_hang }}</td>
+                <td class="px-4 py-4 text-right font-bold text-on-surface tabular-nums">{{ group.fabric_count }}</td>
+                <td class="px-4 py-4 text-right font-bold text-on-surface tabular-nums">{{ group.total_roll_count }}</td>
+                <td class="px-4 py-4 text-right text-on-surface-variant tabular-nums">{{ "%.2f"|format(group.total_quantity) }}</td>
+                <td class="px-4 py-4 text-right text-on-surface-variant tabular-nums">{{ group.counted_count }}/{{ group.fabric_count }}</td>
+                <td class="px-4 py-4 text-right">
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-2 rounded-full bg-surface-container-low px-4 py-2 text-xs font-extrabold uppercase tracking-widest text-primary hover:bg-surface-container-lowest transition-colors"
+                    data-acc-btn="{{ acc_id }}"
+                    aria-expanded="false"
+                    aria-controls="{{ acc_id }}"
+                  >
+                    <span>Chi tiết</span>
+                    <span class="material-symbols-outlined text-base transition-transform" data-acc-icon="{{ acc_id }}">keyboard_arrow_down</span>
+                  </button>
+                </td>
+              </tr>
+              <tr id="{{ acc_id }}" class="hidden border-b border-primary/20 bg-surface-container-low/30">
+                <td colspan="6" class="px-5 py-5">
+                  <div class="rounded-[1.5rem] border border-primary/10 bg-surface-container-lowest overflow-hidden">
+                    <div class="px-6 py-4 bg-primary/5 border-b border-primary/10 flex items-center justify-between gap-4">
+                      <div class="text-xs font-extrabold uppercase tracking-[0.2em] text-primary">{{ group.ma_hang }}</div>
+                      <div class="text-xs text-on-surface-variant">{{ group.fabric_count }} loại vải · {{ "%.2f"|format(group.total_quantity) }} YDS</div>
+                    </div>
+                    <div class="overflow-x-auto">
+                      <table class="min-w-full text-sm">
+                        <thead class="bg-surface-container-low text-on-surface-variant">
+                          <tr class="text-left">
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em]">Tick đủ</th>
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em]">Loại vải</th>
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em]">Tên vải</th>
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em]">Pallet</th>
+                            <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em]">SL theo pallet</th>
+                            <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em]">SL kiểm kê</th>
+                            <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.2em]">Lệch</th>
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em]">Ghi chú</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for row in group.rows %}
+                            {% set i = ns.row_index %}
+                            {% set variance = row.variance_quantity %}
+                            {% set rowspan = (row.pallet_rows|length) + 1 %}
+                            {% for pallet in row.pallet_rows %}
+                              <tr class="border-b border-black/5 align-top {% if row.is_full_match %}bg-secondary-container/10{% endif %}">
+                                {% if loop.first %}
+                                  <td class="px-4 py-4" rowspan="{{ rowspan }}">
+                                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                                      <input class="full-checkbox h-5 w-5 rounded border-black/20 text-primary focus:ring-primary/50 transition-colors cursor-pointer" type="checkbox" data-idx="{{ i }}" {% if row.is_full_match %}checked{% endif %} />
+                                      <span class="text-xs font-bold uppercase tracking-widest {% if row.is_full_match %}text-primary{% else %}text-on-surface-variant{% endif %}">Đủ</span>
+                                    </label>
+                                    <input type="hidden" name="row_id_{{ i }}" value="{{ row.row_id }}" />
+                                  </td>
+                                  <td class="px-4 py-4 font-semibold text-on-surface" rowspan="{{ rowspan }}">{{ row.loai_vai }}</td>
+                                  <td class="px-4 py-4 text-on-surface-variant" rowspan="{{ rowspan }}">{{ row.ten_vai }}</td>
+                                {% endif %}
+                                <td class="px-4 py-4">
+                                  <span class="inline-flex items-center rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold text-white">{{ pallet.vi_tri }}</span>
+                                  <div class="mt-1 text-[11px] text-on-surface-variant">{{ pallet.roll_count }} cây</div>
+                                </td>
+                                <td class="px-4 py-4 text-right text-on-surface-variant tabular-nums">{{ "%.2f"|format(pallet.quantity) }}</td>
+                                {% if loop.first %}
+                                  <td class="px-4 py-4 text-right" rowspan="{{ rowspan }}">
+                                    <input
+                                      class="actual-input w-32 rounded-xl border border-black/5 bg-surface-container-low px-3 py-2 text-right text-sm font-bold tabular-nums focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all"
+                                      type="text"
+                                      inputmode="decimal"
+                                      name="actual_quantity_{{ i }}"
+                                      data-idx="{{ i }}"
+                                      data-system-quantity="{{ "%.2f"|format(row.system_quantity) }}"
+                                      value="{{ row.actual_quantity if row.actual_quantity is not none else '' }}"
+                                      placeholder="0.00"
+                                    />
+                                  </td>
+                                  <td class="px-4 py-4 text-right tabular-nums" rowspan="{{ rowspan }}">
+                                    {% if variance is none %}
+                                      <span class="text-on-surface-variant">—</span>
+                                    {% else %}
+                                      <span class="{% if variance > 0 %}text-emerald-700{% elif variance < 0 %}text-rose-700{% else %}text-on-surface{% endif %} font-bold">
+                                        {{ "%+.2f"|format(variance) }}
+                                      </span>
+                                    {% endif %}
+                                  </td>
+                                  <td class="px-4 py-4" rowspan="{{ rowspan }}">
+                                    <input
+                                      type="text"
+                                      name="note_{{ i }}"
+                                      value="{{ row.note or '' }}"
+                                      placeholder="Thiếu / thừa / ghi chú..."
+                                      class="min-w-[220px] w-full rounded-xl border border-black/5 bg-surface-container-low px-3 py-2 text-sm focus:bg-surface-container-lowest focus:border-primary/30 outline-none transition-all"
+                                    />
+                                  </td>
+                                {% endif %}
+                              </tr>
+                            {% endfor %}
+                            <tr class="border-b border-primary/10 bg-surface-container-low/40">
+                              <td class="px-4 py-3 font-bold text-on-surface" colspan="2">Tổng</td>
+                              <td class="px-4 py-3 text-right font-extrabold text-on-surface tabular-nums">{{ "%.2f"|format(row.system_quantity) }} YDS</td>
+                            </tr>
+                            {% set ns.row_index = ns.row_index + 1 %}
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="6" class="px-4 py-16 text-center text-on-surface-variant">Không có mã hàng nào cho bộ lọc hiện tại.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </section>
+
+  <script>
+    (function () {
+      function toggleRow(id) {
+        const row = document.getElementById(id);
+        const btn = document.querySelector(`[data-acc-btn="${id}"]`);
+        const icon = document.querySelector(`[data-acc-icon="${id}"]`);
+        if (!row || !btn) return;
+        const isHidden = row.classList.contains("hidden");
+        row.classList.toggle("hidden", !isHidden);
+        btn.setAttribute("aria-expanded", isHidden ? "true" : "false");
+        if (icon) icon.style.transform = isHidden ? "rotate(180deg)" : "rotate(0deg)";
+      }
+
+      document.querySelectorAll("[data-acc-btn]").forEach((btn) => {
+        btn.addEventListener("click", () => toggleRow(btn.dataset.accBtn));
+      });
+    })();
+
+    (function () {
+      function syncRow(idx) {
+        const cb = document.querySelector(`input.full-checkbox[data-idx='${idx}']`);
+        const actual = document.querySelector(`input.actual-input[data-idx='${idx}']`);
+        if (!cb || !actual) return;
+        if (cb.checked) {
+          actual.value = actual.dataset.systemQuantity || actual.value;
+        }
+      }
+
+      document.querySelectorAll("input.full-checkbox").forEach((cb) => {
+        cb.addEventListener("change", (event) => syncRow(event.target.dataset.idx));
+      });
+    })();
+  </script>
+</div>
+{% endblock %}

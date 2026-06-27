@@ -7,6 +7,8 @@ from fabric_warehouse.db.models.hanging_tag import HangingTag  # noqa: F401
 from fabric_warehouse.db.models.demand_transfer_log import DemandTransferLog  # noqa: F401
 from fabric_warehouse.db.models.fabric_data import FabricData  # noqa: F401
 from fabric_warehouse.db.models.issue import Issue, IssueLine  # noqa: F401
+from fabric_warehouse.db.models.inventory_count_row import InventoryCountRow  # noqa: F401
+from fabric_warehouse.db.models.inventory_count_session import InventoryCountSession  # noqa: F401
 from fabric_warehouse.db.models.location_transfer_log import LocationTransferLog  # noqa: F401
 from fabric_warehouse.db.models.location_assignment import LocationAssignment  # noqa: F401
 from fabric_warehouse.db.models.pallet_stock_check import PalletStockCheck  # noqa: F401
